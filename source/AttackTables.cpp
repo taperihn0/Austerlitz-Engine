@@ -19,7 +19,7 @@ U64 sqMaskPawnAttacks(enumSide side, uint8_t sq) {
 	return eU64;
 }
 
-// pre-generated mask of avaible attacks for pawn on sq square
+// ... for pawn on sq square
 U64 sqMaskKnightAttacks(enumSide, uint8_t sq) {
 	U64 piece = eU64;
 	setBit(piece, sq);
@@ -30,7 +30,7 @@ U64 sqMaskKnightAttacks(enumSide, uint8_t sq) {
 			 | soWeWe(piece) | soSoWe(piece);
 }
 
-// pre-generated mask of avaible attacks for king on sq square
+// ... for king on sq square
 U64 sqMaskKingAttacks(enumSide, uint8_t sq) {
 	U64 piece = eU64;
 	setBit(piece, sq);

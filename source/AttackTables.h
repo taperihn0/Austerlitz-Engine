@@ -5,7 +5,7 @@
 // table of attack squares bitboards alias
 using a2dTable_t = std::array<std::array<U64, BSIZE>, 2>;
 
-// attack masks for pawn, knight and king
+//	SINGLE ATTACK MASKS for PAWNS, KNIGHTS and KINGS
 U64 sqMaskPawnAttacks(enumSide side, uint8_t sq);
 U64 sqMaskKnightAttacks(enumSide, uint8_t sq);
 U64 sqMaskKingAttacks(enumSide, uint8_t sq);
