@@ -8,7 +8,7 @@ void printBitBoard(U64 bitboard) {
 
 	for (int i = 0; i < BHEIGHT; i++) {
 		for (int j = 0; j < BWIDTH; j++) {
-			std::cout << sCast<bit>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
+			std::cout << static_cast<bit>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
 
 			if (j == 7) {
 				std::cout << "  " << 8 - i << "\n  ";

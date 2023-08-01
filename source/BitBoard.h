@@ -6,21 +6,19 @@
 #include <array>
 
 // define bitboard data type 
-#define U64 uint64_t
-#define bit bool
+using U64 = uint64_t;
+using bit = bool;
 
-template<typename cT, typename T>
-inline constexpr cT sCast(T carg) {
-	return static_cast<cT>(carg);
+template <typename T, typename =
+	std::enable_if_t<std::is_enum<T>::value or std::is_constructible_v<T, U64>>>
+inline constexpr U64 cU64(T&& s) {
+	return static_cast<U64>(std::forward<T>(s));
 }
 
-#define eU64 sCast<U64>(0)
-#define cU64(s) sCast<U64>(s)
+constexpr U64 eU64 = cU64(0);
 
 // define board size
-constexpr int8_t BWIDTH = 8,
-BHEIGHT = 8,
-BSIZE = 8 * 8;
+constexpr int8_t BWIDTH = 8, BHEIGHT = 8, BSIZE = 8 * 8;
 
 // enum indexes for little endian rank-file mapping
 enum enumSquare {
@@ -36,6 +34,15 @@ enum enumSquare {
 
 // enum sides color
 enum enumSide { WHITE, BLACK };
+
+enum enumPiece {
+	PAWN,
+	KNIGHT,
+	BISHOP,
+	ROOK,
+	QUEEN,
+	KING
+};
 
 // little endian rank-file mapping constants
 namespace Constans {
@@ -56,33 +63,33 @@ namespace Constans {
 		dsquares = 0xAA55AA55AA55AA55;
 }
 
+enum enumPiece_bb {
+	nWhite,
+	nBlack,
+	nEmpty,
+	nOccupied,
+
+	nWhitePawn,
+	nWhiteKnight,
+	nWhiteBishop,
+	nWhiteRook,
+	nWhiteQueen,
+	nWhiteKing,
+
+	nBlackPawn,
+	nBlackKnight,
+	nBlackBishop,
+	nBlackRook,
+	nBlackQueen,
+	nBlackKing
+};
+
 // bitboards set
 class BitBoardsSet {
 public:
-	enum enumPiece {
-		nWhite,
-		nBlack,
-		nEmpty,
-		nOccupied,
-
-		nWhitePawn,
-		nWhiteKnight,
-		nWhiteBishop,
-		nWhiteRook,
-		nWhiteQueen,
-		nWhiteKing,
-
-		nBlackPawn,
-		nBlackKnight,
-		nBlackBishop,
-		nBlackRook,
-		nBlackQueen,
-		nBlackKing
-	};
-
 	BitBoardsSet() = default;
 
-	U64 operator[](enumPiece piece_get) {
+	U64 operator[](enumPiece_bb piece_get) {
 		return bitboards[static_cast<size_t>(piece_get)];
 	}
 private:
@@ -93,9 +100,11 @@ private:
 void printBitBoard(U64 bitboard);
 
 inline constexpr void setBit(U64& bb, enumSquare shift) {
-	bb |= (cU64(1) << sCast<uint8_t>(shift));
+	bb |= (cU64(1) << shift);
 }
 
-inline constexpr void setBit(U64& bb, uint8_t shift) {
-	bb |= (cU64(1) << shift);
+template <typename T, typename = 
+	std::enable_if_t<std::is_constructible_v<T, int>>>
+inline constexpr void setBit(U64& bb, T shift) {
+	bb |= (cU64(1) << std::forward<T>(shift));
 }

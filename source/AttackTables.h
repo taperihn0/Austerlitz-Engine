@@ -1,51 +1,63 @@
 #include "MoveSystem.h"
+#include <functional>
 
-// attack table alias
+
+// table of attack squares bitboards alias
 using a2dTable_t = std::array<std::array<U64, BSIZE>, 2>;
 
-//	SINGLE PAWN ATTACK TABLES
-class classSinglePawnAttacks {
+// attack masks for pawn, knight and king
+U64 sqMaskPawnAttacks(enumSide side, uint8_t sq);
+U64 sqMaskKnightAttacks(enumSide, uint8_t sq);
+U64 sqMaskKingAttacks(enumSide, uint8_t sq);
+
+// class template as a custom table of pre-calculated attack tables
+template <enumPiece pT>
+class CSinglePieceAttacks {
 public:
-	classSinglePawnAttacks() = default;
+	CSinglePieceAttacks() = default;
 	void Init();
 
 	U64 get(enumSide side, enumSquare sq);
-	static U64 sqMaskPawnAttack(enumSide side, uint8_t sq);
 private:
 	template <enumSide sT>
 	void Init();
 
-	a2dTable_t tabSinglePawnAttack;
+	a2dTable_t arrAttacks;
 };
 
-// classSinglePawnAttacks class method template implementation:
-template <enumSide sT>
-void classSinglePawnAttacks::Init() {
-	for (uint8_t i = 0; i < BSIZE; i++) {
-		tabSinglePawnAttack[sT][i] = sqMaskPawnAttack(sT, i);
-	}
+// General public initialization template method for pT piece type attacks tables
+template <enumPiece pT>
+void CSinglePieceAttacks<pT>::Init() {
+	Init<WHITE>();
+	Init<BLACK>();
 }
 
+// return given table of attacks for single pT piece type on sq square
+template <enumPiece pT>
+U64 CSinglePieceAttacks<pT>::get(enumSide side, enumSquare sq) {
+	return arrAttacks[side][sq];
+}
 
-//	SINGLE KNIGHT ATTACK TABLES
-class classSingleKnightAttacks {
-public:
-	classSingleKnightAttacks() = default;
-	void Init();
-
-	U64 get(enumSide side, enumSquare sq);
-	static U64 spMaskKnightAttack(uint8_t sq);
-private:
-	template <enumSide sT>
-	void Init();
-
-	a2dTable_t tabSingleKnightAttack;
-};
-
-// classSingleKnightAttacks class method template implementation:
+// Init template function for given as a template parameter piece color and pT piece type
+template <enumPiece pT>
 template <enumSide sT>
-void classSingleKnightAttacks::Init() {
+void CSinglePieceAttacks<pT>::Init() {
+	std::function<U64(enumSide, uint8_t)> mask;
+
+	switch (pT) {
+	case PAWN:
+		mask = &sqMaskPawnAttacks;
+		break;
+	case KNIGHT:
+		mask = &sqMaskKnightAttacks;
+		break;
+	case KING:
+		mask = &sqMaskKingAttacks;
+		break;
+	default: return;
+	}
+
 	for (uint8_t i = 0; i < BSIZE; i++) {
-		tabSingleKnightAttack[sT][i] = spMaskKnightAttack(i);
+		arrAttacks[sT][i] = mask(sT, i);
 	}
 }

@@ -1,8 +1,8 @@
 #include "HeaderFile.h"
 
 int main() {
-	classSingleKnightAttacks arrSingleKnightAttack;
+	CSinglePieceAttacks<PAWN> arrSingleKnightAttack;
 	arrSingleKnightAttack.Init();
 
-	printBitBoard(arrSingleKnightAttack.get(BLACK, g1));
+	printBitBoard(arrSingleKnightAttack.get(WHITE, g1));
 }
