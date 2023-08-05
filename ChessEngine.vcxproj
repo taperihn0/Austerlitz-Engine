@@ -135,12 +135,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="source\AttackTables.cpp" />
-    <ClCompile Include="source\BitBoard.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\MoveSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\MagicBitBoards.h" />
     <ClInclude Include="source\AttackTables.h" />
     <ClInclude Include="source\HeaderFile.h" />
     <ClInclude Include="source\MoveSystem.h" />

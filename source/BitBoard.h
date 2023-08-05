@@ -15,10 +15,10 @@ inline constexpr U64 cU64(T&& s) {
 	return static_cast<U64>(std::forward<T>(s));
 }
 
-constexpr U64 eU64 = cU64(0);
+static constexpr U64 eU64 = cU64(0);
 
 // define board size
-constexpr int8_t BWIDTH = 8, BHEIGHT = 8, BSIZE = 8 * 8;
+static constexpr int8_t BWIDTH = 8, BHEIGHT = 8, BSIZE = 8 * 8;
 
 // enum indexes for little endian rank-file mapping
 enum enumSquare {
@@ -57,6 +57,8 @@ namespace Constans {
 		not_gh_file = 0x3f3f3f3f3f3f3f3f,
 		r1_rank = 0x00000000000000FF,
 		r8_rank = 0xFF00000000000000,
+		not_r1_rank = ~r1_rank,
+		not_r8_rank = ~r8_rank,
 		a1h8_diagonal = 0x8040201008040201,
 		h1_a8_diagonal = 0x0102040810204080,
 		lsquares = 0x55AA55AA55AA55AA,
@@ -90,14 +92,33 @@ public:
 	BitBoardsSet() = default;
 
 	U64 operator[](enumPiece_bb piece_get) {
-		return bitboards[static_cast<size_t>(piece_get)];
+		return bitboards[piece_get];
 	}
 private:
 	std::array<U64, 16> bitboards;
 };
 
 // display single bitboard function
-void printBitBoard(U64 bitboard);
+static void printBitBoard(U64 bitboard) {
+	int bitcheck = 56;
+
+	std::cout << std::endl << "  ";
+
+	for (int i = 0; i < BHEIGHT; i++) {
+		for (int j = 0; j < BWIDTH; j++) {
+			std::cout << static_cast<bit>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
+
+			if (j == 7) {
+				std::cout << "  " << 8 - i << "\n  ";
+			}
+		}
+
+		bitcheck -= 8;
+	}
+
+	std::cout << std::endl << "  a b c d e f g h" << std::endl << std::endl
+		<< "BitBoard: " << bitboard << std::endl;
+}
 
 inline constexpr void setBit(U64& bb, enumSquare shift) {
 	bb |= (cU64(1) << shift);
