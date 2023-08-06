@@ -145,11 +145,11 @@ inline int getLS1B_Index(U64 bb) {
 }
 
 // pop indexed bit
-inline constexpr void popBit(U64& bb, unsigned long long index) {
+inline constexpr void popBit(U64& bb, int index) {
 	bb ^= (bb & (cU64(1) << index))? (1 << index) : 0;
 }
 
 // set given bit
-inline constexpr void setBit(U64& bb, unsigned long long shift) {
+inline constexpr void setBit(U64& bb, int  shift) {
 	bb |= (cU64(1) << shift);
 }

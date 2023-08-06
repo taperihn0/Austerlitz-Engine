@@ -7,7 +7,7 @@ namespace {
 	// random U64 bitboard
 	U64 randomU64() {
 
-		// Mersenne Twister	generator
+		// Mersenne Twister generator
 		static std::mt19937_64 engine(1);
 
 		// minimum random number set to 1, since 0 can't be magic number

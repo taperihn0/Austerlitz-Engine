@@ -11,18 +11,17 @@ namespace {
 		U64 one = cU64(1);
 
 		// piece square coordinates as numbers
-		int tr = sq / 8;
-		int tf = sq % 8;
+		int tr = sq / 8, tf = sq % 8;
 
 		// mask relevant bishop occupancy bits
 		for (int r = tr + 1, f = tf + 1; r <= 6 and f <= 6; r++, f++)
-			occ |= (one << (r * 8 + f));
+			setBit(occ, (r * 8 + f));
 		for (int r = tr + 1, f = tf - 1; r <= 6 and f >= 1; r++, f--)
-			occ |= (one << (r * 8 + f));
+			setBit(occ, (r * 8 + f));
 		for (int r = tr - 1, f = tf - 1; r >= 1 and f >= 1; r--, f--)
-			occ |= (one << (r * 8 + f));
+			setBit(occ, (r * 8 + f));
 		for (int r = tr - 1, f = tf + 1; r >= 1 and f <= 6; r--, f++)
-			occ |= (one << (r * 8 + f));
+			setBit(occ, (r * 8 + f));
 
 		return occ;
 	}
@@ -35,14 +34,13 @@ namespace {
 		U64 one = cU64(1);
 
 		// piece square coordinates as numbers
-		int tr = sq / 8;
-		int tf = sq % 8;
+		int tr = sq / 8, tf = sq % 8;
 
 		// mask relevant rook occupancy bits
-		for (int r = tr + 1; r <= 6; r++) occ |= (one << (r * 8 + tf));
-		for (int r = tr - 1; r >= 1; r--) occ |= (one << (r * 8 + tf));
-		for (int f = tf + 1; f <= 6; f++) occ |= (one << (tr * 8 + f));
-		for (int f = tf - 1; f >= 1; f--) occ |= (one << (tr * 8 + f));
+		for (int r = tr + 1; r <= 6; r++) setBit(occ, (r * 8 + tf));
+		for (int r = tr - 1; r >= 1; r--) setBit(occ, (r * 8 + tf));
+		for (int f = tf + 1; f <= 6; f++) setBit(one, (tr * 8 + f));
+		for (int f = tf - 1; f >= 1; f--) setBit(one, (tr * 8 + f));
 
 		return occ;
 	}
