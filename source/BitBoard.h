@@ -18,7 +18,7 @@ inline constexpr U64 cU64(T&& s) {
 static constexpr U64 eU64 = cU64(0);
 
 // define board size
-static constexpr int8_t BWIDTH = 8, BHEIGHT = 8, BSIZE = 8 * 8;
+static constexpr int bSIZE = 8 * 8;
 
 // enum indexes for little endian rank-file mapping
 enum enumSquare {
@@ -35,6 +35,7 @@ enum enumSquare {
 // enum sides color
 enum enumSide { WHITE, BLACK };
 
+// general piece enum
 enum enumPiece {
 	PAWN,
 	KNIGHT,
@@ -65,6 +66,7 @@ namespace Constans {
 		dsquares = 0xAA55AA55AA55AA55;
 }
 
+// piece enum for their bitboards
 enum enumPiece_bb {
 	nWhite,
 	nBlack,
@@ -98,34 +100,56 @@ private:
 	std::array<U64, 16> bitboards;
 };
 
-// display single bitboard function
-static void printBitBoard(U64 bitboard) {
-	int bitcheck = 56;
+namespace {
 
-	std::cout << std::endl << "  ";
+	// display single bitboard function
+	void printBitBoard(U64 bitboard) {
+		int bitcheck = 56;
 
-	for (int i = 0; i < BHEIGHT; i++) {
-		for (int j = 0; j < BWIDTH; j++) {
-			std::cout << static_cast<bit>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
+		std::cout << std::endl << "  ";
 
-			if (j == 7) {
-				std::cout << "  " << 8 - i << "\n  ";
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				std::cout << static_cast<bit>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
+
+				if (j == 7) {
+					std::cout << "  " << 8 - i << "\n  ";
+				}
 			}
+
+			bitcheck -= 8;
 		}
 
-		bitcheck -= 8;
+		std::cout << std::endl << "  a b c d e f g h" << std::endl << std::endl
+			<< "bb value: " << bitboard << std::endl;
 	}
 
-	std::cout << std::endl << "  a b c d e f g h" << std::endl << std::endl
-		<< "BitBoard: " << bitboard << std::endl;
+	// Population count for magic bitboards 
+	//  - counting bits set to one in a 64-bits number 'x'
+	int bitCount(U64 x) {
+		int count = 0;
+
+		while (x) {
+			count++;
+			x &= x - 1;
+		}
+
+		return count;
+	}
+
 }
 
-inline constexpr void setBit(U64& bb, enumSquare shift) {
+// get index of LS1B (least significant bit)
+inline int getLS1B_Index(U64 bb) {
+	return (bb == 0) ? -1 : bitCount((bb & ~bb) - 1);
+}
+
+// pop indexed bit
+inline constexpr void popBit(U64& bb, unsigned long long index) {
+	bb ^= (bb & (cU64(1) << index))? (1 << index) : 0;
+}
+
+// set given bit
+inline constexpr void setBit(U64& bb, unsigned long long shift) {
 	bb |= (cU64(1) << shift);
-}
-
-template <typename T, typename = 
-	std::enable_if_t<std::is_constructible_v<T, int>>>
-inline constexpr void setBit(U64& bb, T shift) {
-	bb |= (cU64(1) << std::forward<T>(shift));
 }

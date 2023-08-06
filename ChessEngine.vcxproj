@@ -139,6 +139,7 @@
     <ClCompile Include="source\MoveSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\GeneratingMagics.h" />
     <ClInclude Include="source\MagicBitBoards.h" />
     <ClInclude Include="source\AttackTables.h" />
     <ClInclude Include="source\HeaderFile.h" />

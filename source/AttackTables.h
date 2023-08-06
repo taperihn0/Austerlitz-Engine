@@ -2,7 +2,7 @@
 #include <functional>
 
 // table of attack squares bitboards alias
-using a2dTable_t = std::array<std::array<U64, BSIZE>, 2>;
+using a2dTable_t = std::array<std::array<U64, 64>, 2>;
 
 //	SINGLE ATTACK MASKS for PAWNS, KNIGHTS and KINGS
 namespace {
@@ -97,7 +97,7 @@ void CSinglePieceAttacks<pT>::Init() {
 	default: return;
 	}
 
-	for (uint8_t i = 0; i < BSIZE; i++) {
+	for (int i = 0; i < 64; i++) {
 		arrAttacks[sT][i] = mask(sT, i);
 	}
 }

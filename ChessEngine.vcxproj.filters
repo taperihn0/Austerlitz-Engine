@@ -38,5 +38,8 @@
     <ClInclude Include="source\MagicBitBoards.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\GeneratingMagics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

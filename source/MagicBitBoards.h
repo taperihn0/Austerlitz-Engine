@@ -3,19 +3,6 @@
 
 namespace {
 
-	// Population count for magic bitboards 
-	//  - counting bits set to one in a 64-bits number 'x'
-	int bitCount(U64 x) {
-		int count = 0;
-
-		while (x) {
-			count++;
-			x &= x - 1;
-		}
-
-		return count;
-	}
-
 	// relevant occupancy mask of bishop for magic bitboards system
 	U64 relevantOccupancyBishop(int sq) {
 
@@ -40,7 +27,7 @@ namespace {
 		return occ;
 	}
 
-	// same for rook as an entry point of magic bitboards system
+	// same as above for rook as an entry point of magic bitboards system
 	U64 relevantOccupancyRook(int sq) {
 
 		// return occupancy bitboard object
@@ -59,5 +46,22 @@ namespace {
 
 		return occ;
 	}
+
+	struct SMagic {
+		U64 mask;  // relevant occupancy mask
+		U64 magic; // magic number needed to be found earlier
+	};
+
+	// arrays of magic structure containing relevant occupancy mask and magic number for each square
+	// separately for bishop and rook
+	std::array<SMagic, 64>
+		mBishopTab,
+		mRookTab;
+
+	// tables of rook and bishop attacks in Plain Magic Bitboards implementation
+	// 4096 = 2 ^ 12 - maximum number of occupancy subsets for rook (rook at [a1, h8])
+	// 512 = 2 ^ 9 - maximum number of occupancy subsets for bishop (bishop at board center [d4, d5, e4, e5])
+	std::array<std::array<U64, 4096>, 64> mRookAttacks;
+	std::array<std::array<U64, 512>, 64> mBishopAttacks;
 
 } // anonymous namespace preventing violating the One Definition Rule
