@@ -8,7 +8,6 @@ namespace {
 
 		// return occupancy bitboard object
 		U64 occ = eU64;
-		U64 one = cU64(1);
 
 		// piece square coordinates as numbers
 		int tr = sq / 8, tf = sq % 8;
@@ -31,7 +30,6 @@ namespace {
 
 		// return occupancy bitboard object
 		U64 occ = eU64;
-		U64 one = cU64(1);
 
 		// piece square coordinates as numbers
 		int tr = sq / 8, tf = sq % 8;
@@ -39,8 +37,8 @@ namespace {
 		// mask relevant rook occupancy bits
 		for (int r = tr + 1; r <= 6; r++) setBit(occ, (r * 8 + tf));
 		for (int r = tr - 1; r >= 1; r--) setBit(occ, (r * 8 + tf));
-		for (int f = tf + 1; f <= 6; f++) setBit(one, (tr * 8 + f));
-		for (int f = tf - 1; f >= 1; f--) setBit(one, (tr * 8 + f));
+		for (int f = tf + 1; f <= 6; f++) setBit(occ, (tr * 8 + f));
+		for (int f = tf - 1; f >= 1; f--) setBit(occ, (tr * 8 + f));
 
 		return occ;
 	}

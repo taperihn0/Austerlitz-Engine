@@ -127,21 +127,15 @@ namespace {
 	// Population count for magic bitboards 
 	//  - counting bits set to one in a 64-bits number 'x'
 	int bitCount(U64 x) {
-		int count = 0;
-
-		while (x) {
-			count++;
-			x &= x - 1;
-		}
-
-		return count;
+		int c;
+		for (c = 0; x; x &= x - 1, c++);
+		return c;
 	}
 
-}
-
-// get index of LS1B (least significant bit)
-inline int getLS1B_Index(U64 bb) {
-	return (bb == 0) ? -1 : bitCount((bb & ~bb) - 1);
+	// getting numeric index of least significant bit using XOR method
+	int getLS1BIndex(U64 bb) {
+		return bitCount((bb ^ (bb - 1)));
+	}
 }
 
 // pop indexed bit
