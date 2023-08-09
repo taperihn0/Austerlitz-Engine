@@ -1,8 +1,47 @@
 #include "BitBoard.h"
-#include "MagicBitBoards.h"
 #include <random>
 
 namespace {
+
+	// relevant occupancy mask of bishop for magic bitboards system
+	U64 relevantOccupancyBishop(int sq) {
+
+		// return occupancy bitboard object
+		U64 occ = eU64;
+
+		// piece square coordinates as numbers
+		int tr = sq / 8, tf = sq % 8;
+
+		// mask relevant bishop occupancy bits
+		for (int r = tr + 1, f = tf + 1; r <= 6 and f <= 6; r++, f++)
+			setBit(occ, (r * 8 + f));
+		for (int r = tr + 1, f = tf - 1; r <= 6 and f >= 1; r++, f--)
+			setBit(occ, (r * 8 + f));
+		for (int r = tr - 1, f = tf - 1; r >= 1 and f >= 1; r--, f--)
+			setBit(occ, (r * 8 + f));
+		for (int r = tr - 1, f = tf + 1; r >= 1 and f <= 6; r--, f++)
+			setBit(occ, (r * 8 + f));
+
+		return occ;
+	}
+
+	// same as above for rook as an entry point of magic bitboards system
+	U64 relevantOccupancyRook(int sq) {
+
+		// return occupancy bitboard object
+		U64 occ = eU64;
+
+		// piece square coordinates as numbers
+		int tr = sq / 8, tf = sq % 8;
+
+		// mask relevant rook occupancy bits
+		for (int r = tr + 1; r <= 6; r++) setBit(occ, (r * 8 + tf));
+		for (int r = tr - 1; r >= 1; r--) setBit(occ, (r * 8 + tf));
+		for (int f = tf + 1; f <= 6; f++) setBit(occ, (tr * 8 + f));
+		for (int f = tf - 1; f >= 1; f--) setBit(occ, (tr * 8 + f));
+
+		return occ;
+	}
 
 	// random U64 bitboard using Mersenne Twister generator
 	U64 randomU64() {
@@ -10,7 +49,7 @@ namespace {
 		// minimum random number set to 1, since 0 can't be magic number
 		static std::uniform_int_distribution<U64> dist(1, UINT64_MAX);
 
-		return dist(engine);
+		return dist(engine) & dist(engine);
 	}
 
 	// get subset of attack_mask by using binary representation of index
@@ -114,6 +153,9 @@ namespace {
 		for (unsigned int t = 0; t < tries; t++) {
 			magic = randomU64();
 
+			// number has to consist of many bits after shift in magic hash function
+			if (bitCount((relv_mask * magic) & 0xFF00000000000000) < 6) continue;
+
 			// prepare array for the next try with new generated number
 			check.fill(eU64);
 			unvalid = false;
@@ -142,18 +184,4 @@ namespace {
 		return eU64;
 	}
 
-	// print elegant magic numbers for rook or bishop
-	template <enumPiece pT>
-	void printMagics() {
-		std::cout << "std::array<U64, 64> m" 
-			<< ((pT == ROOK) ? "Rook" : "Bishop") << "RookTab = {" << std::endl;
-
-		for (int i = 0; i < 8; i++) {
-			for (int j = 0; j < 8; j++) {
-				std::cout << std::hex << "\t0x" << findSquareMagic<pT>(i * 8 + j) << ",\n";
-			}
-		}
-
-		std::cout << '}' << std::endl;
-	}
-}
+} // namespace
