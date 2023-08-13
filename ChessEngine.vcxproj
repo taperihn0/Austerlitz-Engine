@@ -135,10 +135,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\BitBoardsSet.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\MoveSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\BitBoardsSet.h" />
     <ClInclude Include="source\GeneratingMagics.h" />
     <ClInclude Include="source\MagicBitBoards.h" />
     <ClInclude Include="source\AttackTables.h" />

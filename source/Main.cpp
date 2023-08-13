@@ -1,7 +1,9 @@
-#include "HeaderFile.h"
+﻿#include "HeaderFile.h"
 
 int main() {
+	/*
 	initMAttacksTables<BISHOP>();
+	initMAttacksTables<ROOK>();
 
 	U64 bb = eU64;
 	setBit(bb, f4);
@@ -15,11 +17,9 @@ int main() {
 	setBit(bb, e6);
 
 	printBitBoard(bb);
-	printBitBoard(bishopAttack(bb, c3));
+	printBitBoard(queenAttack(bb, f5));
+	*/
 
-	//int n = bitCount(bb);
-
-	//for (int i = 0; i < (1 << n); i++) {
-	//	printBitBoard(indexSubsetU64(i, bb, n));
-	//}
+	BitBoardsSet BBs("4k2r/6r1/8/8/8/8/3R4/R3K3 w Qk - 0 1");
+	BBs.printBoard();
 }

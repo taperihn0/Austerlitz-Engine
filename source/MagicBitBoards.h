@@ -5,7 +5,7 @@
 namespace mTabs {
 
     // Magics tables:
-    std::array<U64, 64> mRook = {
+    constexpr std::array<U64, 64> mRook = {
         0x188001a080400431,
         0x8140002002401000,
         0x49000852600101c1,
@@ -71,7 +71,7 @@ namespace mTabs {
         0x944302802008104,
         0x28811300442c0082,
     };
-    std::array<U64, 64> mBishop = {
+    constexpr std::array<U64, 64> mBishop = {
         0xd0100150140149c2,
         0x400b4a8fe1010031,
         0x480a1420200000,
@@ -139,7 +139,7 @@ namespace mTabs {
     };
 
     // Relevant occupancy bitboards:
-    std::array<U64, 64> rRook = {
+    constexpr std::array<U64, 64> rRook = {
         0x101010101017e,
         0x202020202027c,
         0x404040404047a,
@@ -205,7 +205,7 @@ namespace mTabs {
         0x3e40404040404000,
         0x7e80808080808000,
     };
-    std::array<U64, 64> rBishop = {
+    constexpr std::array<U64, 64> rBishop = {
         0x40201008040200,
         0x402010080400,
         0x4020100a00,
@@ -273,7 +273,7 @@ namespace mTabs {
     };
 
     // relevant bits:
-    std::array<int, 64> rbRook = {
+    constexpr std::array<int, 64> rbRook = {
         12,11,11,11,11,11,11,12,
         11,10,10,10,10,10,10,11,
         11,10,10,10,10,10,10,11,
@@ -283,7 +283,7 @@ namespace mTabs {
         11,10,10,10,10,10,10,11,
         12,11,11,11,11,11,11,12,
     };
-    std::array<int, 64> rbBishop = {
+    constexpr std::array<int, 64> rbBishop = {
         6,5,5,5,5,5,5,6,
         5,5,5,5,5,5,5,5,
         5,5,7,7,7,7,5,5,
@@ -328,10 +328,6 @@ namespace {
             // loop throught occupancy subsets: generate each subset from index and fill look-up attacks tables
             for (int i = 0; i < (1 << n); i++) {
                 subset = indexSubsetU64(i, att, n);
-
-                if (sq == b3 and !mIndexHash(subset, mTabs::mRook[sq], n)) {
-                    std::cout << subset << ' ' << mTabs::mBishop[sq] << ' ' << n << '\n';
-                }
 
                 switch (pT) {
                 case ROOK:
@@ -402,4 +398,8 @@ inline U64 bishopAttack(U64 occ, int sq) {
 
 inline U64 rookAttack(U64 occ, int sq) {
     return mTabs::mRookAtt[sq][mIndexHash(occ & mTabs::rRook[sq], mTabs::mRook[sq], mTabs::rbRook[sq])];
+}
+
+inline U64 queenAttack(U64 occ, int sq) {
+    return bishopAttack(occ, sq) | rookAttack(occ, sq);
 }

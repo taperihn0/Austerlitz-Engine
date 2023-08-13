@@ -101,3 +101,13 @@ void CSinglePieceAttacks<pT>::Init() {
 		arrAttacks[sT][i] = mask(sT, i);
 	}
 }
+
+
+namespace {
+
+	// attack look-up tables for simple pieces
+	CSinglePieceAttacks<PAWN> cPawnAttacks;
+	CSinglePieceAttacks<KNIGHT> cKnightAttacks;
+	CSinglePieceAttacks<KING> cKingAttacks;
+
+} // namespace

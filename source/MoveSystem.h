@@ -27,7 +27,8 @@ namespace Compass {
 		soWeWe = -10,
 		noWeWe = 6,
 		noNoWe = 15;
-}
+
+} // namespace Compass
 
 //	GENERALIZED SHIFT
 U64 genShift(U64 bb, int shift);

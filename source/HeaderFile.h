@@ -4,3 +4,4 @@
 #include "BitBoard.h"
 #include "AttackTables.h"
 #include "MagicBitBoards.h"
+#include "BitBoardsSet.h"
