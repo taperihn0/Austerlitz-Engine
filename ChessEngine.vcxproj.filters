@@ -47,5 +47,14 @@
     <ClInclude Include="source\BitBoardsSet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\LegalityTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\MoveGeneration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\abs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "BitBoard.h"
 #include "GeneratingMagics.h"
 #include "MoveSystem.h"
@@ -305,15 +307,19 @@ namespace mTabs {
 
 
 namespace {
-    
-    // initialize look-up attacks tables
-    template <enumPiece pT>
-    void initMAttacksTables() {
-        U64 att, subset;
-        int n;
 
-        for (int sq = 0; sq < 64; sq++) {
-            switch (pT) {
+    // InitState namespace contains program init functions which needs to be called
+    // when the program starts
+    namespace InitState {
+
+        // initialize look-up attacks tables
+        template <enumPiece pT>
+        void initMAttacksTables() {
+            U64 att, subset;
+            int n;
+
+            for (int sq = 0; sq < 64; sq++) {
+                switch (pT) {
                 case ROOK:
                     att = mTabs::rRook[sq];
                     n = mTabs::rbRook[sq];
@@ -323,73 +329,76 @@ namespace {
                     n = mTabs::rbBishop[sq];
                     break;
                 default: return;
-            }
+                }
 
-            // loop throught occupancy subsets: generate each subset from index and fill look-up attacks tables
-            for (int i = 0; i < (1 << n); i++) {
-                subset = indexSubsetU64(i, att, n);
+                // loop throught occupancy subsets: generate each subset from index and fill look-up attacks tables
+                for (int i = 0; i < (1 << n); i++) {
+                    subset = indexSubsetU64(i, att, n);
 
-                switch (pT) {
-                case ROOK:
-                    mTabs::mRookAtt[sq][mIndexHash(subset, mTabs::mRook[sq], n)]
-                        = attackSquaresRook(subset, sq);
-                    break;
-                case BISHOP:
-                    mTabs::mBishopAtt[sq][mIndexHash(subset, mTabs::mBishop[sq], n)]
-                        = attackSquaresBishop(subset, sq);
-                    break;
-                default: return;
+                    switch (pT) {
+                    case ROOK:
+                        mTabs::mRookAtt[sq][mIndexHash(subset, mTabs::mRook[sq], n)]
+                            = attackSquaresRook(subset, sq);
+                        break;
+                    case BISHOP:
+                        mTabs::mBishopAtt[sq][mIndexHash(subset, mTabs::mBishop[sq], n)]
+                            = attackSquaresBishop(subset, sq);
+                        break;
+                    default: return;
+                    }
                 }
             }
         }
-    }
 
-    template <enumPiece pT>
-    void printMagics() {
-        std::cout << "std::array<U64, 64> m"
-            << ((pT == ROOK) ? "Rook" : "Bishop") << "Tab = {" << std::endl;
-
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                std::cout << std::hex << "\t0x" << findSquareMagic<pT>(i * 8 + j) << ",\n";
-            }
-        }
-
-        std::cout << "};" << std::endl;
-    }
-
-    template <enumPiece pT>
-    void printRelevantOccupancy() {
-        std::cout << "std::array<U64, 64> r"
-            << ((pT == ROOK) ? "Rook" : "Bishop") << "Tab = {" << std::endl;
-
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                std::cout << std::hex << "\t0x"
-                    << ((pT == ROOK) ? relevantOccupancyRook(i * 8 + j) : relevantOccupancyBishop(i * 8 + j)) << ",\n";
-            }
-        }
-
-        std::cout << "};" << std::endl;
-    }
-
-    template <enumPiece pT>
-    void printRelevantBits() {
-        std::cout << "std::array<U64, 64> revbits"
-            << ((pT == ROOK) ? "Rook" : "Bishop") << "Tab = {" << std::endl;
-
-        for (int i = 0; i < 8; i++) {
-            std::cout << '\t';
-            for (int j = 0; j < 8; j++) {
-                std::cout << ((pT == ROOK) ? bitCount(mTabs::rRook[i * 8 + j]) : bitCount(mTabs::rBishop[i * 8 + j])) << ",";
-            }
-            std::cout << '\n';
-        }
-
-        std::cout << "};" << std::endl;
     }
 
 } // namespace
+
+
+template <enumPiece pT>
+void printMagics() {
+    std::cout << "std::array<U64, 64> m"
+        << ((pT == ROOK) ? "Rook" : "Bishop") << "Tab = {" << std::endl;
+
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            std::cout << std::hex << "\t0x" << findSquareMagic<pT>(i * 8 + j) << ",\n";
+        }
+    }
+
+    std::cout << "};" << std::endl;
+}
+
+template <enumPiece pT>
+void printRelevantOccupancy() {
+    std::cout << "std::array<U64, 64> r"
+        << ((pT == ROOK) ? "Rook" : "Bishop") << "Tab = {" << std::endl;
+
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            std::cout << std::hex << "\t0x"
+                << ((pT == ROOK) ? relevantOccupancyRook(i * 8 + j) : relevantOccupancyBishop(i * 8 + j)) << ",\n";
+        }
+    }
+
+    std::cout << "};" << std::endl;
+}
+
+template <enumPiece pT>
+void printRelevantBits() {
+    std::cout << "std::array<U64, 64> revbits"
+        << ((pT == ROOK) ? "Rook" : "Bishop") << "Tab = {" << std::endl;
+
+    for (int i = 0; i < 8; i++) {
+        std::cout << '\t';
+        for (int j = 0; j < 8; j++) {
+            std::cout << ((pT == ROOK) ? bitCount(mTabs::rRook[i * 8 + j]) : bitCount(mTabs::rBishop[i * 8 + j])) << ",";
+        }
+        std::cout << '\n';
+    }
+
+    std::cout << "};" << std::endl;
+}
 
 
 inline U64 bishopAttack(U64 occ, int sq) {

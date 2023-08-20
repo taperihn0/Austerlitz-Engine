@@ -1,3 +1,5 @@
+#pragma once
+
 #include "MoveSystem.h"
 #include <functional>
 
@@ -54,10 +56,9 @@ namespace {
 template <enumPiece pT>
 class CSinglePieceAttacks {
 public:
-	CSinglePieceAttacks() = default;
-	void Init();
+	CSinglePieceAttacks();
 
-	U64 get(enumSide side, enumSquare sq);
+	const std::array<U64, 64>& operator[](enumSide side);
 private:
 	template <enumSide sT>
 	void Init();
@@ -65,17 +66,17 @@ private:
 	a2dTable_t arrAttacks;
 };
 
-// General public initialization template method for pT piece type attacks tables
+// General public initialization for pT piece type attacks tables
 template <enumPiece pT>
-void CSinglePieceAttacks<pT>::Init() {
+CSinglePieceAttacks<pT>::CSinglePieceAttacks() {
 	Init<WHITE>();
 	Init<BLACK>();
 }
 
 // return given table of attacks for single pT piece type on sq square
 template <enumPiece pT>
-U64 CSinglePieceAttacks<pT>::get(enumSide side, enumSquare sq) {
-	return arrAttacks[side][sq];
+inline const std::array<U64, 64>& CSinglePieceAttacks<pT>::operator[](enumSide side) {
+	return arrAttacks[side];
 }
 
 // Init template function for given as a template parameter piece color and pT piece type
@@ -102,12 +103,7 @@ void CSinglePieceAttacks<pT>::Init() {
 	}
 }
 
-
-namespace {
-
-	// attack look-up tables for simple pieces
-	CSinglePieceAttacks<PAWN> cPawnAttacks;
-	CSinglePieceAttacks<KNIGHT> cKnightAttacks;
-	CSinglePieceAttacks<KING> cKingAttacks;
-
-} // namespace
+// declarations of attack look-up tables for simple pieces
+extern CSinglePieceAttacks<PAWN> cPawnAttacks;
+extern CSinglePieceAttacks<KNIGHT> cKnightAttacks;
+extern CSinglePieceAttacks<KING> cKingAttacks;

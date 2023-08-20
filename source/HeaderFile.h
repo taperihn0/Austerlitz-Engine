@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MoveSystem.h"
-#include "BitBoard.h"
 #include "AttackTables.h"
 #include "MagicBitBoards.h"
-#include "BitBoardsSet.h"
+#include "LegalityTest.h"
+#include "MoveGeneration.h"

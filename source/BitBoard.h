@@ -7,7 +7,6 @@
 
 // define bitboard data type 
 using U64 = uint64_t;
-using bit = bool;
 
 // custom U64 bitboard of given intiger
 template <typename T, typename =
@@ -28,19 +27,25 @@ enum enumSquare {
 	a8, b8, c8, d8, e8, f8, g8, h8
 };
 
+// translate index to string variable square
 constexpr std::array<const char*, 64> index_to_square = {
-	"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-	"a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-	"a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-	"a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-	"a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-	"a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-	"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
 	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+	"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+	"a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+	"a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+	"a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+	"a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+	"a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+	"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 };
 
 // enum sides color
-enum enumSide { WHITE, BLACK };
+enum enumSide : bool { WHITE, BLACK };
+
+inline constexpr enumSide operator!(enumSide s) {
+	return static_cast<enumSide>(!static_cast<bool>(s));
+}
+
 
 // general piece enum
 enum enumPiece {
@@ -49,7 +54,8 @@ enum enumPiece {
 	BISHOP,
 	ROOK,
 	QUEEN,
-	KING
+	KING,
+	ANY
 };
 
 // little endian rank-file mapping constants
@@ -83,18 +89,21 @@ namespace {
 	// pre-compile board size
 	constexpr int bSIZE = 8 * 8;
 
-	// LS1B index purpose
-	constexpr std::array<int, 64> index64 = {
-		0, 47,  1, 56, 48, 27,  2, 60,
-		57, 49, 41, 37, 28, 16,  3, 61,
-		54, 58, 35, 52, 50, 42, 21, 44,
-		38, 32, 29, 23, 17, 11,  4, 62,
-		46, 55, 26, 59, 40, 36, 15, 53,
-		34, 51, 20, 43, 31, 22, 10, 45,
-		25, 39, 14, 33, 19, 30,  9, 24,
-		13, 18,  8, 12,  7,  6,  5, 63
-	};
-	constexpr U64 debruijn64 = cU64(0x03f79d71b4cb0a89);
+	// LS1B index finding purpose
+	namespace lsbResource {
+
+		constexpr std::array<int, 64> index64 = {
+			0, 47,  1, 56, 48, 27,  2, 60,
+			57, 49, 41, 37, 28, 16,  3, 61,
+			54, 58, 35, 52, 50, 42, 21, 44,
+			38, 32, 29, 23, 17, 11,  4, 62,
+			46, 55, 26, 59, 40, 36, 15, 53,
+			34, 51, 20, 43, 31, 22, 10, 45,
+			25, 39, 14, 33, 19, 30,  9, 24,
+			13, 18,  8, 12,  7,  6,  5, 63
+		};
+		constexpr U64 debruijn64 = cU64(0x03f79d71b4cb0a89);
+	}
 
 	// display single bitboard function
 	void printBitBoard(U64 bitboard) {
@@ -104,7 +113,7 @@ namespace {
 
 		for (int i = 0; i < 8; i++) {
 			for (int j = 0; j < 8; j++) {
-				std::cout << static_cast<bit>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
+				std::cout << static_cast<bool>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
 
 				if (j == 7) {
 					std::cout << "  " << 8 - i << "\n  ";
@@ -120,7 +129,7 @@ namespace {
 
 	// Population count for magic bitboards 
 	//  - counting bits set to one in a 64-bits number 'x'
-	int bitCount(U64 x) {
+	int bitCount(U64 x) noexcept {
 		int c;
 		for (c = 0; x; x &= x - 1, c++);
 		return c;
@@ -129,18 +138,20 @@ namespace {
 } // namespace
 
 
-inline int getLS1BIndex(U64 bb) {
-	return (bb != 0) ? index64[((bb ^ (bb - 1)) * debruijn64) >> 58] : -1;
+// basic bitboard functions:
+
+inline constexpr int getLS1BIndex(U64 bb) noexcept {
+	return (bb != 0) ? lsbResource::index64[((bb ^ (bb - 1)) * lsbResource::debruijn64) >> 58] : -1;
 }
 
-inline constexpr void popBit(U64& bb, int shift) {
+inline constexpr void popBit(U64& bb, int shift) noexcept {
 	bb &= ~(cU64(1) << shift);
 }
 
-inline constexpr void setBit(U64& bb, int shift) {
+inline constexpr void setBit(U64& bb, int shift) noexcept {
 	bb |= (cU64(1) << shift);
 }
 
-inline constexpr U64 getBit(U64 bb, int shift) {
+inline constexpr U64 getBit(U64 bb, int shift) noexcept {
 	return bb & (cU64(1) << shift);
 }

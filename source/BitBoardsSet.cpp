@@ -1,8 +1,7 @@
 #include "BitBoardsSet.h"
 
-
 BitBoardsSet::BitBoardsSet()
-	: piece_char{'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k'} {
+	: piece_char{'P', 'p', 'N', 'n', 'B', 'b', 'R', 'r', 'Q', 'q', 'K', 'k'} {
 	bbs.fill(eU64);
 }
 
@@ -129,8 +128,6 @@ void BitBoardsSet::parseGState(int i) {
 		case 'q':
 			gState::castle |= 1;
 			break;
-		case '-':
-			break;
 		default:
 			break;
 		}
@@ -160,11 +157,10 @@ void BitBoardsSet::parseGState(int i) {
 void BitBoardsSet::printBoard() {
 	int sq_piece;
 
-	std::string frame = "\t";
+	std::string frame = "\t+";
 	for (int r = 0; r < 8; r++) {
-		frame += "+---";
+		frame += "---+";
 	}
-	frame += '+';
 
 	for (int i = 0; i < 8; i++) {
 		std::cout << '\n' << frame << "\n\t|";
@@ -181,16 +177,18 @@ void BitBoardsSet::printBoard() {
 
 			std::cout << ' ' << (sq_piece != -1 ? piece_char[sq_piece] : ' ') << " |";
 		}
+
+		std::cout << ' ' << (8 - i);
 	}
 
-	std::cout << std::endl << frame << std::endl << std::endl
+	std::cout << std::endl << frame << std::endl
+		<< "\t  a   b   c   d   e   f   g   h" << std::endl << std::endl
 		<< "  FEN Notation: " << fen << std::endl
-		<< "  Castling: ";
+		<< "  Castling rights: ";
 
 	for (int i = 3; i >= 0; i--) {
-		std::cout << (gState::castle & (1 << i));
+		std::cout << ((gState::castle & (1 << i)) >> i);
 	}
 
-	std::cout << std::endl << "  En passant: " << (gState::ep_sq != -1 ? index_to_square[gState::ep_sq] : "-") << std::endl
-		<< "  Fullmove number: " << gState::fullmove << std::endl;
+	std::cout << std::endl;
 }

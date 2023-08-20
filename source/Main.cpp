@@ -1,5 +1,13 @@
 ﻿#include "HeaderFile.h"
 
+// global variables storing universal piece data
+BitBoardsSet BBs;
+
+CSinglePieceAttacks<PAWN> cPawnAttacks;
+CSinglePieceAttacks<KNIGHT> cKnightAttacks;
+CSinglePieceAttacks<KING> cKingAttacks;
+
+
 int main() {
 	/*
 	initMAttacksTables<BISHOP>();
@@ -20,6 +28,12 @@ int main() {
 	printBitBoard(queenAttack(bb, f5));
 	*/
 
-	BitBoardsSet BBs("4k2r/6r1/8/8/8/8/3R4/R3K3 w Qk - 0 1");
+	InitState::initMAttacksTables<ROOK>();
+	InitState::initMAttacksTables<BISHOP>();
+
+	BBs.parseFEN("2r4k/8/8/Q7/3N4/8/8/2K5 w - - 0 1");
 	BBs.printBoard();
+
+	std::cout << std::endl;
+	displayLegalMoves<WHITE>();
 }
