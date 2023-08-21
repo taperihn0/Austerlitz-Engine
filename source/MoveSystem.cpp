@@ -24,23 +24,6 @@ U64 noWeWe(U64 b) { return genShift((b & Constans::not_ab_file), Compass::noWeWe
 U64 soWeWe(U64 b) { return genShift((b & Constans::not_ab_file), Compass::soWeWe); }
 U64 soSoWe(U64 b) { return genShift((b & Constans::not_a_file),  Compass::soSoWe); }
 
-//	PAWN PUSHES functions in bitboard definitions
-U64 wSinglePushPawn(U64 wpawns, U64 empty) {
-	return nortOne(wpawns) & empty;
-}
-
-U64 wDoublePushPawn(U64 wpawns, U64 empty) {
-	return nortOne(wSinglePushPawn(wpawns, empty)) & empty;
-}
-
-U64 bSinglePushPawn(U64 bpawns, U64 empty) {
-	return soutOne(bpawns) & empty;
-}
-
-U64 bDoublePushPawn(U64 bpawns, U64 empty) {
-	return soutOne(bSinglePushPawn(bpawns, empty)) & empty;
-}
-
 //	PAWN ATTACKS functions -
 //	 for white pawns:
 U64 wEastAttackPawn(U64 wpawns, U64 black_occ) {

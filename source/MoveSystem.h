@@ -51,13 +51,43 @@ U64 noNoWe(U64 b);
 U64 noWeWe(U64 b);
 U64 soWeWe(U64 b);
 U64 soSoWe(U64 b);
- 
-//	PAWN PUSHES functions in bitboard
-U64 wSinglePushPawn(U64 wpawns, U64 empty);
-U64 wDoublePushPawn(U64 wpawns, U64 empty);
 
-U64 bSinglePushPawn(U64 bpawns, U64 empty);
-U64 bDoublePushPawn(U64 bpawns, U64 empty);
+
+namespace {
+	
+	// some resources of pawn moving system
+	namespace PawnPushes {
+
+		template <enumSide SIDE>
+		U64 singlePushPawn(U64 pawns, U64 empty);
+
+		template <enumSide SIDE>
+		U64 doublePushPawn(U64 pawns, U64 empty);
+
+		template <>
+		U64 singlePushPawn<WHITE>(U64 pawns, U64 empty) {
+			return nortOne(pawns) & empty;
+		}
+
+		template <>
+		U64 singlePushPawn<BLACK>(U64 pawns, U64 empty) {
+			return soutOne(pawns) & empty;
+		}
+
+		template <>
+		U64 doublePushPawn<WHITE>(U64 pawns, U64 empty) {
+			return nortOne(singlePushPawn<WHITE>(pawns, empty)) & empty;
+		}
+
+		template <>
+		U64 doublePushPawn<BLACK>(U64 pawns, U64 empty) {
+			return soutOne(singlePushPawn<BLACK>(pawns, empty)) & empty;
+		}
+
+	}
+
+}
+
 	
 // PAWN ATTACKS functions - 
 //  for white pawns: 

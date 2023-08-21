@@ -9,7 +9,7 @@
 
 namespace {
 
-	// construct bitboard of set bits between squares excluding them
+	// construct bitboard of set bits between squares excluding that squares
 	// rectangular lookup method
 	constexpr U64 inBetweenConstr(int sq1, int sq2) {
 		U64 res = eU64;
@@ -63,12 +63,13 @@ namespace {
 }
 
 
+// pre-initialization of compile-time
 namespace RectangularLookUp {
 	constexpr auto inBetweenArr = InitState::cexprArr::CArr();
 }
 
 
-// get proper inBetween bitboard element
+// get proper inBetween bitboard element and check for index overflow
 inline U64 inBetween(int sq1, int sq2) {
 	assert(0 <= sq1 and sq1 < 64 and 0 <= sq2 and sq2 < 64 && "Rectangular look-up array index overflow");
 	return RectangularLookUp::inBetweenArr.arr[sq1][sq2];
@@ -77,6 +78,7 @@ inline U64 inBetween(int sq1, int sq2) {
 // check whether king is double checked
 // condition: king_attackers != 0
 inline bool isDoubleChecked(U64 king_attackers) noexcept {
+	assert(king_attackers != eU64 && "Attackers bitboard is empty");
 	return (king_attackers & (king_attackers - 1));
 }
 

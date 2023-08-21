@@ -10,7 +10,7 @@ using a2dTable_t = std::array<std::array<U64, 64>, 2>;
 namespace {
 
 	// pre-generated mask of avaible attacks for pawn on sq square
-	U64 sqMaskPawnAttacks(enumSide side, uint8_t sq) {
+	U64 sqMaskPawnAttacks(enumSide side, int sq) {
 		U64 piece = eU64;
 		setBit(piece, sq);
 
@@ -29,7 +29,7 @@ namespace {
 	}
 
 	// ... for pawn on sq square
-	U64 sqMaskKnightAttacks(enumSide, uint8_t sq) {
+	U64 sqMaskKnightAttacks(enumSide, int sq) {
 		U64 piece = eU64;
 		setBit(piece, sq);
 
@@ -40,7 +40,7 @@ namespace {
 	}
 
 	// ... for king on sq square
-	U64 sqMaskKingAttacks(enumSide, uint8_t sq) {
+	U64 sqMaskKingAttacks(enumSide, int sq) {
 		U64 piece = eU64;
 		setBit(piece, sq);
 
@@ -83,7 +83,7 @@ inline const std::array<U64, 64>& CSinglePieceAttacks<pT>::operator[](enumSide s
 template <enumPiece pT>
 template <enumSide sT>
 void CSinglePieceAttacks<pT>::Init() {
-	std::function<U64(enumSide, uint8_t)> mask;
+	std::function<U64(enumSide, int)> mask;
 
 	switch (pT) {
 	case PAWN:

@@ -70,6 +70,8 @@ namespace Constans {
 		not_ab_file = 0xfcfcfcfcfcfcfcfc,
 		not_gh_file = 0x3f3f3f3f3f3f3f3f,
 		r1_rank = 0x00000000000000FF,
+		r2_rank = 0x000000000000FF00,
+		r7_rank = 0x00FF000000000000,
 		r8_rank = 0xFF00000000000000,
 		not_r1_rank = ~r1_rank,
 		not_r8_rank = ~r8_rank,
