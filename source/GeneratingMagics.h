@@ -3,6 +3,13 @@
 #include "BitBoard.h"
 #include <random>
 
+
+// hash function using magic numbers
+inline int mIndexHash(U64 occ, U64 magic, int relv_bits) {
+	return static_cast<int>((occ * magic) >> (64 - relv_bits));
+}
+
+
 namespace {
 
 	// relevant occupancy mask of bishop for magic bitboards system
@@ -126,11 +133,6 @@ namespace {
 		}
 
 		return attacks;
-	}
-
-	// hash function using magic numbers
-	int mIndexHash(U64 occ, U64 magic, int relv_bits) {
-		return static_cast<int>((occ * magic) >> (64 - relv_bits));
 	}
 
 	// find magic number for given square for rook or bishop via trial and error method

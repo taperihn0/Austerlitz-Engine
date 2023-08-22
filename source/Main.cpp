@@ -9,31 +9,15 @@ CSinglePieceAttacks<KING> cKingAttacks;
 
 
 int main() {
-	/*
-	initMAttacksTables<BISHOP>();
-	initMAttacksTables<ROOK>();
-
-	U64 bb = eU64;
-	setBit(bb, f4);
-	setBit(bb, e4);
-	setBit(bb, a2);
-	setBit(bb, g7);
-	setBit(bb, g6);
-	setBit(bb, g5);
-	setBit(bb, d4);
-	setBit(bb, c2);
-	setBit(bb, e6);
-
-	printBitBoard(bb);
-	printBitBoard(queenAttack(bb, f5));
-	*/
-
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
 
-	BBs.parseFEN("2r4k/8/8/Q7/3N4/8/8/2K5 w - - 0 1");
+	BBs.parseFEN("3r4/3q3b/8/5P2/3NN3/3KP3/8/8 w - - 0 1");
 	BBs.printBoard();
 
 	std::cout << std::endl;
 	displayLegalMoves<WHITE>();
+
+	//printBitBoard(pinnedPiece<WHITE>(getLS1BIndex(BBs[nWhiteKing])));
+	//printBitBoard(xRayRookAttack(BBs[nOccupied], BBs[nWhite], getLS1BIndex(BBs[nWhiteKing])));
 }

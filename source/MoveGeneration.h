@@ -3,23 +3,36 @@
 #include "LegalityTest.h"
 #include "MoveSystem.h"
 
+
+namespace {
+	namespace pinData {
+		// cache table to store inbetween paths of king and his x-ray attackers
+		// for pinned pieces, since such pinned piece can only move through their inbetween path
+		std::array<U64, 64> inbetween_blockers;
+		U64 pinned;
+	}
+}
+
+
 // whole displaying legal moves systems namespace
 namespace displays {
 	
 	namespace dResources {
 
 		// class template for displaying legal moves of specific piece of given color
+		// condition: functions assume there is no check on the board but support pin system
 		template <enumPiece PC, enumSide SIDE>
 		class displayerLegalMoves {
 		public:
-			void operator()(U64 pinned) = delete;
+			void operator()() = delete;
 		};
 
+		// displayer class for legal king moves
 		template <enumSide SIDE>
 		class displayerLegalMoves<KING, SIDE> {
 		public:
 			// check king's surrounding squares and display safe moves for king
-			void operator()(U64) {
+			void operator()() {
 				int sq, king_sq = getLS1BIndex(BBs[nWhiteKing + SIDE]);
 				U64 king_move = cKingAttacks[SIDE][king_sq];
 
@@ -37,45 +50,74 @@ namespace displays {
 				}
 			}
 		};
-
+		
+		// ... legal pawn moves
 		template <enumSide SIDE>
 		class displayerLegalMoves<PAWN, SIDE> {
 		public:
-			void operator()(U64 pinned) {
+			void operator()() {
+
+				// calculate offset for 'old' squares
+				const int double_offset = 8 * (2 - (SIDE == WHITE) * 4),
+					single_offset = 8 * (1 - (SIDE == WHITE) * 2);
 
 				// double pawn pushes
-				const U64 double_push_pawns = BBs[nWhitePawn + SIDE] &
-					(((SIDE == WHITE) * Constans::r2_rank) | ((SIDE == BLACK) * Constans::r7_rank)) & ~pinned;
-				U64 after_double_push = PawnPushes::doublePushPawn<SIDE>(double_push_pawns, BBs[nEmpty]);
-				int after_sq, offset = 8 * (2 - (SIDE == WHITE) * 4);
+				U64 double_push_pawns = BBs[nWhitePawn + SIDE] &
+					(((SIDE == WHITE) * Constans::r2_rank) | ((SIDE == BLACK) * Constans::r7_rank));
+				U64 after_double_push = PawnPushes::doublePushPawn<SIDE>(double_push_pawns & ~pinData::pinned, BBs[nEmpty]);
+				int after_sq;
 
 				while (after_double_push) {
 					after_sq = getLS1BIndex(after_double_push);
-					std::cout << index_to_square[after_sq + offset] << index_to_square[after_sq] << ',';
+					std::cout << index_to_square[after_sq + double_offset] << index_to_square[after_sq] << ',';
+					after_double_push &= after_double_push - 1;
+				}
+				
+				// single pawn pushes
+				U64 after_push = PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & ~pinData::pinned, BBs[nEmpty]);
+
+				while (after_push) {
+					after_sq = getLS1BIndex(after_push);
+					std::cout << index_to_square[after_sq + single_offset] << index_to_square[after_sq] << ',';
+					after_push &= after_push - 1;
+				}
+
+				// double pushes for pinned pawns
+				double_push_pawns = double_push_pawns & pinData::pinned;
+				after_double_push = PawnPushes::doublePushPawn<SIDE>(double_push_pawns, BBs[nEmpty]);
+
+				while (after_double_push) {
+					after_sq = getLS1BIndex(after_double_push);
+					if (bitU64(after_sq) & pinData::inbetween_blockers[after_sq + double_offset]) 
+						std::cout << index_to_square[after_sq + double_offset] << index_to_square[after_sq] << ',';
 					after_double_push &= after_double_push - 1;
 				}
 
-				// single pawn pushes
-				U64 after_push = PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & ~pinned, BBs[nEmpty]);
-				offset = 8 * (1 - (SIDE == WHITE) * 2);
+				// single pushes for pinned pawns
+				after_push = PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & pinData::pinned, BBs[nEmpty]);
 
 				while (after_push) {
-					after_sq = getLS1BIndex(after_double_push);
-					std::cout << index_to_square[after_sq + offset] << index_to_square[after_sq] << ',';
+					after_sq = getLS1BIndex(after_push);
+					if (bitU64(after_sq) & pinData::inbetween_blockers[after_sq + single_offset])
+						std::cout << index_to_square[after_sq + single_offset] << index_to_square[after_sq] << ',';
 					after_push &= after_push - 1;
 				}
 			}
 		};
 
+		// ... legal knight moves
 		template <enumSide SIDE>
 		class displayerLegalMoves<KNIGHT, SIDE> {
 		public:
-			void operator()(U64 pinned) {
-				U64 knights = BBs[nWhiteKnight + SIDE] & ~pinned,
+			void operator()() {
+				
+				// exclude pinned knights directly, since pinned knight can move
+				U64 knights = BBs[nWhiteKnight + SIDE] & ~pinData::pinned,
 					attacks;
 				int sq;
 
 				// for every knight position loop through his attack squares
+				// check whether attacked square is empty or occupied by opponent piece
 				while (knights) {
 					sq = getLS1BIndex(knights);
 					attacks = cKnightAttacks[SIDE][sq] & ~BBs[nWhite + SIDE];
@@ -94,11 +136,12 @@ namespace displays {
 
 	// general function template called every time to display legal moves of proper piece
 	template <enumPiece PC, enumSide SIDE>
-	void displayLegalMoves(U64 pinned) {
-		dResources::displayerLegalMoves<PC, SIDE>()(pinned);
+	void displayLegalMoves() {
+		dResources::displayerLegalMoves<PC, SIDE>()();
 	}
 
 }
+
 
 // displays only legal moves of given player
 template <enumSide SIDE>
@@ -107,15 +150,16 @@ void displayLegalMoves() {
 	const U64 king_attackers = attackTo<SIDE>(king_sq);
 	const bool is_check = king_attackers;
 
-	std::cout << "Possible moves: ";
+	std::cout << "Possible moves:  " << std::endl;
 
 	// double check case - only king moves to non-attacked squares are permitted
 	if (is_check and isDoubleChecked(king_attackers)) {
-		displays::displayLegalMoves<KING, SIDE>(eU64);
+		displays::displayLegalMoves<KING, SIDE>();
 		return;
 	}
 
-	const U64 pinned = pinnedPiece<SIDE>(king_sq);
+	pinData::pinned = pinnedPiece<SIDE>(king_sq);
+	const int attacker_sq = getLS1BIndex(king_attackers);
 
 	// single check case - 
 	// 1) move king to non-attacked squares,
@@ -124,12 +168,11 @@ void displayLegalMoves() {
 	//    only if checking piece is sliding piece
 	if (is_check) {
 		// 1*
-		displays::displayLegalMoves<KING, SIDE>(eU64);
+		displays::displayLegalMoves<KING, SIDE>();
 			
 		// 2* - there is only one attacker in such case
-		const int attacker_sq = getLS1BIndex(king_attackers);
-			// exclude pinned pieces
-		U64 own_capture = attackTo<!SIDE>(attacker_sq) & ~pinned;
+		// exclude pinned pieces
+		U64 own_capture = attackTo<!SIDE>(attacker_sq) & ~pinData::pinned;
 
 		while (own_capture) {
 			std::cout << index_to_square[getLS1BIndex(own_capture)] << index_to_square[attacker_sq] << ',';
@@ -141,7 +184,7 @@ void displayLegalMoves() {
 			or (king_attackers & BBs[nBlackKnight - SIDE])) {
 			return;
 		}
-
+		
 		U64 block_squares = inBetween(attacker_sq, king_sq),
 			blockers;
 		int block_sq;
@@ -150,7 +193,7 @@ void displayLegalMoves() {
 			block_sq = getLS1BIndex(block_squares);
 			// search for blockers for given square, skip king blocks since 
 			// king can't be a blocker piece
-			blockers = attackTo<!SIDE, KING>(block_sq) & ~pinned;
+			blockers = attackTo<!SIDE, KING>(block_sq) & ~pinData::pinned;
 
 			while (blockers) {
 				std::cout << index_to_square[getLS1BIndex(blockers)] << index_to_square[block_sq] << ',';
@@ -164,6 +207,22 @@ void displayLegalMoves() {
 	}
 
 	// not in check scenario -
-	displays::displayLegalMoves<PAWN, SIDE>(pinned);
-	displays::displayLegalMoves<KNIGHT, SIDE>(pinned);
+	int pinner_sq;
+	U64 ray,
+		pinners = pinnersPiece<SIDE>(king_sq);
+
+	// use bit index as an access index for inbetween cache
+	while (pinners) {
+		pinner_sq = getLS1BIndex(pinners);
+		ray = inBetween(king_sq, pinner_sq);
+		pinData::inbetween_blockers[getLS1BIndex(ray & pinData::pinned)] = ray;
+		pinners &= pinners - 1;
+	}
+
+	// display legal move beyond check of pieces above:
+	displays::displayLegalMoves<KING, SIDE>();
+	displays::displayLegalMoves<PAWN, SIDE>();
+	displays::displayLegalMoves<KNIGHT, SIDE>();
+	
+	// bishop, rook and queen left
 }

@@ -11,9 +11,17 @@ using U64 = uint64_t;
 // custom U64 bitboard of given intiger
 template <typename T, typename =
 	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
-inline constexpr U64 cU64(T&& s) {
-	return static_cast<U64>(std::forward<T>(s));
+constexpr auto cU64(T s) {
+	return static_cast<U64>(s);
 }
+
+// set single bit on a bitboard and return such result
+template <typename T, typename =
+	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
+constexpr auto bitU64(T s) {
+	return static_cast<U64>(cU64(1) << s);
+}
+
 
 // enum indexes for little endian rank-file mapping
 enum enumSquare {

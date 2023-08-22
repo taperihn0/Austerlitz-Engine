@@ -45,8 +45,7 @@ namespace {
 
 			struct CArr {
 				constexpr CArr()
-					: arr{}
-				{
+					: arr{} {
 					for (int i = 0; i < 64; i++) {
 						for (int j = 0; j < 64; j++) {
 							arr[i][j] = inBetweenConstr(i, j);
@@ -156,8 +155,8 @@ U64 attackTo(int sq) {
 template <enumSide SIDE>
 U64 pinnedPiece(int own_king_sq) {
 	U64 own_side_occ = BBs[nWhite + SIDE],
-		opRookQueen = BBs[nWhiteRook + SIDE] | BBs[nWhiteRook + SIDE],
-		opBishopQueen = BBs[nWhiteBishop + SIDE] | BBs[nWhiteRook + SIDE],
+		opRookQueen = BBs[nBlackRook - SIDE] | BBs[nBlackQueen - SIDE],
+		opBishopQueen = BBs[nBlackBishop - SIDE] | BBs[nBlackQueen - SIDE],
 		pinner = opRookQueen & xRayRookAttack(BBs[nOccupied], own_side_occ, own_king_sq),
 		pinned = eU64;
 
@@ -179,4 +178,15 @@ U64 pinnedPiece(int own_king_sq) {
 	}
 
 	return pinned;
+}
+
+// return bitboard of pinners pieces of given color
+template <enumSide SIDE>
+U64 pinnersPiece(int own_king_sq) {
+	U64 own_side_occ = BBs[nWhite + SIDE],
+		opRookQueen = BBs[nBlackRook - SIDE] | BBs[nBlackRook - SIDE],
+		opBishopQueen = BBs[nBlackBishop - SIDE] | BBs[nBlackRook - SIDE];
+
+	return (opRookQueen & xRayRookAttack(BBs[nOccupied], own_side_occ, own_king_sq)) &
+		(opBishopQueen & xRayBishopAttack(BBs[nOccupied], own_side_occ, own_king_sq));
 }
