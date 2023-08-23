@@ -59,7 +59,7 @@ namespace {
 		}
 	}
 
-}
+} // namespace
 
 
 // pre-initialization of compile-time
@@ -75,7 +75,6 @@ inline U64 inBetween(int sq1, int sq2) {
 }
 
 // check whether king is double checked
-// condition: king_attackers != 0
 inline bool isDoubleChecked(U64 king_attackers) noexcept {
 	assert(king_attackers != eU64 && "Attackers bitboard is empty");
 	return (king_attackers & (king_attackers - 1));
@@ -85,9 +84,9 @@ inline bool isDoubleChecked(U64 king_attackers) noexcept {
 namespace {
 
 	U64 xRayBishopAttack(U64 occ, U64 blockers, int sq) {
-		U64 default_attacks = rookAttack(occ, sq);
+		U64 default_attacks = bishopAttack(occ, sq);
 		blockers &= default_attacks;
-		return default_attacks ^ rookAttack(occ ^ blockers, sq);
+		return default_attacks ^ bishopAttack(occ ^ blockers, sq);
 	}
 
 	U64 xRayRookAttack(U64 occ, U64 blockers, int sq) {
@@ -184,8 +183,8 @@ U64 pinnedPiece(int own_king_sq) {
 template <enumSide SIDE>
 U64 pinnersPiece(int own_king_sq) {
 	U64 own_side_occ = BBs[nWhite + SIDE],
-		opRookQueen = BBs[nBlackRook - SIDE] | BBs[nBlackRook - SIDE],
-		opBishopQueen = BBs[nBlackBishop - SIDE] | BBs[nBlackRook - SIDE];
+		opRookQueen = BBs[nBlackRook - SIDE] | BBs[nBlackQueen - SIDE],
+		opBishopQueen = BBs[nBlackBishop - SIDE] | BBs[nBlackQueen - SIDE];
 
 	return (opRookQueen & xRayRookAttack(BBs[nOccupied], own_side_occ, own_king_sq)) &
 		(opBishopQueen & xRayBishopAttack(BBs[nOccupied], own_side_occ, own_king_sq));

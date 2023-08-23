@@ -86,7 +86,7 @@ namespace {
 
 	}
 
-}
+} // namespace
 
 	
 // PAWN ATTACKS functions - 

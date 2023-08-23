@@ -12,12 +12,12 @@ int main() {
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
 
-	BBs.parseFEN("3r4/3q3b/8/5P2/3NN3/3KP3/8/8 w - - 0 1");
+	BBs.parseFEN("8/8/2pk4/2bqr3/8/6B1/2R4K/3Q4 w - - 0 1");
 	BBs.printBoard();
 
 	std::cout << std::endl;
-	displayLegalMoves<WHITE>();
+	displayLegalMoves<BLACK>();
 
-	//printBitBoard(pinnedPiece<WHITE>(getLS1BIndex(BBs[nWhiteKing])));
+	//printBitBoard(xRayBishopAttack(BBs[nOccupied], BBs[nBlack], getLS1BIndex(BBs[nBlackKing])));
 	//printBitBoard(xRayRookAttack(BBs[nOccupied], BBs[nWhite], getLS1BIndex(BBs[nWhiteKing])));
 }

@@ -24,8 +24,44 @@ namespace displays {
 		template <enumPiece PC, enumSide SIDE>
 		class displayerLegalMoves {
 		public:
-			void operator()() = delete;
+			// common move displayer for sliding pieces
+			void operator()() {
+			
+				// unpinned pieces
+				U64 pieces = BBs[pieceToPieceIndex<PC>() + SIDE] & ~pinData::pinned,
+					attacks;
+				int sq;
+
+				while (pieces) {
+					sq = getLS1BIndex(pieces);
+					attacks = attack<PC>(BBs[nOccupied], sq) & ~BBs[nWhite + SIDE];
+
+					while (attacks) {
+						std::cout << index_to_square[sq] << index_to_square[getLS1BIndex(attacks)] << ',';
+						attacks &= attacks - 1;
+					}
+
+					pieces &= pieces - 1;
+				}
+
+				// pinned pieces
+				pieces = BBs[pieceToPieceIndex<PC>() + SIDE] & pinData::pinned;
+
+				while (pieces) {
+					sq = getLS1BIndex(pieces);
+					attacks = (attack<PC>(BBs[nOccupied], sq) & ~BBs[nWhite + SIDE]) & pinData::inbetween_blockers[sq];
+
+					while (attacks) {
+						std::cout << index_to_square[sq] << index_to_square[getLS1BIndex(attacks)] << ',';
+						attacks &= attacks - 1;
+					}
+
+					pieces &= pieces - 1;
+				}
+			}
 		};
+
+		// manualy defined displayers for leaper pieces:
 
 		// displayer class for legal king moves
 		template <enumSide SIDE>
@@ -34,7 +70,7 @@ namespace displays {
 			// check king's surrounding squares and display safe moves for king
 			void operator()() {
 				int sq, king_sq = getLS1BIndex(BBs[nWhiteKing + SIDE]);
-				U64 king_move = cKingAttacks[SIDE][king_sq];
+				U64 king_move = cKingAttacks[SIDE][king_sq] & ~BBs[nWhite + SIDE];
 
 				// loop throught all king possible moves
 				while (king_move) {
@@ -131,7 +167,6 @@ namespace displays {
 				}
 			}
 		};
-
 	}
 
 	// general function template called every time to display legal moves of proper piece
@@ -140,7 +175,7 @@ namespace displays {
 		dResources::displayerLegalMoves<PC, SIDE>()();
 	}
 
-}
+} // namespace displays
 
 
 // displays only legal moves of given player
@@ -214,15 +249,18 @@ void displayLegalMoves() {
 	// use bit index as an access index for inbetween cache
 	while (pinners) {
 		pinner_sq = getLS1BIndex(pinners);
-		ray = inBetween(king_sq, pinner_sq);
+		ray = inBetween(king_sq, pinner_sq) | bitU64(pinner_sq);
 		pinData::inbetween_blockers[getLS1BIndex(ray & pinData::pinned)] = ray;
 		pinners &= pinners - 1;
 	}
 
-	// display legal move beyond check of pieces above:
+	// display legal move beyond check of leaper pieces:
 	displays::displayLegalMoves<KING, SIDE>();
 	displays::displayLegalMoves<PAWN, SIDE>();
 	displays::displayLegalMoves<KNIGHT, SIDE>();
 	
-	// bishop, rook and queen left
+	// sliding pieces left
+	displays::displayLegalMoves<BISHOP, SIDE>();
+	displays::displayLegalMoves<ROOK, SIDE>();
+	displays::displayLegalMoves<QUEEN, SIDE>();
 }

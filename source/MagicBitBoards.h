@@ -400,6 +400,7 @@ void printRelevantBits() {
     std::cout << "};" << std::endl;
 }
 
+// functions for generating sliding pieces attacks using pre-generated magic bitboards
 
 inline U64 bishopAttack(U64 occ, int sq) {
     return mTabs::mBishopAtt[sq][mIndexHash(occ & mTabs::rBishop[sq], mTabs::mBishop[sq], mTabs::rbBishop[sq])];
@@ -411,4 +412,24 @@ inline U64 rookAttack(U64 occ, int sq) {
 
 inline U64 queenAttack(U64 occ, int sq) {
     return bishopAttack(occ, sq) | rookAttack(occ, sq);
+}
+
+// handy templates of same purpose as functions above
+
+template <enumPiece PC>
+U64 attack(U64 occ, int sq);
+
+template <>
+U64 attack<BISHOP>(U64 occ, int sq) {
+    return bishopAttack(occ, sq);
+}
+
+template <>
+U64 attack<ROOK>(U64 occ, int sq) {
+    return rookAttack(occ, sq);
+}
+
+template <>
+U64 attack<QUEEN>(U64 occ, int sq) {
+    return queenAttack(occ, sq);
 }
