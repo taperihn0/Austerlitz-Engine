@@ -6,7 +6,7 @@
 namespace gState {
 	namespace {
 		int ep_sq;
-		bool turn;
+		enumSide turn;
 		int castle, halfmove, fullmove;
 	}
 }

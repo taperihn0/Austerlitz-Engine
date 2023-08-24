@@ -76,8 +76,7 @@ inline U64 inBetween(int sq1, int sq2) {
 
 // check whether king is double checked
 inline bool isDoubleChecked(U64 king_attackers) noexcept {
-	assert(king_attackers != eU64 && "Attackers bitboard is empty");
-	return (king_attackers & (king_attackers - 1));
+	return king_attackers ? (king_attackers & (king_attackers - 1)) : false;
 }
 
 

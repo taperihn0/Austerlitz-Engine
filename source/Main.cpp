@@ -16,7 +16,7 @@ int main() {
 	BBs.printBoard();
 
 	std::cout << std::endl;
-	displayLegalMoves<BLACK>();
+	//displayLegalMoves<BLACK>();
 
 	//printBitBoard(xRayBishopAttack(BBs[nOccupied], BBs[nBlack], getLS1BIndex(BBs[nBlackKing])));
 	//printBitBoard(xRayRookAttack(BBs[nOccupied], BBs[nWhite], getLS1BIndex(BBs[nWhiteKing])));

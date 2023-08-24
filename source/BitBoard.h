@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iostream>
 #include <array>
+#include <cassert>
 
 // define bitboard data type 
 using U64 = uint64_t;
@@ -151,7 +152,15 @@ namespace {
 // basic bitboard functions:
 
 inline constexpr int getLS1BIndex(U64 bb) noexcept {
-	return (bb != 0) ? lsbResource::index64[((bb ^ (bb - 1)) * lsbResource::debruijn64) >> 58] : -1;
+	assert(bb != eU64);
+	return lsbResource::index64[((bb ^ (bb - 1)) * lsbResource::debruijn64) >> 58];
+}
+
+inline constexpr int popLS1B(U64 bb) noexcept {
+	assert(bb != eU64);
+	int res = getLS1BIndex(bb);
+	bb &= bb - 1;
+	return res;
 }
 
 inline constexpr void popBit(U64& bb, int shift) noexcept {

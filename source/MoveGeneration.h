@@ -14,253 +14,249 @@ namespace {
 }
 
 
-// whole displaying legal moves systems namespace
-namespace displays {
-	
-	namespace dResources {
+/* move list resources -
+ * move item consists of:
+ * 0000 0000 0000 0011 1111 origin square   - 6 bits (0..63)
+ * 0000 0000 1111 1100 0000 target square   - 6 bits (0..63)
+ * 0000 0111 0000 0000 0000 promoted piece  - 3 bits (0..5)
+ * 0000 1000 0000 0000 0000 double push flag - 1 bit
+ * 0001 0000 0000 0000 0000 capture flag     - 1 bit
+ * 0010 0000 0000 0000 0000 en passant flag  - 1 bit
+ * 0100 0000 0000 0000 0000 castle flag      - 1 bit
+ *						    19 bits of total:
+ *						    uint32_t is enought for storing move data
+ */
 
-		// class template for displaying legal moves of specific piece of given color
-		// condition: functions assume there is no check on the board but support pin system
-		template <enumPiece PC, enumSide SIDE>
-		class displayerLegalMoves {
-		public:
-			// common move displayer for sliding pieces
-			void operator()() {
-			
-				// unpinned pieces
-				U64 pieces = BBs[pieceToPieceIndex<PC>() + SIDE] & ~pinData::pinned,
-					attacks;
-				int sq;
 
-				while (pieces) {
-					sq = getLS1BIndex(pieces);
-					attacks = attack<PC>(BBs[nOccupied], sq) & ~BBs[nWhite + SIDE];
+namespace {
+	namespace MoveItem {
 
-					while (attacks) {
-						std::cout << index_to_square[sq] << index_to_square[getLS1BIndex(attacks)] << ',';
-						attacks &= attacks - 1;
-					}
-
-					pieces &= pieces - 1;
-				}
-
-				// pinned pieces
-				pieces = BBs[pieceToPieceIndex<PC>() + SIDE] & pinData::pinned;
-
-				while (pieces) {
-					sq = getLS1BIndex(pieces);
-					attacks = (attack<PC>(BBs[nOccupied], sq) & ~BBs[nWhite + SIDE]) & pinData::inbetween_blockers[sq];
-
-					while (attacks) {
-						std::cout << index_to_square[sq] << index_to_square[getLS1BIndex(attacks)] << ',';
-						attacks &= attacks - 1;
-					}
-
-					pieces &= pieces - 1;
-				}
-			}
+		// masks for extracting relevant bits from 32-bit int data
+		enum iMask {
+			ORIGIN = 0x3F,
+			TARGET = 0xFC0,
+			PROMOTED = 0x7000,
+			DOUBLE_PUSH_F = 0x8000,
+			CAPTURE_F = 0x10000,
+			EN_PASSANT_F = 0x20000,
+			CASTLE_F = 0x40000
 		};
 
-		// manualy defined displayers for leaper pieces:
-
-		// displayer class for legal king moves
-		template <enumSide SIDE>
-		class displayerLegalMoves<KING, SIDE> {
+		class iMove {
 		public:
-			// check king's surrounding squares and display safe moves for king
-			void operator()() {
-				int sq, king_sq = getLS1BIndex(BBs[nWhiteKing + SIDE]);
-				U64 king_move = cKingAttacks[SIDE][king_sq] & ~BBs[nWhite + SIDE];
-
-				// loop throught all king possible moves
-				while (king_move) {
-					sq = getLS1BIndex(king_move);
-
-					// unattacked position after move
-					if (!isSquareAttacked<SIDE, KING>(sq)) {
-						std::cout << index_to_square[king_sq] << index_to_square[sq] << ',';
-					}
-
-					// pop least significant bit
-					king_move &= king_move - 1;
-				}
+			inline void operator=(uint32_t data) {
+				cmove = data;
 			}
-		};
-		
-		// ... legal pawn moves
-		template <enumSide SIDE>
-		class displayerLegalMoves<PAWN, SIDE> {
-		public:
-			void operator()() {
 
-				// calculate offset for 'old' squares
-				const int double_offset = 8 * (2 - (SIDE == WHITE) * 4),
-					single_offset = 8 * (1 - (SIDE == WHITE) * 2);
-
-				// double pawn pushes
-				U64 double_push_pawns = BBs[nWhitePawn + SIDE] &
-					(((SIDE == WHITE) * Constans::r2_rank) | ((SIDE == BLACK) * Constans::r7_rank));
-				U64 after_double_push = PawnPushes::doublePushPawn<SIDE>(double_push_pawns & ~pinData::pinned, BBs[nEmpty]);
-				int after_sq;
-
-				while (after_double_push) {
-					after_sq = getLS1BIndex(after_double_push);
-					std::cout << index_to_square[after_sq + double_offset] << index_to_square[after_sq] << ',';
-					after_double_push &= after_double_push - 1;
-				}
-				
-				// single pawn pushes
-				U64 after_push = PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & ~pinData::pinned, BBs[nEmpty]);
-
-				while (after_push) {
-					after_sq = getLS1BIndex(after_push);
-					std::cout << index_to_square[after_sq + single_offset] << index_to_square[after_sq] << ',';
-					after_push &= after_push - 1;
-				}
-
-				// double pushes for pinned pawns
-				double_push_pawns = double_push_pawns & pinData::pinned;
-				after_double_push = PawnPushes::doublePushPawn<SIDE>(double_push_pawns, BBs[nEmpty]);
-
-				while (after_double_push) {
-					after_sq = getLS1BIndex(after_double_push);
-					if (bitU64(after_sq) & pinData::inbetween_blockers[after_sq + double_offset]) 
-						std::cout << index_to_square[after_sq + double_offset] << index_to_square[after_sq] << ',';
-					after_double_push &= after_double_push - 1;
-				}
-
-				// single pushes for pinned pawns
-				after_push = PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & pinData::pinned, BBs[nEmpty]);
-
-				while (after_push) {
-					after_sq = getLS1BIndex(after_push);
-					if (bitU64(after_sq) & pinData::inbetween_blockers[after_sq + single_offset])
-						std::cout << index_to_square[after_sq + single_offset] << index_to_square[after_sq] << ',';
-					after_push &= after_push - 1;
-				}
+			template <iMask MASK>
+			static inline uint32_t getMask() {
+				return (cmove & MASK);
 			}
+		private:
+			uint32_t cmove;
 		};
 
-		// ... legal knight moves
-		template <enumSide SIDE>
-		class displayerLegalMoves<KNIGHT, SIDE> {
-		public:
-			void operator()() {
-				
-				// exclude pinned knights directly, since pinned knight can move
-				U64 knights = BBs[nWhiteKnight + SIDE] & ~pinData::pinned,
-					attacks;
-				int sq;
+		// encoding and decoding a move helper functions:
+		inline uint32_t encodeQuietCapture(int origin, int target, bool capture) {
+			return (capture << 16) | (target << 6) | origin;
+		}
 
-				// for every knight position loop through his attack squares
-				// check whether attacked square is empty or occupied by opponent piece
-				while (knights) {
-					sq = getLS1BIndex(knights);
-					attacks = cKnightAttacks[SIDE][sq] & ~BBs[nWhite + SIDE];
-
-					while (attacks) {
-						std::cout << index_to_square[sq] << index_to_square[getLS1BIndex(attacks)] << ',';
-						attacks &= attacks - 1;
-					}
-
-					knights &= knights - 1;
-				}
-			}
-		};
+		inline uint32_t encodeQuiet(int origin, int target) {
+			return (target << 6) | origin;
+		}
 	}
 
-	// general function template called every time to display legal moves of proper piece
-	template <enumPiece PC, enumSide SIDE>
-	void displayLegalMoves() {
-		dResources::displayerLegalMoves<PC, SIDE>()();
+
+	namespace MoveList {
+
+		// maximum possible playable moves 
+		constexpr int MAX_PLAY_MOVES = 256;
+
+		// main move list storage array of directly defined size
+		std::array<MoveItem::iMove, MAX_PLAY_MOVES> move_list;
+
+		// count of generated moves
+		int count;
 	}
+} // namespace
 
-} // namespace displays
+
+// generator functions based on PINNED piece flag -
+// excluded pieces template parameters don't meet conditions of these functions.
+
+template <enumPiece PC, enumSide SIDE, class =
+	std::enable_if<PC != PAWN and PC != KING>>
+void unPinnedGenerate(U64 legal_blocks) {
+
+	// unpinned pieces only
+	U64 pieces = BBs[pieceToPieceIndex<PC>() + SIDE] & ~pinData::pinned,
+		attacks;
+	int origin, target;
+
+	while (pieces) {
+		origin = popLS1B(pieces);
+		attacks = (attack<PC>(BBs[nOccupied], origin) & ~BBs[nWhite + SIDE])
+			& legal_blocks;
+
+		while (attacks) {
+			target = popLS1B(attacks);
+			MoveList::move_list[MoveList::count++] = 
+				MoveItem::encodeQuietCapture(origin, target, bitU64(target) & BBs[nBlack - SIDE]);
+		}
+	}
+}
+
+template <enumPiece PC, enumSide SIDE, class =
+	std::enable_if<PC != PAWN and PC != KING and PC != KNIGHT>>
+void pinnedGenerate() {
+
+	// pinned pieces only
+	U64 pieces = BBs[pieceToPieceIndex<PC>() + SIDE] & pinData::pinned,
+		attacks;
+	int origin, target;
+
+	while (pieces) {
+		origin = popLS1B(pieces);
+		attacks = (attack<PC>(BBs[nOccupied], origin) & ~BBs[nWhite + SIDE]) 
+			& pinData::inbetween_blockers[origin];
+
+		while (attacks) {
+			target = popLS1B(attacks);
+			MoveList::move_list[MoveList::count++] = 
+				MoveItem::encodeQuietCapture(origin, target, bitU64(target) & BBs[nBlack - SIDE]);
+		}
+	}
+}
 
 
-// displays only legal moves of given player
+// common moves generator for sliding pieces
+template <enumPiece PC, enumSide SIDE>
+void generateOf(U64 legal_blocks) {
+	unPinnedGenerate<PC, SIDE>(legal_blocks);
+	pinnedGenerate  <PC, SIDE>();
+}
+
+
+// pawn legal moves generator function:
+// assuming there is no check
 template <enumSide SIDE>
-void displayLegalMoves() {
-	const int king_sq = getLS1BIndex(BBs[nWhiteKing + SIDE]);
-	const U64 king_attackers = attackTo<SIDE>(king_sq);
-	const bool is_check = king_attackers;
+void nGenerateOfPawns() {
 
-	std::cout << "Possible moves:  " << std::endl;
+	// calculate offset for origin squares
+	constexpr int single_off = SIDE == WHITE ? Compass::sout : Compass::nort,
+		double_off = single_off * 2;
 
-	// double check case - only king moves to non-attacked squares are permitted
-	if (is_check and isDoubleChecked(king_attackers)) {
-		displays::displayLegalMoves<KING, SIDE>();
-		return;
-	}
-
-	pinData::pinned = pinnedPiece<SIDE>(king_sq);
-	const int attacker_sq = getLS1BIndex(king_attackers);
-
-	// single check case - 
-	// 1) move king to non-attacked squares,
-	// 2) capture checking piece by unpinned piece or
-	// 3) block check by moving unpinned piece, except king of course
-	//    only if checking piece is sliding piece
-	if (is_check) {
-		// 1*
-		displays::displayLegalMoves<KING, SIDE>();
-			
-		// 2* - there is only one attacker in such case
-		// exclude pinned pieces
-		U64 own_capture = attackTo<!SIDE>(attacker_sq) & ~pinData::pinned;
-
-		while (own_capture) {
-			std::cout << index_to_square[getLS1BIndex(own_capture)] << index_to_square[attacker_sq] << ',';
-			own_capture &= own_capture - 1;
-		}
-			
-		// 3* - check for sliding piece attacker and if so, continue checking
-		if ((king_attackers & BBs[nBlackPawn - SIDE])
-			or (king_attackers & BBs[nBlackKnight - SIDE])) {
-			return;
-		}
-		
-		U64 block_squares = inBetween(attacker_sq, king_sq),
-			blockers;
-		int block_sq;
-
-		while (block_squares) {
-			block_sq = getLS1BIndex(block_squares);
-			// search for blockers for given square, skip king blocks since 
-			// king can't be a blocker piece
-			blockers = attackTo<!SIDE, KING>(block_sq) & ~pinData::pinned;
-
-			while (blockers) {
-				std::cout << index_to_square[getLS1BIndex(blockers)] << index_to_square[block_sq] << ',';
-				blockers &= blockers - 1;
-			}
-
-			block_squares &= block_squares - 1;
-		}
-			
-		return;
-	}
-
-	// not in check scenario -
-	int pinner_sq;
-	U64 ray,
-		pinners = pinnersPiece<SIDE>(king_sq);
-
-	// use bit index as an access index for inbetween cache
-	while (pinners) {
-		pinner_sq = getLS1BIndex(pinners);
-		ray = inBetween(king_sq, pinner_sq) | bitU64(pinner_sq);
-		pinData::inbetween_blockers[getLS1BIndex(ray & pinData::pinned)] = ray;
-		pinners &= pinners - 1;
-	}
-
-	// display legal move beyond check of leaper pieces:
-	displays::displayLegalMoves<KING, SIDE>();
-	displays::displayLegalMoves<PAWN, SIDE>();
-	displays::displayLegalMoves<KNIGHT, SIDE>();
+	// single and double pawn pushes except pinned pawns
+	U64 push[2] = {
+		PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & ~pinData::pinned, BBs[nEmpty]),
+	};
 	
-	// sliding pieces left
-	displays::displayLegalMoves<BISHOP, SIDE>();
-	displays::displayLegalMoves<ROOK, SIDE>();
-	displays::displayLegalMoves<QUEEN, SIDE>();
+	push[1] = PawnPushes::singlePushPawn<SIDE>(push[0], BBs[nEmpty]);
+
+	int target;
+
+	for (int i = 0; i < 2; i++) {
+		while (push[i]) {
+			target = popLS1B(push[i]);
+			MoveList::move_list[MoveList::count++] = 
+				MoveItem::encodeQuiet(target + single_off, target);
+		}
+	}
+
+	// pinned pawn pushes
+	push[0] = 
+		PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & pinData::pinned, BBs[nEmpty]);
+	push[1] =
+		PawnPushes::singlePushPawn<SIDE>(push[0], BBs[nEmpty]);
+
+	for (int i = 0; i < 2; i++) {
+		while (push[i]) {
+			target = popLS1B(push[i]);
+			if (bitU64(target) & pinData::inbetween_blockers[target + double_off])
+				MoveList::move_list[MoveList::count++] = MoveItem::encodeQuiet(target + single_off, target);
+		}
+	}
+}
+
+// pawn moves generator function while there is a check in a background
+template <enumSide SIDE>
+void cGenerateOfPawns(U64 legal_squares) {
+
+	// calculate offset for origin squares
+	constexpr int single_off = SIDE == WHITE ? Compass::sout : Compass::nort,
+		double_off = single_off * 2;
+	
+	U64 push[2] = {
+		PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & ~pinData::pinned, BBs[nEmpty]),
+	};
+
+	push[1] = PawnPushes::singlePushPawn<SIDE>(push[0], BBs[nEmpty]);
+
+	int target;
+
+	for (int i = 0; i < 2; i++) {
+		push[i] &= legal_squares;
+
+		while (push[i]) {
+			target = popLS1B(push[i]);
+			MoveList::move_list[MoveList::count++] = 
+				MoveItem::encodeQuiet(target + single_off, target);
+		}
+	}
+}
+
+
+template <enumSide SIDE>
+void generateLegalOf() {
+	const int king_sq = getLS1BIndex(BBs[nWhiteKing + SIDE]);
+	const U64 king_att = attackTo<SIDE>(king_sq),
+		checkers = attackTo<SIDE>(king_sq);
+
+	// double check case skipping - only king moves to non-attacked squares are permitted
+	// when there is double check situation
+	if (!isDoubleChecked(king_att)) {
+		const bool check = king_att;
+		pinData::pinned = pinnedPiece<SIDE>(king_sq);
+		int checker_sq = popLS1B(checkers);
+		U64 legal_blocks = check ? inBetween(king_sq, checker_sq) | bitU64(checker_sq) :
+			~eU64;
+		
+		// use bit index as an access index for inbetween cache
+		U64 pinners = pinnersPiece<SIDE>(king_sq), ray;
+		int pinner_sq;
+
+		while (pinners) {
+			pinner_sq = popLS1B(pinners);
+			ray = inBetween(king_sq, pinner_sq) | bitU64(pinner_sq);
+			pinData::inbetween_blockers[getLS1BIndex(ray & pinData::pinned)] = ray;
+		}
+
+		check ? cGenerateOfPawns<SIDE>(legal_blocks) : nGenerateOfPawns<SIDE>();
+
+		// exclude pinned knights directly, since pinned knight can't move anywhere
+		unPinnedGenerate<KNIGHT, SIDE>(legal_blocks);
+		generateOf<BISHOP, SIDE>(legal_blocks);
+		generateOf<ROOK,   SIDE>(legal_blocks);
+		generateOf<QUEEN,  SIDE>(legal_blocks);
+	}
+
+	// generate king legal moves
+	U64 king_moves = cKingAttacks[SIDE][king_sq] & ~BBs[nWhite + SIDE];
+	int target;
+
+	// loop throught all king possible moves
+	while (king_moves) {
+		target = popLS1B(king_moves);
+
+		// checking for an unattacked position after a move
+		if (!isSquareAttacked<SIDE, KING>(king_sq))
+			MoveList::move_list[MoveList::count++] = 
+				MoveItem::encodeQuietCapture(king_sq, target, bitU64(target) & BBs[nBlack - SIDE]);
+	}
+}
+
+
+inline void generateLegalMoves() {
+	MoveList::count = 0;
+	return gState::turn == WHITE ? generateLegalOf<WHITE>() : generateLegalOf<BLACK>();
 }
