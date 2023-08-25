@@ -59,7 +59,7 @@ namespace displays {
 			// check king's surrounding squares and display safe moves for king
 			void operator()() {
 				int sq, king_sq = getLS1BIndex(BBs[nWhiteKing + SIDE]);
-				U64 king_move = cKingAttacks[SIDE][king_sq] & ~BBs[nWhite + SIDE];
+				U64 king_move = cKingAttacks[king_sq] & ~BBs[nWhite + SIDE];
 
 				// loop throught all king possible moves
 				while (king_move) {
@@ -145,7 +145,7 @@ namespace displays {
 				// check whether attacked square is empty or occupied by opponent piece
 				while (knights) {
 					sq = getLS1BIndex(knights);
-					attacks = cKnightAttacks[SIDE][sq] & ~BBs[nWhite + SIDE];
+					attacks = cKnightAttacks[sq] & ~BBs[nWhite + SIDE];
 
 					while (attacks) {
 						std::cout << index_to_square[sq] << index_to_square[getLS1BIndex(attacks)] << ',';

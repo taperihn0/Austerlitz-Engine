@@ -31,7 +31,7 @@ namespace Compass {
 } // namespace Compass
 
 //	GENERALIZED SHIFT
-U64 genShift(U64 bb, int shift);
+U64 genShift(U64 bb, int shift) noexcept;
  
 //	ONE STEP ONLY functions
 U64 nortOne(U64 bb);
@@ -55,7 +55,7 @@ U64 soSoWe(U64 b);
 
 namespace {
 	
-	// some resources of pawn moving system
+	// some resources of pawn pushing system
 	namespace PawnPushes {
 
 		template <enumSide SIDE>
@@ -86,17 +86,47 @@ namespace {
 
 	}
 
+	// pawn attacks functions - 
+	//  for white and black pawns 
+	namespace PawnAttacks {
+
+		template <enumSide SIDE>
+		U64 eastAttackPawn(U64 pawns, U64 opp_occ);
+
+		template <enumSide SIDE>
+		U64 westAttackPawn(U64 pawns, U64 opp_occ);
+
+		template <enumSide SIDE>
+		inline U64 anyAttackPawn(U64 pawns, U64 opp_occ) {
+			return PawnAttacks::eastAttackPawn<SIDE>(pawns, opp_occ)
+				| PawnAttacks::westAttackPawn<SIDE>(pawns, opp_occ);
+		}
+
+		template <>
+		inline U64 eastAttackPawn<WHITE>(U64 pawns, U64 opp_occ) {
+			return noEaOne(pawns) & opp_occ;
+		}
+
+		template <>
+		inline U64 eastAttackPawn<BLACK>(U64 pawns, U64 opp_occ) {
+			return soEaOne(pawns) & opp_occ;
+		}
+
+		template <>
+		inline U64 westAttackPawn<WHITE>(U64 pawns, U64 opp_occ) {
+			return noWeOne(pawns) & opp_occ;
+		}
+
+		template <>
+		inline U64 westAttackPawn<BLACK>(U64 pawns, U64 opp_occ) {
+			return soWeOne(pawns) & opp_occ;
+		}
+
+		template <>
+		inline U64 anyAttackPawn<WHITE>(U64 pawns, U64 opp_occ) {
+			return PawnAttacks::eastAttackPawn<WHITE>(pawns, opp_occ)
+				| PawnAttacks::westAttackPawn<WHITE>(pawns, opp_occ);
+		}
+	}
+
 } // namespace
-
-	
-// PAWN ATTACKS functions - 
-//  for white pawns: 
-U64 wEastAttackPawn(U64 wpawns, U64 black_occ);
-U64 wWestAttackPawn(U64 wpawns, U64 black_occ);
-U64 wAnyAttackPawn(U64 wpawns, U64 black_occ);
-
-// PAWN ATTACKS functions - 
-//  for black pawns:
-U64 bEastAttackPawn(U64 bpawns, U64 white_occ);
-U64 bWestAttackPawn(U64 bpawns, U64 white_occ);
-U64 bAnyAttackPawn(U64 bpawns, U64 white_occ);

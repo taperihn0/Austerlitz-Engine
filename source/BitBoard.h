@@ -11,7 +11,7 @@ using U64 = uint64_t;
 
 // custom U64 bitboard of given intiger
 template <typename T, class =
-	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
+	std::enable_if_t<std::is_enum_v<T> or std::is_constructible_v<U64, T>>>
 constexpr auto cU64(T s) {
 	return static_cast<U64>(s);
 }
@@ -20,7 +20,7 @@ constexpr auto cU64(T s) {
 template <typename T, class =
 	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
 constexpr auto bitU64(T s) {
-	return static_cast<U64>(cU64(1) << s);
+	return cU64(1) << s;
 }
 
 

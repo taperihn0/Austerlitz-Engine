@@ -142,7 +142,6 @@
   <ItemGroup>
     <ClInclude Include="source\abs.h" />
     <ClInclude Include="source\BitBoardsSet.h" />
-    <ClInclude Include="source\displayMoves.h" />
     <ClInclude Include="source\GeneratingMagics.h" />
     <ClInclude Include="source\LegalityTest.h" />
     <ClInclude Include="source\MagicBitBoards.h" />

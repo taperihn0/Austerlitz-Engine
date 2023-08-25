@@ -108,13 +108,13 @@ bool isSquareAttacked(int sq) {
 	}
 
 	// check knight attack
-	if (BBs[nBlackKnight - PC_SIDE] & cKnightAttacks[PC_SIDE][sq]) {
+	if (BBs[nBlackKnight - PC_SIDE] & cKnightAttacks[sq]) {
 		return true;
 	}
 
 	// if checked square is occupied by KING, we can skip this statement
 	// since king can't attack other king
-	if (PC != KING and (BBs[nBlackKing - PC_SIDE] & cKnightAttacks[PC_SIDE][sq])) {
+	if (PC != KING and (BBs[nBlackKing - PC_SIDE] & cKnightAttacks[sq])) {
 		return true;
 	}
 
@@ -143,8 +143,8 @@ U64 attackTo(int sq) {
 
 	// skipping king attacks if checked square is occupied by king
 	return (BBs[nBlackPawn - PC_SIDE] & cPawnAttacks[PC_SIDE][sq])
-		| (BBs[nBlackKnight - PC_SIDE] & cKnightAttacks[PC_SIDE][sq])
-		| ((PC != KING) * (BBs[nBlackKing - PC_SIDE] & cKingAttacks[PC_SIDE][sq]))
+		| (BBs[nBlackKnight - PC_SIDE] & cKnightAttacks[sq])
+		| ((PC != KING) * (BBs[nBlackKing - PC_SIDE] & cKingAttacks[sq]))
 		| (bishopQueen & bishopAttack(occ, sq))
 		| (rookQueen & rookAttack(occ, sq));
 }

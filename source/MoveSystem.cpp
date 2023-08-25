@@ -1,7 +1,7 @@
 #include "MoveSystem.h"
 
 //	GENERALIZED SHIFT
-U64 genShift(U64 bb, int shift) {
+U64 genShift(U64 bb, int shift) noexcept {
 	return (shift > 0) ? (bb << shift) : (bb >> -shift);
 }
 
@@ -23,31 +23,3 @@ U64 noNoWe(U64 b) { return genShift((b & Constans::not_a_file),  Compass::noNoWe
 U64 noWeWe(U64 b) { return genShift((b & Constans::not_ab_file), Compass::noWeWe); }
 U64 soWeWe(U64 b) { return genShift((b & Constans::not_ab_file), Compass::soWeWe); }
 U64 soSoWe(U64 b) { return genShift((b & Constans::not_a_file),  Compass::soSoWe); }
-
-//	PAWN ATTACKS functions -
-//	 for white pawns:
-U64 wEastAttackPawn(U64 wpawns, U64 black_occ) {
-	return noEaOne(wpawns) & black_occ;
-}
-
-U64 wWestAttackPawn(U64 wpawns, U64 black_occ) {
-	return noWeOne(wpawns) & black_occ;
-}
-
-U64 wAnyAttackPawn(U64 wpawns, U64 black_occ) {
-	return wEastAttackPawn(wpawns, black_occ) | wWestAttackPawn(wpawns, black_occ);
-}
-
-//	PAWN ATTACKS functions -
-//   for black pawns:
-U64 bEastAttackPawn(U64 bpawns, U64 white_occ) {
-	return soEaOne(bpawns) & white_occ;
-}
-
-U64 bWestAttackPawn(U64 bpawns, U64 white_occ) {
-	return soWeOne(bpawns) & white_occ;
-}
-
-U64 bAnyAttackPawn(U64 bpawns, U64 white_occ) {
-	return bEastAttackPawn(bpawns, white_occ) | bWestAttackPawn(bpawns, white_occ);
-}

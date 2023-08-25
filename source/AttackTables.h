@@ -3,10 +3,8 @@
 #include "MoveSystem.h"
 #include <functional>
 
-// table of attack squares bitboards alias
-using a2dTable_t = std::array<std::array<U64, 64>, 2>;
 
-//	SINGLE ATTACK MASKS for PAWNS, KNIGHTS and KINGS
+// SINGLE ATTACK MASKS for PAWNS, KNIGHTS and KINGS
 namespace {
 
 	// pre-generated mask of avaible attacks for pawn on sq square
@@ -46,8 +44,8 @@ namespace {
 
 		// union bitboard of all the king surrounding fields
 		return nortOne(piece) | noEaOne(piece) | eastOne(piece)
-			| soEaOne(piece) | soutOne(piece) | soWeOne(piece) |
-			westOne(piece) | noWeOne(piece);
+			| soEaOne(piece) | soutOne(piece) | soWeOne(piece) 
+			| westOne(piece) | noWeOne(piece);
 	}
 
 } // namespace
@@ -55,16 +53,48 @@ namespace {
 // class template as a custom table of pre-calculated attack tables
 template <enumPiece pT>
 class CSinglePieceAttacks {
+	// private class aliases
+private: 
+	using a2dTable_t =
+		std::conditional_t<pT == PAWN, std::array<std::array<U64, 64>, 2>, std::array<U64, 64>>;
+
+	using accessRType =
+		std::conditional_t<pT == PAWN, const std::array<U64, 64>&, U64>;
 public:
 	CSinglePieceAttacks();
 
-	const std::array<U64, 64>& operator[](enumSide side);
+	accessRType operator[](size_t side);
 private:
 	template <enumSide sT>
 	void Init();
 
 	a2dTable_t arrAttacks;
 };
+
+
+// 'capsulating' template helper functions - 
+// no need to keep them in global namespace scope
+namespace attArrHelpers {
+
+	template <enumPiece pT, enumSide sT, typename iT>
+	auto initHelper(iT & arr) -> std::enable_if_t<pT == PAWN> {
+		for (int i = 0; i < 64; i++) {
+			arr[sT][i] = sqMaskPawnAttacks(sT, i);
+		}
+	}
+
+	template <enumPiece pT, enumSide sT, typename iT>
+	auto initHelper(iT & arr) -> std::enable_if_t<pT != PAWN> {
+		const std::function<U64(enumSide, int)> mask =
+			(pT == KNIGHT) ? sqMaskKnightAttacks : sqMaskKingAttacks;
+
+		for (int i = 0; i < 64; i++) {
+			arr[i] = mask(sT, i);
+		}
+	}
+
+}
+
 
 // General public initialization for pT piece type attacks tables
 template <enumPiece pT>
@@ -75,7 +105,7 @@ CSinglePieceAttacks<pT>::CSinglePieceAttacks() {
 
 // return given table of attacks for single pT piece type on sq square
 template <enumPiece pT>
-inline const std::array<U64, 64>& CSinglePieceAttacks<pT>::operator[](enumSide side) {
+inline typename CSinglePieceAttacks<pT>::accessRType CSinglePieceAttacks<pT>::operator[](size_t side) {
 	return arrAttacks[side];
 }
 
@@ -83,24 +113,7 @@ inline const std::array<U64, 64>& CSinglePieceAttacks<pT>::operator[](enumSide s
 template <enumPiece pT>
 template <enumSide sT>
 void CSinglePieceAttacks<pT>::Init() {
-	std::function<U64(enumSide, int)> mask;
-
-	switch (pT) {
-	case PAWN:
-		mask = &sqMaskPawnAttacks;
-		break;
-	case KNIGHT:
-		mask = &sqMaskKnightAttacks;
-		break;
-	case KING:
-		mask = &sqMaskKingAttacks;
-		break;
-	default: return;
-	}
-
-	for (int i = 0; i < 64; i++) {
-		arrAttacks[sT][i] = mask(sT, i);
-	}
+	attArrHelpers::initHelper<pT, sT, a2dTable_t>(arrAttacks);
 }
 
 // declarations of attack look-up tables for simple pieces
