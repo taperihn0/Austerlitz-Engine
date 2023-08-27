@@ -47,20 +47,9 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) {
 	return static_cast<size_t>(pc) + static_cast<size_t>(s);
 }
 
-template <enumPiece PC>
-enumPiece_bbs pieceToPieceIndex() {
-	switch (PC) {
-	case ROOK:
-		return nWhiteRook;
-	case BISHOP:
-		return nWhiteBishop;
-	case QUEEN:
-		return nWhiteQueen;
-	default: break;
-	}
 
-	return nEmpty;
-}
+template <enumPiece PC>
+enumPiece_bbs  bbsIndex();
 
 
 class BitBoardsSet {

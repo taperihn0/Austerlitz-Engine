@@ -136,8 +136,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\BitBoardsSet.cpp" />
+    <ClCompile Include="source\MagicBitBoards.cpp" />
     <ClCompile Include="source\Main.cpp" />
-    <ClCompile Include="source\MoveSystem.cpp" />
+    <ClCompile Include="source\MoveGeneration.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\abs.h" />

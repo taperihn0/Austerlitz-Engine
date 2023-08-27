@@ -83,15 +83,15 @@ inline bool isDoubleChecked(U64 king_attackers) noexcept {
 namespace {
 
 	U64 xRayBishopAttack(U64 occ, U64 blockers, int sq) {
-		U64 default_attacks = bishopAttack(occ, sq);
+		U64 default_attacks = attack<BISHOP>(occ, sq);
 		blockers &= default_attacks;
-		return default_attacks ^ bishopAttack(occ ^ blockers, sq);
+		return default_attacks ^ attack<BISHOP>(occ ^ blockers, sq);
 	}
 
 	U64 xRayRookAttack(U64 occ, U64 blockers, int sq) {
-		U64 default_attacks = rookAttack(occ, sq);
+		U64 default_attacks = attack<ROOK>(occ, sq);
 		blockers &= default_attacks;
-		return default_attacks ^ rookAttack(occ ^ blockers, sq);
+		return default_attacks ^ attack<ROOK>(occ ^ blockers, sq);
 	}
 
 } // namespace
@@ -103,18 +103,18 @@ template <enumSide PC_SIDE, enumPiece PC = ANY>
 bool isSquareAttacked(int sq) {
 
 	// check pawn attack
-	if (BBs[nBlackPawn - PC_SIDE] & cPawnAttacks[PC_SIDE][sq]) {
+	if (BBs[nBlackPawn - PC_SIDE] & cpawn_attacks[PC_SIDE][sq]) {
 		return true;
 	}
 
 	// check knight attack
-	if (BBs[nBlackKnight - PC_SIDE] & cKnightAttacks[sq]) {
+	if (BBs[nBlackKnight - PC_SIDE] & cknight_attacks[sq]) {
 		return true;
 	}
 
 	// if checked square is occupied by KING, we can skip this statement
 	// since king can't attack other king
-	if (PC != KING and (BBs[nBlackKing - PC_SIDE] & cKnightAttacks[sq])) {
+	if (PC != KING and (BBs[nBlackKing - PC_SIDE] & cknight_attacks[sq])) {
 		return true;
 	}
 
@@ -124,12 +124,12 @@ bool isSquareAttacked(int sq) {
 		bishopQueen = BBs[nBlackBishop - PC_SIDE] | queen,
 		occ = BBs[nOccupied];
 
-	if (bishopQueen & bishopAttack(occ, sq)) {
+	if (bishopQueen & attack<BISHOP>(occ, sq)) {
 		return true;
 	}
 
 	// final checking
-	return (rookQueen & rookAttack(occ, sq));
+	return (rookQueen & attack<ROOK>(occ, sq));
 }
 
 // return bitboard of black attackers, if pc_side is white,
@@ -142,11 +142,11 @@ U64 attackTo(int sq) {
 		occ = BBs[nOccupied];
 
 	// skipping king attacks if checked square is occupied by king
-	return (BBs[nBlackPawn - PC_SIDE] & cPawnAttacks[PC_SIDE][sq])
-		| (BBs[nBlackKnight - PC_SIDE] & cKnightAttacks[sq])
-		| ((PC != KING) * (BBs[nBlackKing - PC_SIDE] & cKingAttacks[sq]))
-		| (bishopQueen & bishopAttack(occ, sq))
-		| (rookQueen & rookAttack(occ, sq));
+	return (BBs[nBlackPawn - PC_SIDE] & cpawn_attacks[PC_SIDE][sq])
+		| (BBs[nBlackKnight - PC_SIDE] & cknight_attacks[sq])
+		| ((PC != KING) * (BBs[nBlackKing - PC_SIDE] & cking_attacks[sq]))
+		| (bishopQueen & attack<BISHOP>(occ, sq))
+		| (rookQueen & attack<ROOK>(occ, sq));
 }
 
 // return bitboard of pinned piece of given color

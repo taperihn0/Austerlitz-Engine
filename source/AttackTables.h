@@ -117,6 +117,6 @@ void CSinglePieceAttacks<pT>::Init() {
 }
 
 // declarations of attack look-up tables for simple pieces
-extern CSinglePieceAttacks<PAWN> cPawnAttacks;
-extern CSinglePieceAttacks<KNIGHT> cKnightAttacks;
-extern CSinglePieceAttacks<KING> cKingAttacks;
+extern CSinglePieceAttacks<PAWN> cpawn_attacks;
+extern CSinglePieceAttacks<KNIGHT> cknight_attacks;
+extern CSinglePieceAttacks<KING> cking_attacks;

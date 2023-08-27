@@ -18,10 +18,13 @@
     <ClCompile Include="source\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\MoveSystem.cpp">
+    <ClCompile Include="source\BitBoardsSet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\BitBoardsSet.cpp">
+    <ClCompile Include="source\MoveGeneration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\MagicBitBoards.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

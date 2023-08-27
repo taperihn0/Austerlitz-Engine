@@ -3,9 +3,9 @@
 // global variables storing universal piece data
 BitBoardsSet BBs;
 
-CSinglePieceAttacks<PAWN> cPawnAttacks;
-CSinglePieceAttacks<KNIGHT> cKnightAttacks;
-CSinglePieceAttacks<KING> cKingAttacks;
+CSinglePieceAttacks<PAWN> cpawn_attacks;
+CSinglePieceAttacks<KNIGHT> cknight_attacks;
+CSinglePieceAttacks<KING> cking_attacks;
 
 
 int main() {
