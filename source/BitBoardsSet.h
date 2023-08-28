@@ -2,12 +2,61 @@
 
 #include "BitBoard.h"
 
+class castleRights {
+public:
+	castleRights() = default;
+
+	enum class cSide {
+		wQUEEN,
+		wROOK,
+		bQUEEN,
+		bROOK,
+	};
+
+	void operator=(uint8_t d) {
+		decoded = d;
+	}
+
+	void operator|=(int s) {
+		decoded |= s;
+	}
+
+	auto operator&(int s) {
+		return decoded & s;
+	}
+
+	template <cSide SIDE>
+	bool checkLegalCastle() {
+		return decoded & (1 << static_cast<int>(SIDE));
+	}
+private:
+
+	/*
+	 * decoding castle rights:
+	 * KQkq in FEN Notation
+	 * K stands for 4th bit in decoded variable, Q stands for 3th bit
+	 * k stands for 2nd bit and q stands for 1st bit
+	 * decoded variable bits:	0	 0	  0	    0
+	 * FEN Notation:			K	 Q	  k     q
+	 */
+	 
+	uint8_t decoded;
+};
+
+
+inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
+	return (SIDE == WHITE) ? (PC == ROOK ? castleRights::cSide::wROOK : castleRights::cSide::wQUEEN)
+		: (PC == ROOK ? castleRights::cSide::bROOK : castleRights::cSide::bQUEEN);
+}
+
+
 // game state variables
 namespace gState {
 	namespace {
-		int ep_sq;
+		int ep_sq = -1;
 		enumSide turn;
-		int castle, halfmove, fullmove;
+		castleRights castle;
+		int halfmove, fullmove;
 	}
 }
 

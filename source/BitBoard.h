@@ -156,7 +156,7 @@ inline constexpr int getLS1BIndex(U64 bb) noexcept {
 	return lsbResource::index64[((bb ^ (bb - 1)) * lsbResource::debruijn64) >> 58];
 }
 
-inline constexpr int popLS1B(U64 bb) noexcept {
+inline constexpr int popLS1B(U64& bb) noexcept {
 	assert(bb != eU64);
 	int res = getLS1BIndex(bb);
 	bb &= bb - 1;

@@ -57,11 +57,6 @@ namespace {
 	U64 soWeWe(U64 b) { return genShift((b & Constans::not_ab_file), Compass::soWeWe); }
 	U64 soSoWe(U64 b) { return genShift((b & Constans::not_a_file), Compass::soSoWe); }
 
-}
-
-
-namespace {
-	
 	// some resources of pawn pushing system
 	namespace PawnPushes {
 

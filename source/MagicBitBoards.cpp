@@ -47,28 +47,3 @@ void printRelevantBits() {
 }
 
 
-template <>
-U64 attack<KNIGHT>(U64 occ, int sq) {
-    return cknight_attacks[sq];
-}
-
-template <>
-U64 attack<BISHOP>(U64 occ, int sq) {
-    return mTabs::mBishopAtt[sq][mIndexHash(occ & mTabs::rBishop[sq], mTabs::mBishop[sq], mTabs::rbBishop[sq])];
-}
-
-template <>
-U64 attack<ROOK>(U64 occ, int sq) {
-    return mTabs::mRookAtt[sq][mIndexHash(occ & mTabs::rRook[sq], mTabs::mRook[sq], mTabs::rbRook[sq])];
-}
-
-template <>
-U64 attack<QUEEN>(U64 occ, int sq) {
-    return attack<BISHOP>(occ, sq) | attack<ROOK>(occ, sq);
-}
-
-
-template U64 attack<KNIGHT>(U64, int);
-template U64 attack<BISHOP>(U64, int);
-template U64 attack<ROOK>(U64, int);
-template U64 attack<QUEEN>(U64, int);

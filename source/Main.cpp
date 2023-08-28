@@ -7,8 +7,8 @@ CSinglePieceAttacks<PAWN> cpawn_attacks;
 CSinglePieceAttacks<KNIGHT> cknight_attacks;
 CSinglePieceAttacks<KING> cking_attacks;
 
-
 int main() {
+
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
 
@@ -16,8 +16,6 @@ int main() {
 	BBs.printBoard();
 
 	std::cout << std::endl;
-	//displayLegalMoves<BLACK>();
 
-	//printBitBoard(xRayBishopAttack(BBs[nOccupied], BBs[nBlack], getLS1BIndex(BBs[nBlackKing])));
-	//printBitBoard(xRayRookAttack(BBs[nOccupied], BBs[nWhite], getLS1BIndex(BBs[nWhiteKing])));
+	MoveGenerator::generateLegalMoves();
 }

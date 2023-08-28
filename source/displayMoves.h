@@ -2,6 +2,7 @@
 
 #include "MoveGeneration.h"
 
+/* DEPRECATED HEADER FILE */
 
 // whole displaying legal moves systems namespace
 namespace displays {

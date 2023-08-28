@@ -77,14 +77,14 @@ private:
 namespace attArrHelpers {
 
 	template <enumPiece pT, enumSide sT, typename iT>
-	auto initHelper(iT & arr) -> std::enable_if_t<pT == PAWN> {
+	inline auto initHelper(iT& arr) -> std::enable_if_t<pT == PAWN> {
 		for (int i = 0; i < 64; i++) {
 			arr[sT][i] = sqMaskPawnAttacks(sT, i);
 		}
 	}
 
 	template <enumPiece pT, enumSide sT, typename iT>
-	auto initHelper(iT & arr) -> std::enable_if_t<pT != PAWN> {
+	inline auto initHelper(iT& arr) -> std::enable_if_t<pT != PAWN> {
 		const std::function<U64(enumSide, int)> mask =
 			(pT == KNIGHT) ? sqMaskKnightAttacks : sqMaskKingAttacks;
 

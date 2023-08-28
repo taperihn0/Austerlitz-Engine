@@ -305,7 +305,6 @@ namespace {
             6,5,5,5,5,5,5,6,
         };
 
-
         // look-up tables of rook and bishop attacks in Plain Magic Bitboards implementation
         // 4096 = 2 ^ 12 - maximum number of occupancy subsets for rook (rook at [a1, h8])
         // 512 = 2 ^ 9 - maximum number of occupancy subsets for bishop (bishop at board center [d4, d5, e4, e5])
@@ -314,12 +313,15 @@ namespace {
 
     } // namespace mTabs
 
+
     // InitState namespace contains program init functions which needs to be called
     // when the program starts
     namespace InitState {
 
         // initialize look-up attacks tables for sliders except queen
-        template <enumPiece pT>
+        // moving definition of this function to implementation .cpp file cause linker error
+        template <enumPiece pT, class =
+            checkEqual<pT, ROOK, BISHOP>>
         void initMAttacksTables() {
             U64 att, subset;
             int n;
@@ -358,6 +360,37 @@ namespace {
 
     }
 
+
+    // handy function templates for generating sliding pieces attacks using pre-generated magic bitboards
+    // supported pieces: sliders and knight
+
+    template <enumPiece pT>
+    U64 attack(U64, int) {
+        static_assert(pT == KNIGHT or pT == BISHOP or pT == ROOK or pT == QUEEN,
+            "Unsupported piece type by attack function");
+        return eU64;
+    }
+
+    template <>
+    U64 attack<KNIGHT>(U64, int sq) {
+        return cknight_attacks[sq];
+    }
+
+    template <>
+    U64 attack<BISHOP>(U64 occ, int sq) {
+        return mTabs::mBishopAtt[sq][mIndexHash(occ & mTabs::rBishop[sq], mTabs::mBishop[sq], mTabs::rbBishop[sq])];
+    }
+
+    template <>
+    U64 attack<ROOK>(U64 occ, int sq) {
+        return mTabs::mRookAtt[sq][mIndexHash(occ & mTabs::rRook[sq], mTabs::mRook[sq], mTabs::rbRook[sq])];
+    }
+
+    template <>
+    U64 attack<QUEEN>(U64 occ, int sq) {
+        return attack<BISHOP>(occ, sq) | attack<ROOK>(occ, sq);
+    }
+
 } // namespace
 
 
@@ -372,8 +405,3 @@ void printRelevantOccupancy();
 template <enumPiece pT, class =
     checkEqual<pT, BISHOP, ROOK>>
 void printRelevantBits();
-
-
-// handy function template for generating sliding pieces attacks using pre-generated magic bitboards
-template <enumPiece PC>
-U64 attack(U64 occ, int sq);
