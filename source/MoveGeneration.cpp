@@ -1,14 +1,29 @@
 #include "MoveGeneration.h"
-#include <initializer_list>
+#include <string>
 
+namespace {
+
+	template <enumPiece PC>
+	U64 test(U64 occ, int sq) {
+		return eU64;
+	}
+
+
+	template <>
+	U64 test<BISHOP>(U64 occ, int sq) {
+		auto res = mdata.mBishopAtt[sq][mIndexHash(occ & mTabs::rBishop[sq], mTabs::mBishop[sq], mTabs::rbBishop[sq])];
+		assert(res != eU64 && "HERE");
+		return res;
+	}
+
+}
 
 namespace MoveGenerator {
 
 	// generator functions based on PINNED piece flag -
 	// excluded pieces template parameters don't meet conditions of these functions.
 
-	template <enumPiece PC, enumSide SIDE, class =
-		std::enable_if<PC != PAWN and PC != KING>>
+	template <enumPiece PC, enumSide SIDE, class>
 	void unPinnedGenerate(U64 legal_blocks) {
 
 		// unpinned pieces only
@@ -29,8 +44,7 @@ namespace MoveGenerator {
 		}
 	}
 
-	template <enumPiece PC, enumSide SIDE, class =
-		std::enable_if<PC != PAWN and PC != KING and PC != KNIGHT>>
+	template <enumPiece PC, enumSide SIDE, class>
 	void pinnedGenerate() {
 
 		// pinned pieces only
@@ -268,13 +282,12 @@ namespace MoveGenerator {
 	template <enumSide SIDE>
 	void generateLegalOf() {
 		const int king_sq = getLS1BIndex(BBs[nWhiteKing + SIDE]);
-		const U64 king_att = attackTo<SIDE>(king_sq),
-			checkers = attackTo<SIDE>(king_sq);
-		const bool check = king_att;
+		const U64 checkers = attackTo<SIDE, KING>(king_sq);
+		const bool check = checkers;
 
 		// double check case skipping - only king moves to non-attacked squares are permitted
 		// when there is double check situation
-		if (!isDoubleChecked(king_att)) {
+		if (!isDoubleChecked(checkers)) {
 			pinData::pinned = pinnedPiece<SIDE>(king_sq);
 			int checker_sq = check ? getLS1BIndex(checkers) : -1;
 			U64 legal_blocks = check ?
@@ -332,6 +345,30 @@ namespace MoveGenerator {
 	void generateLegalMoves() {
 		MoveList::count = 0;
 		return gState::turn == WHITE ? generateLegalOf<WHITE>() : generateLegalOf<BLACK>();
+	}
+
+	void populateMoveList() {
+		auto helper = [](bool mask, std::string text) {
+			if (mask) {
+				std::cout << text << ' ';
+			}
+		};
+
+		std::cout << "MoveList.size: " << MoveList::count << std::endl << std::endl << ' ';
+		
+		for (int tmp, i = 0; i < MoveList::count; i++) {
+			std::cout << index_to_square[MoveList::move_list[i].getMask<MoveItem::iMask::ORIGIN>()]
+				<< index_to_square[MoveList::move_list[i].getMask<MoveItem::iMask::TARGET>() >> 6];
+
+			tmp = MoveList::move_list[i].getMask<MoveItem::iMask::PROMOTION>();
+			helper(tmp, std::to_string(tmp >> 12) + " promotion");
+			helper(MoveList::move_list[i].getMask<MoveItem::iMask::DOUBLE_PUSH_F>(), "double push");
+			helper(MoveList::move_list[i].getMask<MoveItem::iMask::CAPTURE_F>(), "capture");
+			helper(MoveList::move_list[i].getMask<MoveItem::iMask::EN_PASSANT_F>(), "capture");
+			helper(MoveList::move_list[i].getMask<MoveItem::iMask::CASTLE_F>(), "capture");
+
+			std::cout << '\n' << ' ';
+		}
 	}
 
 } // namespace MoveGenerator

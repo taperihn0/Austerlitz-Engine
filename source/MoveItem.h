@@ -22,12 +22,12 @@ namespace {
 		// enum classes used for separating bit masks and encoding type
 		// masks for extracting relevant bits from 32-bit int data
 		enum class iMask {
-			ORIGIN = 0x3F,
-			TARGET = 0xFC0,
-			PROMOTED = 0x7000,
+			ORIGIN   = 0x3F,
+			TARGET   = 0xFC0,
+			PROMOTION = 0x7000,
 			DOUBLE_PUSH_F = 0x8000,
-			CAPTURE_F = 0x10000,
-			EN_PASSANT_F = 0x20000,
+			CAPTURE_F     = 0x10000,
+			EN_PASSANT_F  = 0x20000,
 			CASTLE_F = 0x40000
 		};
 
@@ -49,7 +49,7 @@ namespace {
 
 			template <iMask MASK>
 			inline uint32_t getMask() noexcept {
-				return (cmove & MASK);
+				return cmove & static_cast<int>(MASK);
 			}
 		private:
 			uint32_t cmove;

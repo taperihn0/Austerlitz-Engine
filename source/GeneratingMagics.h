@@ -5,7 +5,7 @@
 
 
 // hash function using magic numbers
-inline int mIndexHash(U64 occ, U64 magic, int relv_bits) {
+inline constexpr int mIndexHash(U64 occ, U64 magic, int relv_bits) {
 	return static_cast<int>((occ * magic) >> (64 - relv_bits));
 }
 
@@ -62,7 +62,7 @@ namespace {
 	}
 
 	// get subset of attack_mask by using binary representation of index
-	U64 indexSubsetU64(int index, U64 attack_mask, int bit_count) {
+	constexpr U64 indexSubsetU64(int index, U64 attack_mask, int bit_count) {
 		U64 subset = eU64;
 
 		for (int count = 0; count < bit_count; count++) {
@@ -79,7 +79,7 @@ namespace {
 
 	// construct bitboard of attacked squares by rook 
 	// (including friendly pieces which are attacked - thats illegal)
-	U64 attackSquaresRook(U64 occ, int sq) {
+	constexpr U64 attackSquaresRook(U64 occ, int sq) {
 		U64 attacks = eU64;
 
 		int tr = sq / 8, tf = sq % 8;
@@ -108,7 +108,7 @@ namespace {
 	}
 	
 	// same as above but now for bishop
-	U64 attackSquaresBishop(U64 occ, int sq) { 
+	constexpr U64 attackSquaresBishop(U64 occ, int sq) { 
 		U64 attacks = eU64;
 		int tr = sq / 8, tf = sq % 8;
 

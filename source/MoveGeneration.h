@@ -34,7 +34,17 @@ namespace {
 // move generation resources
 namespace MoveGenerator {
 
+	template <enumPiece PC, enumSide SIDE, class =
+		std::enable_if<PC != PAWN and PC != KING>>
+	void unPinnedGenerate(U64 legal_blocks);
+
+	template <enumPiece PC, enumSide SIDE, class =
+		std::enable_if<PC != PAWN and PC != KING and PC != KNIGHT>>
+	void pinnedGenerate();
+
 	// main generation function, generating all the legal moves for all the turn-to-move pieces
 	void generateLegalMoves();
+
+	void populateMoveList();
 
 } 

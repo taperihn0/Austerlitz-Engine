@@ -10,6 +10,18 @@
 template <enumPiece pT, enumPiece pT1, enumPiece pT2>
 using checkEqual = std::enable_if_t<pT == pT1 or pT == pT2>;
 
+// structure storing actual magic numberic data
+struct mData {
+
+    // look-up tables of rook and bishop attacks in Plain Magic Bitboards implementation
+    // 4096 = 2 ^ 12 - maximum number of occupancy subsets for rook (rook at [a1, h8])
+    // 512 = 2 ^ 9 - maximum number of occupancy subsets for bishop (bishop at board center [d4, d5, e4, e5])
+    std::array<std::array<U64, 4096>, 64> mRookAtt;
+    std::array<std::array<U64, 512>, 64> mBishopAtt;
+};
+
+extern mData mdata;
+
 namespace {
 
     // magic data
@@ -305,13 +317,7 @@ namespace {
             6,5,5,5,5,5,5,6,
         };
 
-        // look-up tables of rook and bishop attacks in Plain Magic Bitboards implementation
-        // 4096 = 2 ^ 12 - maximum number of occupancy subsets for rook (rook at [a1, h8])
-        // 512 = 2 ^ 9 - maximum number of occupancy subsets for bishop (bishop at board center [d4, d5, e4, e5])
-        std::array<std::array<U64, 4096>, 64> mRookAtt;
-        std::array<std::array<U64, 512>, 64> mBishopAtt;
-
-    } // namespace mTabs
+    };
 
 
     // InitState namespace contains program init functions which needs to be called
@@ -345,11 +351,11 @@ namespace {
 
                     switch (pT) {
                     case ROOK:
-                        mTabs::mRookAtt[sq][mIndexHash(subset, mTabs::mRook[sq], n)]
+                        mdata.mRookAtt[sq][mIndexHash(subset, mTabs::mRook[sq], n)]
                             = attackSquaresRook(subset, sq);
                         break;
                     case BISHOP:
-                        mTabs::mBishopAtt[sq][mIndexHash(subset, mTabs::mBishop[sq], n)]
+                        mdata.mBishopAtt[sq][mIndexHash(subset, mTabs::mBishop[sq], n)]
                             = attackSquaresBishop(subset, sq);
                         break;
                     default: return;
@@ -360,15 +366,14 @@ namespace {
 
     }
 
-
     // handy function templates for generating sliding pieces attacks using pre-generated magic bitboards
     // supported pieces: sliders and knight
 
     template <enumPiece pT>
-    U64 attack(U64, int) {
+    U64 attack(U64 occ, int sq) {
         static_assert(pT == KNIGHT or pT == BISHOP or pT == ROOK or pT == QUEEN,
             "Unsupported piece type by attack function");
-        return eU64;
+        return UINT64_MAX;
     }
 
     template <>
@@ -378,12 +383,12 @@ namespace {
 
     template <>
     U64 attack<BISHOP>(U64 occ, int sq) {
-        return mTabs::mBishopAtt[sq][mIndexHash(occ & mTabs::rBishop[sq], mTabs::mBishop[sq], mTabs::rbBishop[sq])];
+        return mdata.mBishopAtt[sq][mIndexHash(occ & mTabs::rBishop[sq], mTabs::mBishop[sq], mTabs::rbBishop[sq])];
     }
 
     template <>
     U64 attack<ROOK>(U64 occ, int sq) {
-        return mTabs::mRookAtt[sq][mIndexHash(occ & mTabs::rRook[sq], mTabs::mRook[sq], mTabs::rbRook[sq])];
+        return mdata.mRookAtt[sq][mIndexHash(occ & mTabs::rRook[sq], mTabs::mRook[sq], mTabs::rbRook[sq])];
     }
 
     template <>

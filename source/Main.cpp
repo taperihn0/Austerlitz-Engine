@@ -7,10 +7,13 @@ CSinglePieceAttacks<PAWN> cpawn_attacks;
 CSinglePieceAttacks<KNIGHT> cknight_attacks;
 CSinglePieceAttacks<KING> cking_attacks;
 
+mData mdata;
+
 int main() {
 
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
+
 
 	BBs.parseFEN("8/8/2pk4/2bqr3/8/6B1/2R4K/3Q4 w - - 0 1");
 	BBs.printBoard();
@@ -18,4 +21,5 @@ int main() {
 	std::cout << std::endl;
 
 	MoveGenerator::generateLegalMoves();
+	MoveGenerator::populateMoveList();
 }

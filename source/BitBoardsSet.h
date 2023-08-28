@@ -98,7 +98,7 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) {
 
 
 template <enumPiece PC>
-enumPiece_bbs  bbsIndex();
+enumPiece_bbs bbsIndex();
 
 
 class BitBoardsSet {
