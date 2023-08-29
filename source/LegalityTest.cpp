@@ -16,7 +16,7 @@ U64 xRayRookAttack(U64 occ, U64 blockers, int sq) {
 
 // return true whether given piece is attacked by any of 
 // opponent piece, else return false
-template <enumSide PC_SIDE, enumPiece PC>
+template <enumSide PC_SIDE>
 bool isSquareAttacked(int sq) {
 
 	// check pawn attack
@@ -29,9 +29,8 @@ bool isSquareAttacked(int sq) {
 		return true;
 	}
 
-	// if checked square is occupied by KING, we can skip this statement
-	// since king can't attack other king
-	if (PC != KING and (BBs[nBlackKing - PC_SIDE] & cknight_attacks[sq])) {
+	// same for king attacks
+	if (BBs[nBlackKing - PC_SIDE] & cking_attacks[sq]) {
 		return true;
 	}
 
@@ -41,22 +40,22 @@ bool isSquareAttacked(int sq) {
 		bishopQueen = BBs[nBlackBishop - PC_SIDE] | queen,
 		occ = BBs[nOccupied];
 
-	if (bishopQueen & attack<BISHOP>(occ, sq)) {
+	if (bishopQueen & attack<BISHOP>(occ & ~BBs[nWhiteKing + PC_SIDE], sq)) {
 		return true;
 	}
 
 	// final checking
-	return (rookQueen & attack<ROOK>(occ, sq));
+	return (rookQueen & attack<ROOK>(occ & ~BBs[nWhiteKing + PC_SIDE], sq));
 }
 
-template bool isSquareAttacked<WHITE, KING>(int);
-template bool isSquareAttacked<BLACK, KING>(int);
+
 template bool isSquareAttacked<WHITE>(int);
 template bool isSquareAttacked<BLACK>(int);
 
 
 // return bitboard of black attackers, if pc_side is white,
 // else return white attackers, if pc_side is black
+// if PC is KING, we don't have to check opposite king attacks
 template <enumSide PC_SIDE, enumPiece PC>
 U64 attackTo(int sq) {
 	U64 queen = BBs[nBlackQueen - PC_SIDE],

@@ -82,6 +82,8 @@ namespace Constans {
 		r2_rank = 0x000000000000FF00,
 		r7_rank = 0x00FF000000000000,
 		r8_rank = 0xFF00000000000000,
+		r4_rank = 0x00000000FF000000,
+		r5_rank = 0x000000FF00000000,
 		not_r1_rank = ~r1_rank,
 		not_r8_rank = ~r8_rank,
 		a1h8_diagonal = 0x8040201008040201,

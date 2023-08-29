@@ -51,14 +51,15 @@ inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
 
 
 // game state variables
-namespace gState {
-	namespace {
-		int ep_sq = -1;
-		enumSide turn;
-		castleRights castle;
-		int halfmove, fullmove;
-	}
-}
+struct gState {
+	int ep_sq;
+	enumSide turn;
+	castleRights castle;
+	int halfmove, fullmove;
+};
+
+extern gState game_state;
+
 
 // piece enum for their bitboards
 enum enumPiece_bbs {
@@ -116,6 +117,8 @@ public:
 
 	// display entire board of all pieces
 	void printBoard();
+
+	void clear();
 private:
 	// board display purpose
 	std::array<char, 12> piece_char;

@@ -83,7 +83,7 @@ U64 xRayBishopAttack(U64 occ, U64 blockers, int sq);
 U64 xRayRookAttack(U64 occ, U64 blockers, int sq);
 
 
-template <enumSide PC_SIDE, enumPiece PC = ANY>
+template <enumSide PC_SIDE>
 bool isSquareAttacked(int sq);
 
 

@@ -22,6 +22,7 @@ struct mData {
 
 extern mData mdata;
 
+
 namespace {
 
     // magic data

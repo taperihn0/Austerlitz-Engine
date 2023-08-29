@@ -34,12 +34,12 @@ template enumPiece_bbs bbsIndex<QUEEN>();
 
 BitBoardsSet::BitBoardsSet()
 	: piece_char{'P', 'p', 'N', 'n', 'B', 'b', 'R', 'r', 'Q', 'q', 'K', 'k'} {
-	bbs.fill(eU64);
+	clear();
 }
 
 BitBoardsSet::BitBoardsSet(const std::string& _fen)
 	: BitBoardsSet() {
-	bbs.fill(eU64);
+	clear();
 	parseFEN(_fen);
 }
 
@@ -136,53 +136,53 @@ void BitBoardsSet::parseFEN(const std::string& _fen) {
 void BitBoardsSet::parseGState(int i) {
 	switch (fen[i]) {
 	case 'w':
-		gState::turn = WHITE;
+		game_state.turn = WHITE;
 		break;
 	case 'b':
-		gState::turn = BLACK;
+		game_state.turn = BLACK;
 		break;
 	default: break;
 	}
 
 	i += 2;
-	gState::castle = 0;
+	game_state.castle = 0;
 	for (; fen[i] != ' '; i++) {
 		switch (fen[i]) {
 		case 'K':
-			gState::castle |= (1 << 3);
+			game_state.castle |= (1 << 3);
 			break;
 		case 'Q':
-			gState::castle |= (1 << 2);
+			game_state.castle |= (1 << 2);
 			break;
 		case 'k':
-			gState::castle |= (1 << 1);
+			game_state.castle |= (1 << 1);
 			break;
 		case 'q':
-			gState::castle |= 1;
+			game_state.castle |= 1;
 			break;
 		default:
 			break;
 		}
 	}
 
-	gState::ep_sq = -1;
+	game_state.ep_sq = -1;
 	if (fen[++i] != '-') {
-		gState::ep_sq = (fen[i] - 'a') * 8 + (fen[++i] - '1');
+		game_state.ep_sq = (fen[i] - 'a') + (fen[i + 1] - '1') * 8;
 	} 
 
 	i += 2;
 	
-	gState::halfmove = 0;
+	game_state.halfmove = 0;
 	for (; fen[i] != ' '; i++) {
-		gState::halfmove *= 10;
-		gState::halfmove += fen[i] - '0';
+		game_state.halfmove *= 10;
+		game_state.halfmove += fen[i] - '0';
 	}
 	
 	i++;
-	gState::fullmove = 0;
+	game_state.fullmove = 0;
 	for (; i < size(fen) and fen[i] != ' '; i++) {
-		gState::fullmove *= 10;
-		gState::fullmove += fen[i] - '0';
+		game_state.fullmove *= 10;
+		game_state.fullmove += fen[i] - '0';
 	}
 }
 
@@ -219,8 +219,12 @@ void BitBoardsSet::printBoard() {
 		<< "  Castling rights: ";
 
 	for (int i = 3; i >= 0; i--) {
-		std::cout << ((gState::castle & (1 << i)) >> i);
+		std::cout << ((game_state.castle & (1 << i)) >> i);
 	}
 
-	std::cout << std::endl;
+	std::cout << std::endl << std::endl;
+}
+
+void BitBoardsSet::clear() {
+	bbs.fill(eU64);
 }

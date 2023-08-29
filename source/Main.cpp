@@ -1,4 +1,5 @@
 ﻿#include "HeaderFile.h"
+#include <string>
 
 // global variables storing universal piece data
 BitBoardsSet BBs;
@@ -8,18 +9,22 @@ CSinglePieceAttacks<KNIGHT> cknight_attacks;
 CSinglePieceAttacks<KING> cking_attacks;
 
 mData mdata;
+gState game_state;
 
 int main() {
 
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
+	
+	std::string fen;
 
+	while (std::getline(std::cin, fen)) {
+		BBs.clear();
 
-	BBs.parseFEN("8/8/2pk4/2bqr3/8/6B1/2R4K/3Q4 w - - 0 1");
-	BBs.printBoard();
+		BBs.parseFEN(fen);
+		BBs.printBoard();
 
-	std::cout << std::endl;
-
-	MoveGenerator::generateLegalMoves();
-	MoveGenerator::populateMoveList();
+		MoveGenerator::generateLegalMoves();
+		MoveGenerator::populateMoveList();
+	}
 }
