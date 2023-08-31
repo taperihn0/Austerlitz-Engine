@@ -15,16 +15,33 @@ int main() {
 
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
-	
-	std::string fen;
 
-	while (std::getline(std::cin, fen)) {
-		BBs.clear();
+	BBs.parseFEN("7R/1P2P1B1/p1nP4/2k5/4Q3/p2K3p/P6p/2r1b3 w - - 0 1");
+	BBs.printBoard();
 
-		BBs.parseFEN(fen);
+	auto move_list = MoveGenerator::generateLegalMoves();
+	MoveGenerator::Analisis::populateMoveList(move_list);
+
+	auto bbs = BBs;
+	auto gs = game_state;
+
+	for (auto& move : move_list) {
+		std::cout << index_to_square[move.getMask<MoveItem::iMask::ORIGIN>()]
+			<< index_to_square[move.getMask < MoveItem::iMask::TARGET>() >> 6] << '\n';
+		
+		std::cin.get();
+
+		MovePerform::makeMove(move);
 		BBs.printBoard();
-
-		MoveGenerator::generateLegalMoves();
-		MoveGenerator::populateMoveList();
+		MovePerform::unmakeMove(bbs, gs);
 	}
+
+	/*
+	BBs.clear();
+	BBs.parseFEN(fen);
+	BBs.printBoard();
+
+	auto move_list = MoveGenerator::generateLegalMoves();
+	MoveGenerator::Analisis::populateMoveList(move_list);
+	*/
 }

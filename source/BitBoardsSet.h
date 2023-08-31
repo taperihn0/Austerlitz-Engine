@@ -56,6 +56,8 @@ struct gState {
 	enumSide turn;
 	castleRights castle;
 	int halfmove, fullmove;
+	// for each side
+	std::array<bool, 2> rook_king_move_block;
 };
 
 extern gState game_state;
@@ -104,16 +106,19 @@ enumPiece_bbs bbsIndex();
 
 class BitBoardsSet {
 public:
-	BitBoardsSet();
+	BitBoardsSet() = default;
+	BitBoardsSet(const BitBoardsSet& bbs) noexcept(nothrow_copy_assign);
 	BitBoardsSet(const std::string& _fen);
 
 	// pieces bitboard initialization using FEN method
 	void parseFEN(const std::string& fen);
 	void parseGState(int i);
 
-	U64& operator[](size_t piece_get) noexcept;
+	U64& operator[](size_t piece_get);
+	void operator=(BitBoardsSet&& mbbs) noexcept(nothrow_move_constr);
+	void operator=(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign);
 
-	const std::string& getFEN() noexcept;
+	const std::string& getFEN() noexcept(nothrow_str_cpy_constr);
 
 	// display entire board of all pieces
 	void printBoard();
@@ -121,18 +126,29 @@ public:
 	void clear();
 private:
 	// board display purpose
-	std::array<char, 12> piece_char;
+	static std::array<char, 12> piece_char;
+	static constexpr bool nothrow_move_constr = std::is_nothrow_move_constructible_v<std::array<U64, 16>>,
+		nothrow_copy_assign = std::is_nothrow_copy_assignable_v<std::array<U64, 16>>,
+		nothrow_str_cpy_constr = std::is_nothrow_copy_constructible_v<std::string>;
 
 	// central storage of actual piece structure of every type
 	std::array<U64, 16> bbs;
 	std::string fen;
 };
 
-inline U64& BitBoardsSet::operator[](size_t piece_get) noexcept {
+inline U64& BitBoardsSet::operator[](size_t piece_get) {
 	return bbs[piece_get];
 }
 
-inline const std::string& BitBoardsSet::getFEN() noexcept {
+inline void BitBoardsSet::operator=(BitBoardsSet&& mbbs) noexcept(nothrow_move_constr) {
+	bbs = std::move(mbbs.bbs);
+}
+
+inline void BitBoardsSet::operator=(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) {
+	bbs = cbbs.bbs;
+}
+
+inline const std::string& BitBoardsSet::getFEN() noexcept(nothrow_str_cpy_constr) {
 	return fen;
 }
 

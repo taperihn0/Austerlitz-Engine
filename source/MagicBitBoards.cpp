@@ -1,21 +1,6 @@
 #include "MagicBitBoards.h"
 
 
-
-
-/*
-template U64 attack<KNIGHT>(U64, int);
-template U64 attack<BISHOP>(U64, int);
-template U64 attack<ROOK>(U64, int);
-template U64 attack<QUEEN>(U64, int);
-*/
-
-template <enumPiece pT>
-static U64 helper(U64 occ, int sq) {
-    return attack<pT>(occ, sq);
-}
-
-
 template <enumPiece pT, class>
 void printMagics() {
     std::cout << "std::array<U64, 64> m"
@@ -60,5 +45,3 @@ void printRelevantBits() {
 
     std::cout << "};" << std::endl;
 }
-
-

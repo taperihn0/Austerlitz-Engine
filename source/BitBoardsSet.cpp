@@ -32,13 +32,15 @@ template enumPiece_bbs bbsIndex<ROOK>();
 template enumPiece_bbs bbsIndex<BISHOP>();
 template enumPiece_bbs bbsIndex<QUEEN>();
 
-BitBoardsSet::BitBoardsSet()
-	: piece_char{'P', 'p', 'N', 'n', 'B', 'b', 'R', 'r', 'Q', 'q', 'K', 'k'} {
-	clear();
+std::array<char, 12> BitBoardsSet::piece_char = {
+	'P', 'p', 'N', 'n', 'B', 'b', 'R', 'r', 'Q', 'q', 'K', 'k'
+};
+
+BitBoardsSet::BitBoardsSet(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) {
+	bbs = cbbs.bbs;
 }
 
-BitBoardsSet::BitBoardsSet(const std::string& _fen)
-	: BitBoardsSet() {
+BitBoardsSet::BitBoardsSet(const std::string& _fen) {
 	clear();
 	parseFEN(_fen);
 }
@@ -184,6 +186,8 @@ void BitBoardsSet::parseGState(int i) {
 		game_state.fullmove *= 10;
 		game_state.fullmove += fen[i] - '0';
 	}
+
+	game_state.rook_king_move_block = { false, false };
 }
 
 void BitBoardsSet::printBoard() {

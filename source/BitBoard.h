@@ -67,6 +67,11 @@ enum enumPiece {
 	ANY
 };
 
+inline constexpr bool operator==(uint32_t iarg, enumPiece pc) noexcept {
+	return iarg == static_cast<uint32_t>(pc);
+}
+
+
 // little endian rank-file mapping constants
 namespace Constans {
 
@@ -175,4 +180,9 @@ inline constexpr void setBit(U64& bb, int shift) noexcept {
 
 inline constexpr U64 getBit(U64 bb, int shift) noexcept {
 	return bb & (cU64(1) << shift);
+}
+
+inline constexpr void moveBit(U64& bb, int origin, int target) noexcept {
+	setBit(bb, target);
+	popBit(bb, origin);
 }
