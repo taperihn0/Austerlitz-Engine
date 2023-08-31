@@ -1,37 +1,6 @@
 #include "BitBoardsSet.h"
 
 
-template <enumPiece PC>
-enumPiece_bbs bbsIndex() {
-	return nEmpty;
-}
-
-template <>
-enumPiece_bbs bbsIndex<KNIGHT>() {
-	return nWhiteKnight;
-}
-
-template <>
-enumPiece_bbs bbsIndex<BISHOP>() {
-	return nWhiteBishop;
-}
-
-template <>
-enumPiece_bbs bbsIndex<ROOK>() {
-	return nWhiteRook;
-}
-
-template <>
-enumPiece_bbs bbsIndex<QUEEN>() {
-	return nWhiteQueen;
-}
-
-// explicit template's instantiation definition
-template enumPiece_bbs bbsIndex<KNIGHT>();
-template enumPiece_bbs bbsIndex<ROOK>();
-template enumPiece_bbs bbsIndex<BISHOP>();
-template enumPiece_bbs bbsIndex<QUEEN>();
-
 std::array<char, 12> BitBoardsSet::piece_char = {
 	'P', 'p', 'N', 'n', 'B', 'b', 'R', 'r', 'Q', 'q', 'K', 'k'
 };

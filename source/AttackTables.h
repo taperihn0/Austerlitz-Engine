@@ -7,7 +7,7 @@
 // SINGLE ATTACK MASKS for PAWNS, KNIGHTS and KINGS
 namespace {
 
-	// pre-generated mask of avaible attacks for pawn on sq square
+	// mask of avaible attacks for pawn on sq square
 	U64 sqMaskPawnAttacks(enumSide side, int sq) {
 		U64 piece = eU64;
 		setBit(piece, sq);

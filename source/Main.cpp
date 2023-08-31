@@ -16,7 +16,7 @@ int main() {
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
 
-	BBs.parseFEN("7R/1P2P1B1/p1nP4/2k5/4Q3/p2K3p/P6p/2r1b3 w - - 0 1");
+	BBs.parseFEN("4kb2/8/8/8/8/8/8/R3K2R b KQ - 0 1");
 	BBs.printBoard();
 
 	auto move_list = MoveGenerator::generateLegalMoves();
@@ -33,6 +33,10 @@ int main() {
 
 		MovePerform::makeMove(move);
 		BBs.printBoard();
+
+		auto ml = MoveGenerator::generateLegalMoves();
+		MoveGenerator::Analisis::populateMoveList(ml);
+
 		MovePerform::unmakeMove(bbs, gs);
 	}
 

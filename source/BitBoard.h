@@ -12,14 +12,14 @@ using U64 = uint64_t;
 // custom U64 bitboard of given intiger
 template <typename T, class =
 	std::enable_if_t<std::is_enum_v<T> or std::is_constructible_v<U64, T>>>
-constexpr auto cU64(T s) {
+inline constexpr auto cU64(T s) noexcept {
 	return static_cast<U64>(s);
 }
 
 // set single bit on a bitboard and return such result
 template <typename T, class =
 	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
-constexpr auto bitU64(T s) {
+inline constexpr auto bitU64(T s) noexcept {
 	return cU64(1) << s;
 }
 
@@ -77,24 +77,24 @@ namespace Constans {
 
 	// usefull constans for bits-oriented board
 	constexpr U64
-		a_file = 0x0101010101010101,
-		h_file = 0x8080808080808080,
-		not_a_file = ~a_file,
-		not_h_file = ~h_file,
-		not_ab_file = 0xfcfcfcfcfcfcfcfc,
-		not_gh_file = 0x3f3f3f3f3f3f3f3f,
-		r1_rank = 0x00000000000000FF,
-		r2_rank = 0x000000000000FF00,
-		r7_rank = 0x00FF000000000000,
-		r8_rank = 0xFF00000000000000,
-		r4_rank = 0x00000000FF000000,
-		r5_rank = 0x000000FF00000000,
-		not_r1_rank = ~r1_rank,
-		not_r8_rank = ~r8_rank,
-		a1h8_diagonal = 0x8040201008040201,
+		a_file         = 0x0101010101010101,
+		h_file         = 0x8080808080808080,
+		not_a_file     = ~a_file,
+		not_h_file     = ~h_file,
+		not_ab_file    = 0xfcfcfcfcfcfcfcfc,
+		not_gh_file    = 0x3f3f3f3f3f3f3f3f,
+		r1_rank		   = 0x00000000000000FF,
+		r2_rank		   = 0x000000000000FF00,
+		r7_rank		   = 0x00FF000000000000,
+		r8_rank		   = 0xFF00000000000000,
+		r4_rank		   = 0x00000000FF000000,
+		r5_rank		   = 0x000000FF00000000,
+		not_r1_rank    = ~r1_rank,
+		not_r8_rank    = ~r8_rank,
+		a1h8_diagonal  = 0x8040201008040201,
 		h1_a8_diagonal = 0x0102040810204080,
-		lsquares = 0x55AA55AA55AA55AA,
-		dsquares = 0xAA55AA55AA55AA55;
+		lsquares       = 0x55AA55AA55AA55AA,
+		dsquares       = 0xAA55AA55AA55AA55;
 
 } // namespace Constans
 

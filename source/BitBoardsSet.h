@@ -5,29 +5,35 @@
 class castleRights {
 public:
 	castleRights() = default;
-
+	
 	enum class cSide {
-		wQUEEN,
-		wROOK,
 		bQUEEN,
 		bROOK,
+		wQUEEN,
+		wROOK,
 	};
 
-	void operator=(uint8_t d) {
+	void operator=(const castleRights& cr);
+
+	inline void operator=(uint8_t d) noexcept {
 		decoded = d;
 	}
 
-	void operator|=(int s) {
+	inline void operator|=(int s) noexcept {
 		decoded |= s;
 	}
 
-	auto operator&(int s) {
+	inline auto operator&(int s) noexcept {
 		return decoded & s;
 	}
 
 	template <cSide SIDE>
-	bool checkLegalCastle() {
+	inline bool checkLegalCastle() noexcept {
 		return decoded & (1 << static_cast<int>(SIDE));
+	}
+
+	inline uint32_t raw() {
+		return decoded;
 	}
 private:
 
@@ -43,6 +49,9 @@ private:
 	uint8_t decoded;
 };
 
+inline void castleRights::operator=(const castleRights& cr) {
+	decoded = cr.decoded;
+}
 
 inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
 	return (SIDE == WHITE) ? (PC == ROOK ? castleRights::cSide::wROOK : castleRights::cSide::wQUEEN)
@@ -103,6 +112,31 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) {
 template <enumPiece PC>
 enumPiece_bbs bbsIndex();
 
+template <enumPiece PC>
+inline enumPiece_bbs bbsIndex() {
+	return nEmpty;
+}
+
+template <>
+inline enumPiece_bbs bbsIndex<KNIGHT>() {
+	return nWhiteKnight;
+}
+
+template <>
+inline enumPiece_bbs bbsIndex<BISHOP>() {
+	return nWhiteBishop;
+}
+
+template <>
+inline enumPiece_bbs bbsIndex<ROOK>() {
+	return nWhiteRook;
+}
+
+template <>
+inline enumPiece_bbs bbsIndex<QUEEN>() {
+	return nWhiteQueen;
+}
+
 
 class BitBoardsSet {
 public:
@@ -115,7 +149,6 @@ public:
 	void parseGState(int i);
 
 	U64& operator[](size_t piece_get);
-	void operator=(BitBoardsSet&& mbbs) noexcept(nothrow_move_constr);
 	void operator=(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign);
 
 	const std::string& getFEN() noexcept(nothrow_str_cpy_constr);
@@ -127,8 +160,7 @@ public:
 private:
 	// board display purpose
 	static std::array<char, 12> piece_char;
-	static constexpr bool nothrow_move_constr = std::is_nothrow_move_constructible_v<std::array<U64, 16>>,
-		nothrow_copy_assign = std::is_nothrow_copy_assignable_v<std::array<U64, 16>>,
+	static constexpr bool nothrow_copy_assign = std::is_nothrow_copy_assignable_v<std::array<U64, 16>>,
 		nothrow_str_cpy_constr = std::is_nothrow_copy_constructible_v<std::string>;
 
 	// central storage of actual piece structure of every type
@@ -138,10 +170,6 @@ private:
 
 inline U64& BitBoardsSet::operator[](size_t piece_get) {
 	return bbs[piece_get];
-}
-
-inline void BitBoardsSet::operator=(BitBoardsSet&& mbbs) noexcept(nothrow_move_constr) {
-	bbs = std::move(mbbs.bbs);
 }
 
 inline void BitBoardsSet::operator=(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) {

@@ -22,7 +22,7 @@ namespace MoveGenerator {
 
 			while (attacks) {
 				target = popLS1B(attacks);
-				*it++ = MoveItem::encodeQuietCapture(origin, target, bitU64(target) & BBs[nBlack - SIDE], PC);
+				*it++ = MoveItem::encodeQuietCapture(origin, target, bitU64(target) & BBs[nBlack - SIDE], PC, SIDE);
 			}
 		}
 	}
@@ -47,10 +47,10 @@ namespace MoveGenerator {
 		}
 
 		// pinned pawn moves generation helper function template
-		template <MoveItem::encodeType eT, int Offset>
+		template <MoveItem::encodeType eT, enumSide SIDE, int Offset>
 		inline void pPawnMovesGenHelper(int target, MoveList::iterator& it) {
 			if (bitU64(target) & pinData::inbetween_blockers[target + Offset]) {
-				*it++ = (MoveItem::encode<eT>(target + Offset, target, PAWN));
+				*it++ = (MoveItem::encode<eT>(target + Offset, target, PAWN, SIDE));
 			}
 		}
 
@@ -58,7 +58,7 @@ namespace MoveGenerator {
 		template <enumSide SIDE, int Offset>
 		inline void pawnCapturesGenHelper(int target, MoveList::iterator& it) {
 			if (bitU64(target + Offset) & BBs[nWhitePawn + SIDE]) {
-				*it++ = (MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + Offset, target, PAWN));
+				*it++ = (MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + Offset, target, PAWN, SIDE));
 			}
 		}
 
@@ -115,12 +115,12 @@ namespace MoveGenerator {
 
 				while (single_push) {
 					target = popLS1B(single_push);
-					PawnHelpers::pPawnMovesGenHelper<MoveItem::encodeType::QUIET, SingleOff>(target, it);
+					PawnHelpers::pPawnMovesGenHelper<MoveItem::encodeType::QUIET, SIDE, SingleOff>(target, it);
 				}
 
 				while (double_push) {
 					target = popLS1B(double_push);
-					PawnHelpers::pPawnMovesGenHelper<MoveItem::encodeType::DOUBLE_PUSH, DoubleOff>(target, it);
+					PawnHelpers::pPawnMovesGenHelper<MoveItem::encodeType::DOUBLE_PUSH, SIDE, DoubleOff>(target, it);
 				}
 
 				// check en passant capture possibility and find origin square
@@ -184,12 +184,12 @@ namespace MoveGenerator {
 		single_push &= ~promote_rank_mask;
 		while (single_push) {
 			target = popLS1B(single_push);
-			*it++ = (MoveItem::encode<MoveItem::encodeType::QUIET>(target + single_off, target, PAWN));
+			*it++ = (MoveItem::encode<MoveItem::encodeType::QUIET>(target + single_off, target, PAWN, SIDE));
 		}
 
 		while (double_push) {
 			target = popLS1B(double_push);
-			*it++ = MoveItem::encode<MoveItem::encodeType::DOUBLE_PUSH>(target + double_off, target, PAWN);
+			*it++ = MoveItem::encode<MoveItem::encodeType::DOUBLE_PUSH>(target + double_off, target, PAWN, SIDE);
 		}
 
 		captures &= ~promote_rank_mask;
@@ -248,7 +248,7 @@ namespace MoveGenerator {
 
 			// checking for an unattacked position after a move
 			if (!isSquareAttacked<SIDE>(target)) {
-				*it++ = MoveItem::encodeQuietCapture(king_sq, target, bitU64(target) & BBs[nBlack - SIDE], KING);
+				*it++ = MoveItem::encodeQuietCapture(king_sq, target, bitU64(target) & BBs[nBlack - SIDE], KING, SIDE);
 			}
 		}
 
@@ -330,7 +330,7 @@ namespace MovePerform {
 			moveBit(BBs[nWhiteKing + side], origin, target);
 			
 			bool rook_side = target == g1 or target == g8;
-			int rook_origin = (rook_side ? (side ? f8 : f1) : (side ? d8 : d1)),
+			int rook_origin = (rook_side ? (side ? h8 : h1) : (side ? a8 : a1)),
 				rook_target = origin + (rook_side ? 1 : -1);
 
 			moveBit(BBs[nWhiteRook + side], rook_origin, rook_target);
@@ -345,6 +345,7 @@ namespace MovePerform {
 
 		// quiet moves or captures
 		auto piece = move.getMask<MoveItem::iMask::PIECE>() >> 12;
+
 		moveBit(BBs[side ? bbsIndex<BLACK>(piece) : bbsIndex<WHITE>(piece)], origin, target);
 		moveBit(BBs[nWhite + side], origin, target);
 		moveBit(BBs[nOccupied], origin, target);
@@ -370,49 +371,68 @@ namespace MovePerform {
 
 		// updating castle rights
 		game_state.rook_king_move_block[side] |= (piece == KING or piece == ROOK);
+		game_state.castle = 0;
 
-		if (!side and !game_state.rook_king_move_block[WHITE]) { // checking castling rights change at opponent side
+		bool flag = true;
+
+		// checking castling rights change at opponent side - white move
+		if (!side and !game_state.rook_king_move_block[BLACK]) {
+			
 			// checking on king side
 			if (attack<ROOK>(BBs[nOccupied], h8) & BBs[nBlackKing]) {
 				
 				// check whether fields between rook and king aren't attacked
 				for (int sq = e8; sq < h8; sq++) {
-					if (isSquareAttacked<BLACK>(sq))
-						return;
+					if (isSquareAttacked<BLACK>(sq)) {
+						flag = false;
+						break;
+					}
 				}
 
-				game_state.castle |= 1 << 1;
+				if (flag) game_state.castle |= 1 << 1;
 
-			} // and queen side
-			else if (attack<ROOK>(BBs[nOccupied], a8) & BBs[nBlackKing]) {
+			} 
+			// and queen side
+			if (attack<ROOK>(BBs[nOccupied], a8) & BBs[nBlackKing]) {
+
+				flag = true;
 
 				for (int sq = e8; sq > a8; sq--) {
-					if (isSquareAttacked<BLACK>(sq))
-						return;
+					if (isSquareAttacked<BLACK>(sq)) {
+						flag = false;
+						break;
+					}
 				}
 
-				game_state.castle |= 1;
+				if(flag) game_state.castle |= 1;
 			}
 
-		} // castle rights change while white player turn
-		else if (!side or game_state.rook_king_move_block[BLACK]) {
+		} // return, no sense to continue executing
+		else if (!side or game_state.rook_king_move_block[WHITE]) {
 			return;
 		}
 
+		// castle change if black has just moved a piece - rook side
 		if (attack<ROOK>(BBs[nOccupied], h1) & BBs[nWhiteKing]) {
 
+			flag = true;
+
 			for (int sq = e1; sq < h1; sq++) {
-				if (isSquareAttacked<WHITE>(sq))
-					return;
+				if (isSquareAttacked<WHITE>(sq)) {
+					flag = false;
+					break;
+				}
 			}
 
-			game_state.castle |= 1 << 3;
-		}
-		else if (attack<ROOK>(BBs[nOccupied], a1) & BBs[nWhiteKing]) {
+			if (flag) game_state.castle |= 1 << 3;
+		} 
+		// and queen side
+		if (attack<ROOK>(BBs[nOccupied], a1) & BBs[nWhiteKing]) {
 
 			for (int sq = e1; sq > a1; sq--) {
-				if (isSquareAttacked<WHITE>(sq))
+				if (isSquareAttacked<WHITE>(sq)) {
 					return;
+				}
 			}
 
 			game_state.castle |= 1 << 2;
@@ -421,8 +441,8 @@ namespace MovePerform {
 
 	// unmake move using copy-make approach
 	void unmakeMove(BitBoardsSet& bbs_cpy, gState& states_cpy) {
-		BBs = std::move(bbs_cpy);
-		game_state = std::move(states_cpy);
+		BBs = bbs_cpy;
+		game_state = states_cpy;
 	}
 
 } // namespace MovePerform

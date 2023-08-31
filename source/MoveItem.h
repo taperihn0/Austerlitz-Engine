@@ -64,8 +64,8 @@ namespace MoveItem {
 	// special functions of more arguments than only origin and target squares:
 		
 	// decide about capture flag relevancy
-	inline uint32_t encodeQuietCapture(int origin, int target, bool capture, enumPiece piece) noexcept {
-		return (capture << 16) | (piece << 12) | (target << 6) | origin;
+	inline uint32_t encodeQuietCapture(int origin, int target, bool capture, enumPiece piece, enumSide side) noexcept {
+		return (side << 19) | (capture << 16) | (piece << 12) | (target << 6) | origin;
 	}
 
 	// encode promotion and picked promotion piece
@@ -76,7 +76,7 @@ namespace MoveItem {
 
 	template <enumSide Side>
 	inline uint32_t encodeEnPassant(int origin, int target) noexcept {
-		return (Side << 19) | (1 << 18) | (target << 6) | origin;
+		return (Side << 19) | (1 << 17) | (target << 6) | origin;
 	}
 
 	template <enumSide Side>
@@ -86,21 +86,21 @@ namespace MoveItem {
 
 	// direct function template as a parameter of a specific encoding mode
 	template <encodeType eT>
-	uint32_t encode(int origin, int target, enumPiece piece);
+	uint32_t encode(int origin, int target, enumPiece piece, enumSide side);
 
 	template <>
-	inline uint32_t encode<encodeType::QUIET>(int origin, int target, enumPiece piece) noexcept {
-		return (piece << 12) | (target << 6) | origin;
+	inline uint32_t encode<encodeType::QUIET>(int origin, int target, enumPiece piece, enumSide side) noexcept {
+		return (side << 19) | (piece << 12) | (target << 6) | origin;
 	}
 
 	template <>
-	inline uint32_t encode<encodeType::CAPTURE>(int origin, int target, enumPiece piece) noexcept {
-		return (piece << 12) | (1 << 16) | (target << 6) | origin;
+	inline uint32_t encode<encodeType::CAPTURE>(int origin, int target, enumPiece piece, enumSide side) noexcept {
+		return (side << 19) | (piece << 12) | (1 << 16) | (target << 6) | origin;
 	}
 
 	template <>
-	inline uint32_t encode<encodeType::DOUBLE_PUSH>(int origin, int target, enumPiece piece) noexcept {
-		return (piece << 12) | (1 << 15) | (target << 6) | origin;
+	inline uint32_t encode<encodeType::DOUBLE_PUSH>(int origin, int target, enumPiece piece, enumSide side) noexcept {
+		return (side << 19) | (piece << 12) | (1 << 15) | (target << 6) | origin;
 	}
 
-}
+} // namespace MoveItem

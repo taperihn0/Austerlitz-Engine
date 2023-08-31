@@ -367,37 +367,42 @@ namespace {
 
     }
 
-    // handy function templates for generating sliding pieces attacks using pre-generated magic bitboards
-    // supported pieces: sliders and knight
-
-    template <enumPiece pT>
-    U64 attack(U64 occ, int sq) {
-        static_assert(pT == KNIGHT or pT == BISHOP or pT == ROOK or pT == QUEEN,
-            "Unsupported piece type by attack function");
-        return UINT64_MAX;
-    }
-
-    template <>
-    U64 attack<KNIGHT>(U64, int sq) {
-        return cknight_attacks[sq];
-    }
-
-    template <>
-    U64 attack<BISHOP>(U64 occ, int sq) {
-        return mdata.mBishopAtt[sq][mIndexHash(occ & mTabs::rBishop[sq], mTabs::mBishop[sq], mTabs::rbBishop[sq])];
-    }
-
-    template <>
-    U64 attack<ROOK>(U64 occ, int sq) {
-        return mdata.mRookAtt[sq][mIndexHash(occ & mTabs::rRook[sq], mTabs::mRook[sq], mTabs::rbRook[sq])];
-    }
-
-    template <>
-    U64 attack<QUEEN>(U64 occ, int sq) {
-        return attack<BISHOP>(occ, sq) | attack<ROOK>(occ, sq);
-    }
-
 } // namespace
+
+
+// handy function templates for generating sliding pieces attacks using pre-generated magic bitboards
+// supported pieces: sliders and knight
+
+template <enumPiece pT>
+inline U64 attack(U64 occ, int sq) noexcept {
+    static_assert(pT == KNIGHT or pT == BISHOP or pT == ROOK or pT == QUEEN,
+        "Unsupported piece type by attack function");
+    return UINT64_MAX;
+}
+
+template <>
+inline U64 attack<KNIGHT>(U64, int sq) noexcept {
+    assert(sq >= 0 and sq < 64 && "Index overflow");
+    return cknight_attacks[sq];
+}
+
+template <>
+inline U64 attack<BISHOP>(U64 occ, int sq) noexcept {
+    assert(sq >= 0 and sq < 64 && "Index overflow");
+    return mdata.mBishopAtt[sq][mIndexHash(occ & mTabs::rBishop[sq], mTabs::mBishop[sq], mTabs::rbBishop[sq])];
+}
+
+template <>
+inline U64 attack<ROOK>(U64 occ, int sq) noexcept {
+    assert(sq >= 0 and sq < 64 && "Index overflow");
+    return mdata.mRookAtt[sq][mIndexHash(occ & mTabs::rRook[sq], mTabs::mRook[sq], mTabs::rbRook[sq])];
+}
+
+template <>
+inline U64 attack<QUEEN>(U64 occ, int sq) noexcept {
+    assert(sq >= 0 and sq < 64 && "Index overflow");
+    return attack<BISHOP>(occ, sq) | attack<ROOK>(occ, sq);
+}
 
 
 template <enumPiece pT, class =
