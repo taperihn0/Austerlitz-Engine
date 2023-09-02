@@ -6,6 +6,8 @@
 #include <array>
 #include <cassert>
 
+#include <nmmintrin.h>
+
 // define bitboard data type 
 using U64 = uint64_t;
 
@@ -128,7 +130,7 @@ namespace {
 		};
 		constexpr U64 debruijn64 = cU64(0x03f79d71b4cb0a89);
 	}
-
+	
 	// display single bitboard function
 	void printBitBoard(U64 bitboard) {
 		int bitcheck = 56;
@@ -154,6 +156,11 @@ namespace {
 	// Population count for magic bitboards 
 	//  - counting bits set to one in a 64-bits number 'x'
 	int bitCount(U64 x) noexcept {
+#if defined(__INTEL_COMPILER) or defined(_MSC_VER)
+		return static_cast<int>(_mm_popcnt_u64(x));
+#elif defined(__GNUC__)
+		return __builtin_popcount(x);
+#endif
 		int c;
 		for (c = 0; x; x &= x - 1, c++);
 		return c;
@@ -163,7 +170,6 @@ namespace {
 
 
 // basic bitboard functions:
-
 inline constexpr int getLS1BIndex(U64 bb) noexcept {
 	assert(bb != eU64);
 	return lsbResource::index64[((bb ^ (bb - 1)) * lsbResource::debruijn64) >> 58];
@@ -184,7 +190,7 @@ inline constexpr void setBit(U64& bb, int shift) noexcept {
 	bb |= (cU64(1) << shift);
 }
 
-inline constexpr U64 getBit(U64 bb, int shift) noexcept {
+inline constexpr bool getBit(U64 bb, int shift) noexcept {
 	return bb & (cU64(1) << shift);
 }
 

@@ -64,8 +64,9 @@ namespace MoveItem {
 	// special functions of more arguments than only origin and target squares:
 		
 	// decide about capture flag relevancy
-	inline uint32_t encodeQuietCapture(int origin, int target, bool capture, enumPiece piece, enumSide side) noexcept {
-		return (side << 19) | (capture << 16) | (piece << 12) | (target << 6) | origin;
+	template <enumPiece PC, enumSide SIDE>
+	inline uint32_t encodeQuietCapture(int origin, int target, bool capture) noexcept {
+		return (SIDE << 19) | (capture << 16) | (PC << 12) | (target << 6) | origin;
 	}
 
 	// encode promotion and picked promotion piece
@@ -76,7 +77,7 @@ namespace MoveItem {
 
 	template <enumSide Side>
 	inline uint32_t encodeEnPassant(int origin, int target) noexcept {
-		return (Side << 19) | (1 << 17) | (target << 6) | origin;
+		return (Side << 19) | (1 << 17) | (1 << 16) | (target << 6) | origin;
 	}
 
 	template <enumSide Side>

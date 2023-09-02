@@ -85,6 +85,7 @@
       <PreprocessorDefinitions>__DEBUG__</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/constexpr:steps270000 %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -115,6 +116,7 @@
       <PreprocessorDefinitions>__DEBUG__</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/constexpr:steps270000 %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,7 +131,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>__RELEASE__</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <Optimization>Optimizations (Favor Speed) (/O3)</Optimization>
+      <Optimization>MaxSpeed</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

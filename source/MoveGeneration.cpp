@@ -23,7 +23,7 @@ namespace MoveGenerator {
 
 			while (attacks) {
 				target = popLS1B(attacks);
-				*it++ = MoveItem::encodeQuietCapture(origin, target, bitU64(target) & BBs[nBlack - SIDE], PC, SIDE);
+				*it++ = MoveItem::encodeQuietCapture<PC, SIDE>(origin, target, bitU64(target) & BBs[nBlack - SIDE]);
 			}
 		}
 	}
@@ -36,7 +36,7 @@ namespace MoveGenerator {
 		if (!check) pinGenerate<PC, SIDE, true>(eU64, it);
 	}
 
-
+	// some handy functions during generating pawn fully-legal moves
 	namespace PawnHelpers {
 
 		template <enumSide SIDE, bool Capture, int Offset>
@@ -278,7 +278,7 @@ namespace MoveGenerator {
 
 			// checking for an unattacked position after a move
 			if (!isSquareAttacked<SIDE>(target)) {
-				*it++ = MoveItem::encodeQuietCapture(king_sq, target, bitU64(target) & BBs[nBlack - SIDE], KING, SIDE);
+				*it++ = MoveItem::encodeQuietCapture<KING, SIDE>(king_sq, target, bitU64(target) & BBs[nBlack - SIDE]);
 			}
 		}
 
@@ -370,29 +370,29 @@ namespace MovePerform {
 	void makeMove(const MoveItem::iMove& move) {
 		int target = move.getMask<MoveItem::iMask::TARGET>() >> 6,
 			origin = move.getMask<MoveItem::iMask::ORIGIN>();
-		auto promotion = move.getMask<MoveItem::iMask::PROMOTION>();
-		bool side = move.getMask<MoveItem::iMask::SIDE_F>();
+		const bool side = move.getMask<MoveItem::iMask::SIDE_F>();
 
 		// change player to turn and update en passant square
 		game_state.turn = !game_state.turn;
 		game_state.ep_sq = -1;
 
-		if (promotion) {
-			setBit(BBs[side ? bbsIndex<BLACK>(promotion >> 20) : bbsIndex<WHITE>(promotion >> 20)], target);
+		if (move.getMask<MoveItem::iMask::EN_PASSANT_F>()) {
+			const int ep_pawn = target + (side ? Compass::nort : Compass::sout);
+			moveBit(BBs[nWhitePawn + side], origin, target);
+			popBit(BBs[nBlackPawn - side], ep_pawn);
+			moveBit(BBs[nWhite + side], origin, target);
+			popBit(BBs[nBlack - side], ep_pawn);
+			popBit(BBs[nOccupied], origin);
+			moveBit(BBs[nOccupied], ep_pawn, target);
+			moveBit(BBs[nEmpty], ep_pawn, origin);
+			return;
+		}
+		else if (const auto promotion = move.getMask<MoveItem::iMask::PROMOTION>()) {
+			setBit(BBs[bbsIndex<WHITE>(promotion >> 20) + side], target);
 			popBit(BBs[nWhitePawn + side], origin);
 			moveBit(BBs[nWhite + side], origin, target);
 			moveBit(BBs[nOccupied], origin, target);
 			moveBit(BBs[nEmpty], target, origin);
-			return;
-		}
-		else if (move.getMask<MoveItem::iMask::EN_PASSANT_F>()) {
-			moveBit(BBs[nWhitePawn + side], origin, target);
-			popBit(BBs[nBlackPawn - side], target + (side ? Compass::nort : Compass::sout));
-			moveBit(BBs[nWhite + side], origin, target);
-			popBit(BBs[nBlack - side], target + (side ? Compass::nort : Compass::sout));
-			popBit(BBs[nOccupied], origin);
-			moveBit(BBs[nOccupied], target + (side ? Compass::nort : Compass::sout), target);
-			moveBit(BBs[nEmpty], target + (side ? Compass::nort : Compass::sout), origin);
 			return;
 		}
 		else if (move.getMask<MoveItem::iMask::CASTLE_F>()) {
@@ -400,8 +400,8 @@ namespace MovePerform {
 
 			moveBit(BBs[nWhiteKing + side], origin, target);
 
-			bool rook_side = target == g1 or target == g8;
-			int rook_origin = (rook_side ? (side ? h8 : h1) : (side ? a8 : a1)),
+			const bool rook_side = target == g1 or target == g8;
+			const int rook_origin = (rook_side ? (side ? h8 : h1) : (side ? a8 : a1)),
 				rook_target = origin + (rook_side ? 1 : -1);
 
 			moveBit(BBs[nWhiteRook + side], rook_origin, rook_target);
@@ -415,9 +415,9 @@ namespace MovePerform {
 		}
 
 		// quiet moves or captures
-		auto piece = move.getMask<MoveItem::iMask::PIECE>() >> 12;
+		const auto piece = move.getMask<MoveItem::iMask::PIECE>() >> 12;
 
-		moveBit(BBs[side ? bbsIndex<BLACK>(piece) : bbsIndex<WHITE>(piece)], origin, target);
+		moveBit(BBs[bbsIndex<WHITE>(piece) + side], origin, target);
 		moveBit(BBs[nWhite + side], origin, target);
 		moveBit(BBs[nOccupied], origin, target);
 		moveBit(BBs[nEmpty], target, origin);
@@ -437,6 +437,7 @@ namespace MovePerform {
 		// setting new en passant position, if legal and possible
 		if (move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>()) {
 			game_state.ep_sq = target;
+			return;
 		}
 
 		// updating castle rights
@@ -492,12 +493,12 @@ namespace MoveGenerator {
 			if (!depth)
 				return 1;
 
-			auto move_list = MoveGenerator::generateLegalMoves();
-			auto bbs_cpy = BBs;
-			auto gstate_cpy = game_state;
+			const auto move_list = MoveGenerator::generateLegalMoves();
+			const auto bbs_cpy = BBs;
+			const auto gstate_cpy = game_state;
 			std::size_t total = 0;
 
-			for (auto& move : move_list) {
+			for (const auto& move : move_list) {
 				MovePerform::makeMove(move);
 				total += dPerft(depth - 1);
 				MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
