@@ -12,40 +12,13 @@ mData mdata;
 gState game_state;
 
 int main() {
-
+	std::ios::sync_with_stdio(false);
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
-
-	BBs.parseFEN("4kb2/8/8/8/8/8/8/R3K2R b KQ - 0 1");
+	
+	//BBs.parseFEN(BitBoardsSet::start_pos);
+	BBs.parseFEN("3Q4/pp2r3/6p1/1p2kP2/1pPnP2r/7p/8/1K5N w - - 0 1");
 	BBs.printBoard();
 
-	auto move_list = MoveGenerator::generateLegalMoves();
-	MoveGenerator::Analisis::populateMoveList(move_list);
-
-	auto bbs = BBs;
-	auto gs = game_state;
-
-	for (auto& move : move_list) {
-		std::cout << index_to_square[move.getMask<MoveItem::iMask::ORIGIN>()]
-			<< index_to_square[move.getMask < MoveItem::iMask::TARGET>() >> 6] << '\n';
-		
-		std::cin.get();
-
-		MovePerform::makeMove(move);
-		BBs.printBoard();
-
-		auto ml = MoveGenerator::generateLegalMoves();
-		MoveGenerator::Analisis::populateMoveList(ml);
-
-		MovePerform::unmakeMove(bbs, gs);
-	}
-
-	/*
-	BBs.clear();
-	BBs.parseFEN(fen);
-	BBs.printBoard();
-
-	auto move_list = MoveGenerator::generateLegalMoves();
-	MoveGenerator::Analisis::populateMoveList(move_list);
-	*/
+	MoveGenerator::Analisis::perft(3);
 }

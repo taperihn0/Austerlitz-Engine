@@ -52,7 +52,7 @@ namespace MoveItem {
 		}
 
 		template <iMask MASK>
-		inline uint32_t getMask() noexcept {
+		inline uint32_t getMask() const noexcept {
 			return cmove & static_cast<uint32_t>(MASK);
 		}
 	private:

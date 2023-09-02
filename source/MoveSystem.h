@@ -124,11 +124,6 @@ namespace {
 			return soWeOne(pawns) & opp_occ;
 		}
 
-		template <>
-		inline U64 anyAttackPawn<WHITE>(U64 pawns, U64 opp_occ) {
-			return PawnAttacks::eastAttackPawn<WHITE>(pawns, opp_occ)
-				| PawnAttacks::westAttackPawn<WHITE>(pawns, opp_occ);
-		}
 	}
 
 } // namespace

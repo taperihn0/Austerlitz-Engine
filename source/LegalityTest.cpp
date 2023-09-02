@@ -117,7 +117,7 @@ U64 pinnersPiece(int own_king_sq) {
 		opRookQueen = BBs[nBlackRook - SIDE] | BBs[nBlackQueen - SIDE],
 		opBishopQueen = BBs[nBlackBishop - SIDE] | BBs[nBlackQueen - SIDE];
 
-	return (opRookQueen & xRayRookAttack(BBs[nOccupied], own_side_occ, own_king_sq)) &
+	return (opRookQueen & xRayRookAttack(BBs[nOccupied], own_side_occ, own_king_sq)) |
 		(opBishopQueen & xRayBishopAttack(BBs[nOccupied], own_side_occ, own_king_sq));
 }
 

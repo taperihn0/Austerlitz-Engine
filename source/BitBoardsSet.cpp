@@ -155,8 +155,6 @@ void BitBoardsSet::parseGState(int i) {
 		game_state.fullmove *= 10;
 		game_state.fullmove += fen[i] - '0';
 	}
-
-	game_state.rook_king_move_block = { false, false };
 }
 
 void BitBoardsSet::printBoard() {

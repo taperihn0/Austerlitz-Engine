@@ -32,6 +32,10 @@ public:
 		return decoded & (1 << static_cast<int>(SIDE));
 	}
 
+	inline void operator&=(uint32_t mask) {
+		decoded &= mask;
+	}
+
 	inline uint32_t raw() {
 		return decoded;
 	}
@@ -65,8 +69,7 @@ struct gState {
 	enumSide turn;
 	castleRights castle;
 	int halfmove, fullmove;
-	// for each side
-	std::array<bool, 2> rook_king_move_block;
+	//std::array<bool, 2> rook_king_move_block;
 };
 
 extern gState game_state;
@@ -157,6 +160,8 @@ public:
 	void printBoard();
 
 	void clear();
+
+	static constexpr const char* start_pos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 private:
 	// board display purpose
 	static std::array<char, 12> piece_char;
