@@ -41,6 +41,7 @@ namespace BitU64LookUp {
 template <typename T, class =
 	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
 inline constexpr auto bitU64(T s) noexcept {
+	assert(s >= 0 and s < 64 && "Index overflow");
 	return BitU64LookUp::u64bit.arr[s];
 }
 
@@ -122,6 +123,11 @@ namespace Constans {
 
 	constexpr std::array<U64, 8> r_by_index = {
 		r1_rank, r2_rank, r3_rank, r4_rank, r5_rank, r6_rank, r7_rank, r8_rank
+	};
+
+	constexpr std::array<U64, 8> f_by_index = {
+		a_file, a_file << 1, a_file << 2, a_file << 3, a_file << 4, a_file << 5,
+		a_file << 6, a_file << 7
 	};
 
 } // namespace Constans

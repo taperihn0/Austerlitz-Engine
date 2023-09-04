@@ -7,7 +7,8 @@ namespace pinData {
 
 	// cache table to store inbetween paths of king and his x-ray attackers
 	// for pinned pieces, since such pinned piece can only move through their inbetween path
-	std::array<U64, 64> inbetween_blockers;
+	//std::array<U64, 64> inbetween_blockers;
+	std::array<U64, 3> pinmask;
 	U64 pinned;
 	std::array<U64, 2> pin_mask;
 }
@@ -22,7 +23,7 @@ namespace MoveGenerator {
 	void pinGenerate(const U64 legal_blocks, MoveList::iterator& it) {
 
 		// avaible fields during attacking
-		const U64 avaible = ~BBs[nWhite + SIDE];
+		const U64 avaible = ~BBs[nWhite + SIDE] & (Pin ? pinData::pinmask[PC - 2] : UINT64_MAX) & legal_blocks;
 
 		// only pinned or only unpinned processing
 		U64 pieces = BBs[bbsIndex<PC>() + SIDE] & pinData::pin_mask[Pin],
@@ -31,8 +32,7 @@ namespace MoveGenerator {
 
 		while (pieces) {
 			origin = popLS1B(pieces);
-			attacks = (attack<PC>(BBs[nOccupied], origin) & avaible)
-				& (Pin ? pinData::inbetween_blockers[origin] : legal_blocks);
+			attacks = attack<PC>(BBs[nOccupied], origin) & avaible;
 
 			while (attacks) {
 				target = popLS1B(attacks);
@@ -46,7 +46,7 @@ namespace MoveGenerator {
 	template <enumPiece PC, enumSide SIDE>
 	inline void generateOf(U64 legal_blocks, MoveList::iterator& it, bool check) {
 		pinGenerate<PC, SIDE, false>(legal_blocks, it);
-		if (!check) pinGenerate<PC, SIDE, true>(eU64, it);
+		if (!check) pinGenerate<PC, SIDE, true>(UINT64_MAX, it);
 	}
 
 	// some handy functions during generating pawn fully-legal moves
@@ -61,12 +61,14 @@ namespace MoveGenerator {
 		}
 
 		// pinned pawn moves generation helper function template
+		/*
 		template <MoveItem::encodeType eT, enumSide SIDE, int Offset>
 		inline void pPawnMovesGenHelper(int target, MoveList::iterator& it) {
 			if (bitU64(target) & pinData::inbetween_blockers[target + Offset]) {
 				*it++ = (MoveItem::encode<eT>(target + Offset, target, PAWN, SIDE));
 			}
 		}
+		*/
 
 		// pawn captures helper function template
 		template <enumSide SIDE, int Offset>
@@ -120,7 +122,7 @@ namespace MoveGenerator {
 		template <enumSide SIDE, int SingleOff, int DoubleOff>
 		struct miscellaneousHelper<SIDE, SingleOff, DoubleOff, false> {
 			static void process(U64, MoveList::iterator& it) {
-
+				/*
 				static constexpr int west_att_off = SIDE == WHITE ? Compass::soWe : Compass::noWe,
 					east_att_off = SIDE == WHITE ? Compass::soEa : Compass::noEa;
 				static constexpr U64 double_push_mask = SIDE == WHITE ? Constans::r4_rank : Constans::r5_rank;
@@ -142,19 +144,60 @@ namespace MoveGenerator {
 				}
 
 				// captures
-				U64 pawns = PawnAttacks::anyAttackPawn<!SIDE>(BBs[nBlack - SIDE], pinned);
-				int origin;
+				U64 attacks = PawnAttacks::anyAttackPawn<SIDE>(pinned, BBs[nBlack - SIDE]);
+				int target;
 
-				while (pawns) {
-					origin = popLS1B(pawns);
+				while (attacks) {
+					target = popLS1B(attacks);
 
-					if (bitU64(origin + west_att_off) & pinData::inbetween_blockers[origin]) {
-						*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(origin, origin + west_att_off, PAWN, SIDE);
+					if (bitU64(target) & pinData::inbetween_blockers[target + west_att_off]) {
+						*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + west_att_off, target, PAWN, SIDE);
 					}
-					else if (bitU64(origin + east_att_off) & pinData::inbetween_blockers[origin]) {
-						*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(origin, origin + east_att_off, PAWN, SIDE);
+					else if (bitU64(target) & pinData::inbetween_blockers[target + east_att_off]) {
+						*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + east_att_off, target, PAWN, SIDE);
 					}
+				}
 
+				// check en passant capture possibility and find origin square
+				if (game_state.ep_sq != -1) {
+					PawnHelpers::pawnEPGenHelper<SIDE, Compass::west, SingleOff>(it);
+					PawnHelpers::pawnEPGenHelper<SIDE, Compass::east, SingleOff>(it);
+				}
+				*/
+
+				static constexpr U64 double_push_mask = SIDE == WHITE ? Constans::r4_rank : Constans::r5_rank;
+				static constexpr int east_att_off = SIDE == WHITE ? Compass::soEa : Compass::noEa,
+					west_att_off = SIDE == WHITE ? Compass::soWe : Compass::noWe;
+
+				U64 hor_pinned = pinData::pinned & BBs[nWhitePawn + SIDE]
+					& Constans::f_by_index[getLS1BIndex(BBs[nWhiteKing + SIDE]) % 8];
+
+				U64 single_push = PawnPushes::singlePushPawn<SIDE>(hor_pinned, BBs[nEmpty]),
+					double_push = PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask,
+					west_captures = PawnAttacks::westAttackPawn<SIDE>(pinData::pinned & BBs[nWhitePawn + SIDE], 
+						BBs[nBlack - SIDE] & pinData::pinmask[0]),
+					east_captures = PawnAttacks::eastAttackPawn<SIDE>(pinData::pinned & BBs[nWhitePawn + SIDE],
+						BBs[nBlack - SIDE] & pinData::pinmask[0]);
+				int target;
+
+				while (single_push) {
+					target = popLS1B(single_push);
+					*it++ = (MoveItem::encode<MoveItem::encodeType::QUIET>(target + SingleOff, target, PAWN, SIDE));
+				}
+
+				while (double_push) {
+					target = popLS1B(double_push);
+					*it++ = (MoveItem::encode<MoveItem::encodeType::DOUBLE_PUSH>(target + DoubleOff, target, PAWN, SIDE));
+				}
+
+				while (west_captures) {
+					target = popLS1B(west_captures);
+					*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + east_att_off, target, PAWN, SIDE);
+				}
+
+				while (east_captures) {
+					target = popLS1B(east_captures);
+					*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + west_att_off, target, PAWN, SIDE);
 				}
 
 				// check en passant capture possibility and find origin square
@@ -185,8 +228,8 @@ namespace MoveGenerator {
 		const U64 unpinned = BBs[nWhitePawn + SIDE] & ~pinData::pinned;
 
 		int target;
-		U64 single_push = PawnPushes::singlePushPawn<SIDE>(unpinned, BBs[nEmpty]),
-			double_push = PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask & legal_squares,
+		U64 single_push   = PawnPushes::singlePushPawn<SIDE>(unpinned, BBs[nEmpty]),
+			double_push   = PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask & legal_squares,
 			west_captures = PawnAttacks::westAttackPawn<SIDE>(unpinned, BBs[nBlack - SIDE]) & legal_squares,
 			east_captures = PawnAttacks::eastAttackPawn<SIDE>(unpinned, BBs[nBlack - SIDE]) & legal_squares,
 			promote_moves = single_push & legal_squares & promote_rank_mask;
@@ -251,16 +294,27 @@ namespace MoveGenerator {
 				(inBetween(king_sq, checker_sq) | bitU64(checker_sq)) : UINT64_MAX;
 
 			// use bit index as an access index for inbetween cache
-			U64 pinners = pinnersPiece<SIDE>(king_sq), ray;
-			int pinner_sq;
+			//U64 pinners = pinnersPiece<SIDE>(king_sq), ray;
+			//int pinner_sq;
 
-			while (pinners) {
-				pinner_sq = popLS1B(pinners);
-				ray = inBetween(king_sq, pinner_sq) | bitU64(pinner_sq);
-				pinData::inbetween_blockers[getLS1BIndex(ray & pinData::pinned)] = ray;
-			}
+			//while (pinners) {
+			//	pinner_sq = popLS1B(pinners);
+			//	ray = inBetween(king_sq, pinner_sq) | bitU64(pinner_sq);
+			//	pinData::inbetween_blockers[getLS1BIndex(ray & pinData::pinned)] = ray;
+			//}
 
 			pinData::pin_mask[0] = ~pinData::pinned, pinData::pin_mask[1] = pinData::pinned;
+			
+			// bishop pinmask data
+			pinData::pinmask[0] = attack<BISHOP>(BBs[nBlack - SIDE], king_sq);
+			// rook pinmask
+			pinData::pinmask[1] = attack<ROOK>(BBs[nBlack - SIDE], king_sq);
+			// queen pinmask
+			pinData::pinmask[2] = attack<QUEEN>(BBs[nBlack - SIDE], king_sq)
+				& (xRayBishopAttack(BBs[nBlack - SIDE], BBs[nWhiteQueen + SIDE], king_sq)
+					| xRayRookAttack(BBs[nBlack - SIDE], BBs[nWhiteQueen + SIDE], king_sq))
+				| inBetween(king_sq, BBs[nWhiteQueen + SIDE] ? getLS1BIndex(BBs[nWhiteQueen + SIDE]) : king_sq);
+
 
 			check ? generateOfPawns<SIDE, true>(legal_blocks, it) : generateOfPawns<SIDE, false>(legal_blocks, it);
 			// exclude pinned knights directly, since pinned knight can't move anywhere
@@ -535,7 +589,7 @@ namespace MoveGenerator {
 
 			std::cout << std::endl << "Nodes: " << total << std::endl
 				<< "Timer: ~" << duration << " ms" << std::endl
-				<< "Performance: ~" << static_cast<float>(total / duration) << " kN/s" << std::endl
+				<< "Performance: ~" << total * 1. / duration << " kN/s" << std::endl
 				<< "[depth " << depth << ']' << std::endl;
 		}
 
