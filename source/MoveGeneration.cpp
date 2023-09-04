@@ -3,22 +3,35 @@
 #include <string>
 
 
+namespace pinData {
+
+	// cache table to store inbetween paths of king and his x-ray attackers
+	// for pinned pieces, since such pinned piece can only move through their inbetween path
+	std::array<U64, 64> inbetween_blockers;
+	U64 pinned;
+	std::array<U64, 2> pin_mask;
+}
+
+
 namespace MoveGenerator {
 
 	// generator functions based on PINNED piece flag -
 	// excluded pieces template parameters don't meet conditions of these functions.
 	template <enumPiece PC, enumSide SIDE, bool Pin, class =
 		std::enable_if<PC != PAWN and PC != KING and (!Pin and PC == KNIGHT)>>
-	void pinGenerate(U64 legal_blocks, MoveList::iterator& it) {
+	void pinGenerate(const U64 legal_blocks, MoveList::iterator& it) {
+
+		// avaible fields during attacking
+		const U64 avaible = ~BBs[nWhite + SIDE];
 
 		// only pinned or only unpinned processing
-		U64 pieces = BBs[bbsIndex<PC>() + SIDE] & (Pin ? pinData::pinned : ~pinData::pinned),
+		U64 pieces = BBs[bbsIndex<PC>() + SIDE] & pinData::pin_mask[Pin],
 			attacks;
 		int origin, target;
 
 		while (pieces) {
 			origin = popLS1B(pieces);
-			attacks = (attack<PC>(BBs[nOccupied], origin) & ~BBs[nWhite + SIDE])
+			attacks = (attack<PC>(BBs[nOccupied], origin) & avaible)
 				& (Pin ? pinData::inbetween_blockers[origin] : legal_blocks);
 
 			while (attacks) {
@@ -40,11 +53,11 @@ namespace MoveGenerator {
 	namespace PawnHelpers {
 
 		template <enumSide SIDE, bool Capture, int Offset>
-		inline void pawnPromotionGenHelper(int target, MoveList::iterator& it) {
+		void pawnPromotionGenHelper(int target, MoveList::iterator& it) {
 			*it++ = (MoveItem::encodePromotion<SIDE, QUEEN, Capture>(target + Offset, target));
 			*it++ = (MoveItem::encodePromotion<SIDE, ROOK,  Capture>(target + Offset, target));
 			*it++ = (MoveItem::encodePromotion<SIDE, BISHOP,Capture>(target + Offset, target));
-			*it++ = (MoveItem::encodePromotion<SIDE, KNIGHT,  Capture>(target + Offset, target));
+			*it++ = (MoveItem::encodePromotion<SIDE, KNIGHT,Capture>(target + Offset, target));
 		}
 
 		// pinned pawn moves generation helper function template
@@ -58,12 +71,9 @@ namespace MoveGenerator {
 		// pawn captures helper function template
 		template <enumSide SIDE, int Offset>
 		inline void pawnCapturesGenHelper(int target, MoveList::iterator& it) {
-			if ((target % 8 == 0 and (Offset == Compass::noWe or Offset == Compass::soWe)) or 
-			    (target % 8 == 7 and (Offset == Compass::noEa or Offset == Compass::soEa)) or
-				!(bitU64(target + Offset) & (BBs[nWhitePawn + SIDE] & ~pinData::pinned)))
-				return;
-
-			*it++ = (MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + Offset, target, PAWN, SIDE));
+			if (oneStep<Offset>(target) and (bitU64(target + Offset) & (BBs[nWhitePawn + SIDE] & ~pinData::pinned))) {
+				*it++ = (MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + Offset, target, PAWN, SIDE));
+			}
 		}
 
 		// special horizontal pin test function template for en passant capture scenario
@@ -71,10 +81,8 @@ namespace MoveGenerator {
 		void pawnEPGenHelper(MoveList::iterator& it) {
 
 			// no legal en passant capture is possible
-			if ((!(game_state.ep_sq % 8) and Offset == Compass::west) or 
-				(game_state.ep_sq % 8 == 7 and Offset == Compass::east) or 
-				!(bitU64(game_state.ep_sq + Offset) & BBs[nWhitePawn + SIDE]) or 
-				bitU64(game_state.ep_sq + Offset) & pinData::pinned)
+			if (!oneStep<Offset>(game_state.ep_sq) or
+				bitU64(game_state.ep_sq + Offset) & (~BBs[nWhitePawn + SIDE] | pinData::pinned))
 				return;
 
 			// horizontal pin test
@@ -94,14 +102,13 @@ namespace MoveGenerator {
 
 		template <enumSide SIDE, int SingleOff, int DoubleOff>
 		struct miscellaneousHelper<SIDE, SingleOff, DoubleOff, true> {
-			static void process(U64 legal_squares, MoveList::iterator& it) {
+			static void process(const U64 legal_squares, MoveList::iterator& it) {
 
 				// en passant case - 
 				// permitted only when checker is a pawn possible to capture using en passant rule
 				if (getLS1BIndex(legal_squares) != game_state.ep_sq)
 					return;
-
-				if (bitU64(game_state.ep_sq + Compass::west) & BBs[nWhitePawn + SIDE]) {
+				else if (bitU64(game_state.ep_sq + Compass::west) & BBs[nWhitePawn + SIDE]) {
 					*it++ = MoveItem::encodeEnPassant<SIDE>(game_state.ep_sq + Compass::west, game_state.ep_sq - SingleOff);
 				}
 				if (bitU64(game_state.ep_sq + Compass::east) & BBs[nWhitePawn + SIDE]) {
@@ -114,38 +121,37 @@ namespace MoveGenerator {
 		struct miscellaneousHelper<SIDE, SingleOff, DoubleOff, false> {
 			static void process(U64, MoveList::iterator& it) {
 
-				static constexpr int west_att_off = SIDE ? Compass::soWe : Compass::noWe,
-					east_att_off = SIDE ? Compass::soEa : Compass::noEa;
+				static constexpr int west_att_off = SIDE == WHITE ? Compass::soWe : Compass::noWe,
+					east_att_off = SIDE == WHITE ? Compass::soEa : Compass::noEa;
 				static constexpr U64 double_push_mask = SIDE == WHITE ? Constans::r4_rank : Constans::r5_rank;
 
+				const U64 pinned = BBs[nWhitePawn + SIDE] & pinData::pinned;
+					
 				// pinned pawn - only pushes
 				U64 single_push =
-					PawnPushes::singlePushPawn<SIDE>(BBs[nWhitePawn + SIDE] & pinData::pinned, BBs[nEmpty]),
+					PawnPushes::singlePushPawn<SIDE>(pinned, BBs[nEmpty]),
 					double_push =
 					PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask;
-				int target;
 
 				while (single_push) {
-					target = popLS1B(single_push);
-					PawnHelpers::pPawnMovesGenHelper<MoveItem::encodeType::QUIET, SIDE, SingleOff>(target, it);
+					PawnHelpers::pPawnMovesGenHelper<MoveItem::encodeType::QUIET, SIDE, SingleOff>(popLS1B(single_push), it);
 				}
 
 				while (double_push) {
-					target = popLS1B(double_push);
-					PawnHelpers::pPawnMovesGenHelper<MoveItem::encodeType::DOUBLE_PUSH, SIDE, DoubleOff>(target, it);
+					PawnHelpers::pPawnMovesGenHelper<MoveItem::encodeType::DOUBLE_PUSH, SIDE, DoubleOff>(popLS1B(double_push), it);
 				}
 
 				// captures
-				U64 pawns = BBs[nWhitePawn + SIDE] & pinData::pinned;
+				U64 pawns = PawnAttacks::anyAttackPawn<!SIDE>(BBs[nBlack - SIDE], pinned);
 				int origin;
 
 				while (pawns) {
 					origin = popLS1B(pawns);
 
-					if (bitU64(origin + west_att_off) & BBs[nBlack - SIDE] & pinData::inbetween_blockers[origin]) {
+					if (bitU64(origin + west_att_off) & pinData::inbetween_blockers[origin]) {
 						*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(origin, origin + west_att_off, PAWN, SIDE);
 					}
-					else if (bitU64(origin + east_att_off) & BBs[nBlack - SIDE] & pinData::inbetween_blockers[origin]) {
+					else if (bitU64(origin + east_att_off) & pinData::inbetween_blockers[origin]) {
 						*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(origin, origin + east_att_off, PAWN, SIDE);
 					}
 
@@ -179,16 +185,11 @@ namespace MoveGenerator {
 		const U64 unpinned = BBs[nWhitePawn + SIDE] & ~pinData::pinned;
 
 		int target;
-		U64 single_push =
-			PawnPushes::singlePushPawn<SIDE>(unpinned, BBs[nEmpty]),
-			double_push =
-			PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask
-			& legal_squares,
-			captures =
-			PawnAttacks::anyAttackPawn<SIDE>(unpinned, BBs[nBlack - SIDE])
-			& legal_squares,
-			promote_moves =
-			single_push & legal_squares & promote_rank_mask;
+		U64 single_push = PawnPushes::singlePushPawn<SIDE>(unpinned, BBs[nEmpty]),
+			double_push = PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask & legal_squares,
+			west_captures = PawnAttacks::westAttackPawn<SIDE>(unpinned, BBs[nBlack - SIDE]) & legal_squares,
+			east_captures = PawnAttacks::eastAttackPawn<SIDE>(unpinned, BBs[nBlack - SIDE]) & legal_squares,
+			promote_moves = single_push & legal_squares & promote_rank_mask;
 
 		// processing pawn promotions by pushes
 		while (promote_moves) {
@@ -196,22 +197,19 @@ namespace MoveGenerator {
 		}
 
 		// processing pawn promotions by captures
-		promote_moves = captures & promote_rank_mask & legal_squares;
+		promote_moves = west_captures & promote_rank_mask;
 		while (promote_moves) {
-			target = popLS1B(promote_moves);
+			PawnHelpers::pawnPromotionGenHelper<SIDE, true, east_att_off>(popLS1B(promote_moves), it);
+		}
 
-			if (bitU64(target + west_att_off) & BBs[nWhitePawn + SIDE]) {
-				PawnHelpers::pawnPromotionGenHelper<SIDE, true, west_att_off>(target, it);
-			}
-			if (bitU64(target + east_att_off) & BBs[nWhitePawn + SIDE]) {
-				PawnHelpers::pawnPromotionGenHelper<SIDE, true, east_att_off>(target, it);
-			}
+		promote_moves = east_captures & promote_rank_mask;
+		while (promote_moves) {
+			PawnHelpers::pawnPromotionGenHelper<SIDE, true, west_att_off>(popLS1B(promote_moves), it);
 		}
 
 		// processing pawn pushes, then possible captures
 		// excluding promotion case - promotion scenario is processed
-		single_push &= ~promote_rank_mask;
-		single_push &= legal_squares;
+		single_push &= ~promote_rank_mask & legal_squares;
 		while (single_push) {
 			target = popLS1B(single_push);
 			*it++ = (MoveItem::encode<MoveItem::encodeType::QUIET>(target + single_off, target, PAWN, SIDE));
@@ -222,13 +220,16 @@ namespace MoveGenerator {
 			*it++ = MoveItem::encode<MoveItem::encodeType::DOUBLE_PUSH>(target + double_off, target, PAWN, SIDE);
 		}
 
-		captures &= ~promote_rank_mask;
-		while (captures) {
-			target = popLS1B(captures);
+		west_captures &= ~promote_rank_mask;
+		while (west_captures) {
+			target = popLS1B(west_captures);
+			*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + east_att_off, target, PAWN, SIDE);
+		}
 
-			// checking occupied squared by pawn belonging
-			PawnHelpers::pawnCapturesGenHelper<SIDE, west_att_off>(target, it);
-			PawnHelpers::pawnCapturesGenHelper<SIDE, east_att_off>(target, it);
+		east_captures &= ~promote_rank_mask;
+		while (east_captures) {
+			target = popLS1B(east_captures);
+			*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + west_att_off, target, PAWN, SIDE);
 		}
 
 		PawnHelpers::miscellaneousHelper<SIDE, single_off, double_off, Check>::process(legal_squares, it);
@@ -259,6 +260,8 @@ namespace MoveGenerator {
 				pinData::inbetween_blockers[getLS1BIndex(ray & pinData::pinned)] = ray;
 			}
 
+			pinData::pin_mask[0] = ~pinData::pinned, pinData::pin_mask[1] = pinData::pinned;
+
 			check ? generateOfPawns<SIDE, true>(legal_blocks, it) : generateOfPawns<SIDE, false>(legal_blocks, it);
 			// exclude pinned knights directly, since pinned knight can't move anywhere
 			pinGenerate<KNIGHT, SIDE, false>(legal_blocks, it);
@@ -285,13 +288,13 @@ namespace MoveGenerator {
 		if (check)
 			return;
 		
-		const int ksq = SIDE ? e8 : e1;
+		static constexpr int ksq = SIDE ? e8 : e1;
 
 		// checking castling rights change at opponent side - white move
 		if (game_state.castle.checkLegalCastle<SIDE & ROOK>()) {
 
 			// prepare king square and proper rook square
-			const int rsq = SIDE ? h8 : h1;
+			static constexpr int rsq = SIDE ? h8 : h1;
 
 			// checking on king side
 			if (attack<ROOK>(BBs[nOccupied], rsq) & BBs[nWhiteKing + SIDE]) {
@@ -299,7 +302,7 @@ namespace MoveGenerator {
 				bool ind_f = true;
 
 				// check whether fields between rook and king aren't attacked
-				for (int sq = ksq; sq < rsq; sq++) {
+				for (int sq = ksq + 1; sq < rsq; sq++) {
 					if (isSquareAttacked<SIDE>(sq)) {
 						ind_f = false;
 						break;
@@ -313,13 +316,13 @@ namespace MoveGenerator {
 
 		// and queen side
 		if (game_state.castle.checkLegalCastle<SIDE & QUEEN>()) {
-			const int rsq = SIDE ? a8 : a1;
+			static constexpr int rsq = SIDE ? a8 : a1;
 
 			if (attack<ROOK>(BBs[nOccupied], rsq) & BBs[nWhiteKing + SIDE]) {
 
 				bool ind_f = true;
 
-				for (int sq = ksq; sq > rsq; sq--) {
+				for (int sq = ksq - 1; sq > rsq; sq--) {
 					if (isSquareAttacked<SIDE>(sq)) {
 						ind_f = false;
 						break;
@@ -437,16 +440,13 @@ namespace MovePerform {
 		// setting new en passant position, if legal and possible
 		if (move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>()) {
 			game_state.ep_sq = target;
-			return;
-		}
-
-		// updating castle rights
-		if (piece == ROOK and origin == (side ? a8 : a1))
-			game_state.castle &= ~(side ? (1 << 1) : (1 << 2));
+		} // updating castling rights
+		else if (piece == ROOK and origin == (side ? a8 : a1))
+			game_state.castle &= ~(1 << (2 - side));
 		else if (piece == ROOK and origin == (side ? h8 : h1))
-			game_state.castle &= ~(1 << 3);
+			game_state.castle &= ~(1 << (3 - side * 2));
 		else if (piece == KING)
-			game_state.castle &= ~(side ? 3 : 12);
+			game_state.castle &= ~(12 - side * 9);
 	}
 
 	// unmake move using copy-make approach

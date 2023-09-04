@@ -48,14 +48,48 @@ namespace {
 	U64 westOne(U64 bb) { return genShift((bb & Constans::not_a_file), Compass::west); }
 	U64 noWeOne(U64 bb) { return genShift((bb & Constans::not_a_file), Compass::noWe); }
 
-	U64 noNoEa(U64 b) { return genShift((b & Constans::not_h_file), Compass::noNoEa); }
+	U64 noNoEa(U64 b) { return genShift((b & Constans::not_h_file),  Compass::noNoEa); }
 	U64 noEaEa(U64 b) { return genShift((b & Constans::not_gh_file), Compass::noEaEa); }
 	U64 soEaEa(U64 b) { return genShift((b & Constans::not_gh_file), Compass::soEaEa); }
-	U64 soSoEa(U64 b) { return genShift((b & Constans::not_h_file), Compass::soSoEa); }
-	U64 noNoWe(U64 b) { return genShift((b & Constans::not_a_file), Compass::noNoWe); }
+	U64 soSoEa(U64 b) { return genShift((b & Constans::not_h_file),  Compass::soSoEa); }
+	U64 noNoWe(U64 b) { return genShift((b & Constans::not_a_file),  Compass::noNoWe); }
 	U64 noWeWe(U64 b) { return genShift((b & Constans::not_ab_file), Compass::noWeWe); }
 	U64 soWeWe(U64 b) { return genShift((b & Constans::not_ab_file), Compass::soWeWe); }
-	U64 soSoWe(U64 b) { return genShift((b & Constans::not_a_file), Compass::soSoWe); }
+	U64 soSoWe(U64 b) { return genShift((b & Constans::not_a_file),  Compass::soSoWe); }
+
+	// function template checking move validity:
+	template <int Direct>
+	bool oneStep(int sq);
+
+	template <>
+	bool oneStep<Compass::noWe>(int sq) {
+		return noWeOne(bitU64(sq));
+	}
+
+	template <>
+	bool oneStep<Compass::soWe>(int sq) {
+		return soWeOne(bitU64(sq));
+	}
+
+	template <>
+	bool oneStep<Compass::noEa>(int sq) {
+		return noEaOne(bitU64(sq));
+	}
+
+	template <>
+	bool oneStep<Compass::soEa>(int sq) {
+		return soEaOne(bitU64(sq));
+	}
+
+	template <>
+	bool oneStep<Compass::west>(int sq) {
+		return westOne(bitU64(sq));
+	}
+
+	template <>
+	bool oneStep<Compass::east>(int sq) {
+		return eastOne(bitU64(sq));
+	}
 
 	// some resources of pawn pushing system
 	namespace PawnPushes {

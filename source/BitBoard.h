@@ -5,7 +5,6 @@
 #include <iostream>
 #include <array>
 #include <cassert>
-
 #include <nmmintrin.h>
 
 // define bitboard data type 
@@ -18,12 +17,33 @@ inline constexpr auto cU64(T s) noexcept {
 	return static_cast<U64>(s);
 }
 
+namespace {
+	namespace InitState {
+		struct CArr_ {
+			constexpr CArr_()
+				: arr{} {
+				for (int i = 0; i < 64; i++) {
+					arr[i] = cU64(1) << i;
+				}
+			}
+
+			U64 arr[64];
+		};
+	}
+}
+
+namespace BitU64LookUp {
+	constexpr auto u64bit = InitState::CArr_();
+}
+
+
 // set single bit on a bitboard and return such result
 template <typename T, class =
 	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
 inline constexpr auto bitU64(T s) noexcept {
-	return cU64(1) << s;
+	return BitU64LookUp::u64bit.arr[s];
 }
+
 
 
 // enum indexes for little endian rank-file mapping
@@ -87,7 +107,7 @@ namespace Constans {
 		not_gh_file    = 0x3f3f3f3f3f3f3f3f,
 		r1_rank		   = 0x00000000000000FF,
 		r2_rank		   = 0x000000000000FF00,
-		r3_rank		   = 0x000000FF00000000,
+		r3_rank		   = 0x0000000000FF0000,
 		r4_rank		   = 0x00000000FF000000,
 		r5_rank		   = 0x000000FF00000000,
 		r6_rank		   = 0x0000FF0000000000,
@@ -115,6 +135,8 @@ namespace {
 	// pre-compile board size
 	constexpr int bSIZE = 8 * 8;
 
+#if not defined(_MSC_VER) and not defined(__INTEL_COMPILER) and not defined(__GNUC__)
+
 	// LS1B index finding purpose
 	namespace lsbResource {
 
@@ -130,6 +152,8 @@ namespace {
 		};
 		constexpr U64 debruijn64 = cU64(0x03f79d71b4cb0a89);
 	}
+
+#endif
 	
 	// display single bitboard function
 	void printBitBoard(U64 bitboard) {
@@ -170,12 +194,26 @@ namespace {
 
 
 // basic bitboard functions:
+#if defined(_MSC_VER) or defined(__INTEL_COMPILER)
+inline int getLS1BIndex(U64 bb) {
+	assert(bb != eU64);
+	unsigned long s;
+	_BitScanForward64(&s, bb);
+	return s;
+}
+#elif defined(__GNUC__)
+inline int getLS1BIndex(U64 bb) noexcept(noexcept(__builtin_ctzll(bb))) {
+	assert(bb != eU64);
+	return __builtin_ctzll(bb);
+}
+#else
 inline constexpr int getLS1BIndex(U64 bb) noexcept {
 	assert(bb != eU64);
 	return lsbResource::index64[((bb ^ (bb - 1)) * lsbResource::debruijn64) >> 58];
 }
+#endif
 
-inline constexpr int popLS1B(U64& bb) noexcept {
+inline int popLS1B(U64& bb) noexcept {
 	assert(bb != eU64);
 	int res = getLS1BIndex(bb);
 	bb &= bb - 1;

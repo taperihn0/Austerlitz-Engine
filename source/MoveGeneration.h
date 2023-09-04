@@ -5,19 +5,6 @@
 #include "MoveItem.h"
 
 
-namespace {
-
-	namespace pinData {
-
-		// cache table to store inbetween paths of king and his x-ray attackers
-		// for pinned pieces, since such pinned piece can only move through their inbetween path
-		std::array<U64, 64> inbetween_blockers;
-		U64 pinned;
-	}
-
-}
-
-
 // storage for generated moves
 struct MoveList {
 public:
