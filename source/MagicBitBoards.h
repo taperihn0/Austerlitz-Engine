@@ -381,6 +381,12 @@ inline U64 attack(U64 occ, int sq) noexcept {
 }
 
 template <>
+inline U64 attack<KING>(U64, int sq) {
+    assert(sq >= 0 and sq < 64 && "Index overflow");
+    return cking_attacks[sq];
+}
+
+template <>
 inline U64 attack<KNIGHT>(U64, int sq) noexcept {
     assert(sq >= 0 and sq < 64 && "Index overflow");
     return cknight_attacks[sq];

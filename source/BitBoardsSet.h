@@ -111,35 +111,61 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) {
 	return static_cast<size_t>(pc) + static_cast<size_t>(s);
 }
 
+// handy functions helping getting proper piece index in bitboards set
+namespace {
 
-template <enumPiece PC>
-enumPiece_bbs bbsIndex();
+	template <enumPiece PC>
+	enumPiece_bbs bbsIndex();
 
-template <enumPiece PC>
-inline enumPiece_bbs bbsIndex() {
-	return nEmpty;
+	template <enumPiece PC>
+	inline enumPiece_bbs bbsIndex() {
+		return nEmpty;
+	}
+
+	template <>
+	inline enumPiece_bbs bbsIndex<KNIGHT>() {
+		return nWhiteKnight;
+	}
+
+	template <>
+	inline enumPiece_bbs bbsIndex<BISHOP>() {
+		return nWhiteBishop;
+	}
+
+	template <>
+	inline enumPiece_bbs bbsIndex<ROOK>() {
+		return nWhiteRook;
+	}
+
+	template <>
+	inline enumPiece_bbs bbsIndex<QUEEN>() {
+		return nWhiteQueen;
+	}
+
+	template <bool Side>
+	enumPiece_bbs bbsIndex(uint32_t pc);
+
+	template <>
+	enumPiece_bbs bbsIndex<WHITE>(uint32_t pc) {
+		return pc == PAWN ? nWhitePawn :
+			pc == KNIGHT ? nWhiteKnight :
+			pc == BISHOP ? nWhiteBishop :
+			pc == ROOK ? nWhiteRook :
+			pc == QUEEN ? nWhiteQueen :
+			nWhiteKing;
+	}
+
+	template <>
+	enumPiece_bbs bbsIndex<BLACK>(uint32_t pc) {
+		return pc == PAWN ? nBlackPawn :
+			pc == KNIGHT ? nBlackKnight :
+			pc == BISHOP ? nBlackBishop :
+			pc == ROOK ? nBlackRook :
+			pc == QUEEN ? nBlackQueen :
+			nBlackKing;
+	}
+
 }
-
-template <>
-inline enumPiece_bbs bbsIndex<KNIGHT>() {
-	return nWhiteKnight;
-}
-
-template <>
-inline enumPiece_bbs bbsIndex<BISHOP>() {
-	return nWhiteBishop;
-}
-
-template <>
-inline enumPiece_bbs bbsIndex<ROOK>() {
-	return nWhiteRook;
-}
-
-template <>
-inline enumPiece_bbs bbsIndex<QUEEN>() {
-	return nWhiteQueen;
-}
-
 
 class BitBoardsSet {
 public:

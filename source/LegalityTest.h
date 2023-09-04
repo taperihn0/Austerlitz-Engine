@@ -3,7 +3,7 @@
 #include "AttackTables.h"
 #include "BitBoardsSet.h"
 #include "MagicBitBoards.h"
-#include "abs.h"
+#include "static.h"
 #include <cassert>
 
 

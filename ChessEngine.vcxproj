@@ -149,7 +149,7 @@
     <ClCompile Include="source\MoveGeneration.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\abs.h" />
+    <ClInclude Include="source\static.h" />
     <ClInclude Include="source\BitBoardsSet.h" />
     <ClInclude Include="source\GeneratingMagics.h" />
     <ClInclude Include="source\LegalityTest.h" />

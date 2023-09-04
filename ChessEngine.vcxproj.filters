@@ -59,7 +59,7 @@
     <ClInclude Include="source\MoveGeneration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\abs.h">
+    <ClInclude Include="source\static.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\MoveItem.h">
