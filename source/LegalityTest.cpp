@@ -13,6 +13,12 @@ U64 xRayRookAttack(U64 occ, U64 blockers, int sq) {
 	return default_attacks ^ attack<ROOK>(occ ^ blockers, sq);
 }
 
+U64 xRayQueenAttack(U64 occ, U64 blockers, int sq) {
+	U64 default_attacks = attack<QUEEN>(occ, sq);
+	blockers &= default_attacks;
+	return default_attacks ^ attack<QUEEN>(occ ^ blockers, sq);
+}
+
 
 // return true whether given piece is attacked by any of 
 // opponent piece, else return false
@@ -38,14 +44,14 @@ bool isSquareAttacked(int sq) {
 	U64 queen = BBs[nBlackQueen - PC_SIDE],
 		rookQueen = BBs[nBlackRook - PC_SIDE] | queen,
 		bishopQueen = BBs[nBlackBishop - PC_SIDE] | queen,
-		occ = BBs[nOccupied];
+		occ = BBs[nOccupied] & ~BBs[nWhiteKing + PC_SIDE];
 
-	if (bishopQueen & attack<BISHOP>(occ & ~BBs[nWhiteKing + PC_SIDE], sq)) {
+	if (bishopQueen & attack<BISHOP>(occ, sq)) {
 		return true;
 	}
 
 	// final checking
-	return (rookQueen & attack<ROOK>(occ & ~BBs[nWhiteKing + PC_SIDE], sq));
+	return (rookQueen & attack<ROOK>(occ, sq));
 }
 
 

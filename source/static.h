@@ -18,10 +18,10 @@ namespace {
 
 		template <int It>
 		void static_for(U64& dst, U64 occ, std::integral_constant<int, It>) {
-			U64 tmp = BBs[It];
+			U64 pieces = BBs[It];
 			
-			while (tmp) {
-				dst |= attack<static_cast<enumPiece>(It / 2)>(occ, popLS1B(tmp));
+			while (pieces) {
+				dst |= attack<static_cast<enumPiece>(It / 2)>(occ, popLS1B(pieces));
 			}
 
 			static_for(dst, occ, std::integral_constant<int, It + 2>());

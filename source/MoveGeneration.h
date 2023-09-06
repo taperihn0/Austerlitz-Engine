@@ -64,7 +64,8 @@ namespace MoveGenerator {
 		void populateMoveList(const MoveList& move_list);
 
 		// perft function testing whether move generator is bug-free
-		void perft(int depth);
+		template <int Depth>
+		void perft();
 
 	}
 

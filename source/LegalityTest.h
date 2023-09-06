@@ -33,7 +33,6 @@ namespace {
 				setBit(res, sq_m + i * (sq_m % 8 < sq_x % 8 ? 9 : 7));
 			}
 		}
-
 		return res;
 	}
 
@@ -81,6 +80,7 @@ inline bool isDoubleChecked(U64 king_attackers) noexcept {
 
 U64 xRayBishopAttack(U64 occ, U64 blockers, int sq);
 U64 xRayRookAttack(U64 occ, U64 blockers, int sq);
+U64 xRayQueenAttack(U64 occ, U64 blockers, int sq);
 
 
 template <enumSide PC_SIDE>
