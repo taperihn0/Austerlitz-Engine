@@ -15,6 +15,8 @@ BitBoardsSet::BitBoardsSet(const std::string& _fen) {
 }
 
 void BitBoardsSet::parseFEN(const std::string& _fen) {
+	clear();
+
 	fen = _fen;
 	int x = 0, y = 7;
 

@@ -82,14 +82,11 @@ template U64 attackTo<BLACK, KING>(int);
 template U64 attackTo<WHITE>(int);
 template U64 attackTo<BLACK>(int);
 
-
-// return bitboard of pinned piece of given color
 template <enumSide SIDE>
-U64 pinnedPiece(int own_king_sq) {
+U64 pinnedHorizonVertic(int own_king_sq) {
 	U64 own_side_occ = BBs[nWhite + SIDE],
-		opRookQueen = BBs[nBlackRook - SIDE] | BBs[nBlackQueen - SIDE],
-		opBishopQueen = BBs[nBlackBishop - SIDE] | BBs[nBlackQueen - SIDE],
-		pinner = opRookQueen & xRayRookAttack(BBs[nOccupied], own_side_occ, own_king_sq),
+		pinner = (BBs[nBlackRook - SIDE] | BBs[nBlackQueen - SIDE])
+		& xRayRookAttack(BBs[nOccupied], own_side_occ, own_king_sq),
 		pinned = eU64;
 
 	// processing pins performed by file and rank lines - rooks and queens
@@ -100,8 +97,17 @@ U64 pinnedPiece(int own_king_sq) {
 		pinner &= pinner - 1;
 	}
 
+	return pinned;
+}
+
+template <enumSide SIDE>
+U64 pinnedDiagonal(int own_king_sq) {
+	U64 own_side_occ = BBs[nWhite + SIDE],
+		pinner = (BBs[nBlackBishop - SIDE] | BBs[nBlackQueen - SIDE])
+		& xRayBishopAttack(BBs[nOccupied], own_side_occ, own_king_sq),
+		pinned = eU64;
+
 	// pins on diagonal lines - bishop and queens
-	pinner = opBishopQueen & xRayBishopAttack(BBs[nOccupied], own_side_occ, own_king_sq);
 	while (pinner) {
 		pinned |= own_side_occ & inBetween(getLS1BIndex(pinner), own_king_sq);
 
@@ -112,8 +118,23 @@ U64 pinnedPiece(int own_king_sq) {
 	return pinned;
 }
 
+// return bitboard of pinned piece of given color
+template <enumSide SIDE>
+inline U64 pinnedPiece(int own_king_sq) {
+	return pinnedHorizonVertic<SIDE>(own_king_sq)
+		| pinnedDiagonal<SIDE>(own_king_sq);
+}
+
+
 template U64 pinnedPiece<WHITE>(int);
 template U64 pinnedPiece<BLACK>(int);
+
+template U64 pinnedHorizonVertic<WHITE>(int);
+template U64 pinnedHorizonVertic<BLACK>(int);
+
+template U64 pinnedDiagonal<WHITE>(int);
+template U64 pinnedDiagonal<BLACK>(int);
+
 
 
 // return bitboard of pinners pieces of given color

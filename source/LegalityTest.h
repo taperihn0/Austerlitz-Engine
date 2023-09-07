@@ -96,4 +96,11 @@ U64 pinnedPiece(int own_king_sq);
 
 
 template <enumSide SIDE>
+U64 pinnedHorizonVertic(int own_king_sq);
+
+template <enumSide SIDE>
+U64 pinnedDiagonal(int own_king_sq);
+
+
+template <enumSide SIDE>
 U64 pinnersPiece(int own_king_sq);

@@ -7,10 +7,9 @@ namespace pinData {
 
 	// cache table to store inbetween paths of king and his x-ray attackers
 	// for pinned pieces, since such pinned piece can only move through their inbetween path
-	//std::array<U64, 64> inbetween_blockers;
-	//std::array<U64, 3> pinmask;
-	U64 diag_pin, pinned;
-	std::array<U64, 2> pin_mask;
+	// mask for diagonal pinmask (simply bishop attack from king square), horizontally or vertically pinned 
+	// and logical OR of these two pin types
+	U64 diag_pin, hv_pin, pinned;
 
 	int king_sq;
 }
@@ -39,12 +38,32 @@ namespace MoveGenerator {
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
 	inline auto pinMask(bool) -> std::enable_if_t<Pin and PC == BISHOP, U64> {
-		return pinData::diag_pin = attack<BISHOP>(BBs[nBlack - SIDE], pinData::king_sq);
+		return attack<BISHOP>(BBs[nBlack - SIDE], pinData::king_sq);
 	}
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
 	inline auto pinMask(bool any_rook) -> std::enable_if_t<Pin and PC == ROOK, U64> {
 		return any_rook ? attack<ROOK>(BBs[nBlack - SIDE], pinData::king_sq) : UINT64_MAX;
+	}
+
+	template <enumPiece PC, bool Pin>
+	inline auto pinType() -> std::enable_if_t<Pin and PC == BISHOP, U64> {
+		return pinData::diag_pin;
+	}
+
+	template <enumPiece PC, bool Pin>
+	inline auto pinType() -> std::enable_if_t<Pin and PC == ROOK, U64> {
+		return pinData::hv_pin;
+	}
+
+	template <enumPiece PC, bool Pin>
+	inline auto pinType() -> std::enable_if_t<Pin and PC == QUEEN, U64> {
+		return pinData::pinned;
+	}
+
+	template <enumPiece PC, bool Pin>
+	inline auto pinType() -> std::enable_if_t<!Pin, U64> {
+		return ~pinData::pinned;
 	}
 
 	// generator functions based on PINNED piece flag -
@@ -54,7 +73,7 @@ namespace MoveGenerator {
 	void pinGenerate(MoveList::iterator& it) {
 
 		// only pinned or only unpinned processing
-		U64 pieces = BBs[bbsIndex<PC>() + SIDE] & pinData::pin_mask[Pin],
+		U64 pieces = BBs[bbsIndex<PC>() + SIDE] & pinType<PC, Pin>(),
 			attacks;
 		int origin, target;
 
@@ -83,6 +102,7 @@ namespace MoveGenerator {
 	// some handy functions during generating pawn fully-legal moves
 	namespace PawnHelpers {
 
+		// generate pawn possible promotions
 		template <enumSide SIDE, bool Capture, int Offset>
 		void pawnPromotionGenHelper(int target, MoveList::iterator& it) {
 			*it++ = (MoveItem::encodePromotion<SIDE, QUEEN, Capture>(target + Offset, target));
@@ -91,22 +111,16 @@ namespace MoveGenerator {
 			*it++ = (MoveItem::encodePromotion<SIDE, KNIGHT, Capture>(target + Offset, target));
 		}
 
-		// pawn captures helper function template
-		template <enumSide SIDE, int Offset>
-		inline void pawnCapturesGenHelper(int target, MoveList::iterator& it) {
-			if (oneStep<Offset>(target) and (bitU64(target + Offset) & (BBs[nWhitePawn + SIDE] & ~pinData::pinned))) {
-				*it++ = (MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + Offset, target, PAWN, SIDE));
-			}
-		}
-
 		// special horizontal pin test function template for en passant capture scenario
 		template <enumSide SIDE, int Offset, int EP_Offset>
 		void pawnEPGenHelper(MoveList::iterator& it) {
 
+			const U64 exclude_ep_cap = BBs[nOccupied] & ~(bitU64(game_state.ep_sq) | bitU64(game_state.ep_sq + Offset));
+
 			// checking en passant capture legality
-			if (attack<ROOK>(BBs[nOccupied] & ~(bitU64(game_state.ep_sq) | bitU64(game_state.ep_sq + Offset)), pinData::king_sq)
+			if (attack<ROOK>(exclude_ep_cap, pinData::king_sq)
 				& (BBs[nBlackQueen - SIDE] | BBs[nBlackRook - SIDE]) or 
-				attack<BISHOP>(BBs[nOccupied] & ~(bitU64(game_state.ep_sq) | bitU64(game_state.ep_sq + Offset)), pinData::king_sq)
+				attack<BISHOP>(exclude_ep_cap, pinData::king_sq)
 				& (BBs[nBlackQueen - SIDE] | BBs[nBlackBishop - SIDE]))
 				return;
 
@@ -142,17 +156,30 @@ namespace MoveGenerator {
 				static constexpr U64 double_push_mask = SIDE == WHITE ? Constans::r4_rank : Constans::r5_rank;
 				static constexpr int east_att_off = SIDE == WHITE ? Compass::soEa : Compass::noEa,
 					west_att_off = SIDE == WHITE ? Compass::soWe : Compass::noWe;
+				static constexpr U64 promote_rank_mask = SIDE == WHITE ? Constans::r8_rank : Constans::r1_rank;
 
-				U64 hor_pinned = pinData::pinned & BBs[nWhitePawn + SIDE]
-					& Constans::f_by_index[pinData::king_sq % 8];
+				const U64 hor_pinned_pawns = pinData::pinned & BBs[nWhitePawn + SIDE]
+					& Constans::f_by_index[pinData::king_sq % 8],
+					possible_captures = BBs[nBlack - SIDE] & attack<BISHOP>(BBs[nBlack - SIDE], pinData::king_sq);
 
-				U64 single_push = PawnPushes::singlePushPawn<SIDE>(hor_pinned, BBs[nEmpty]),
-					double_push = PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask,
-					west_captures = PawnAttacks::westAttackPawn<SIDE>(pinData::pinned & BBs[nWhitePawn + SIDE],
-						BBs[nBlack - SIDE] & pinData::diag_pin),
-					east_captures = PawnAttacks::eastAttackPawn<SIDE>(pinData::pinned & BBs[nWhitePawn + SIDE],
-						BBs[nBlack - SIDE] & pinData::diag_pin);
 				int target;
+				U64 single_push = PawnPushes::singlePushPawn<SIDE>(hor_pinned_pawns, BBs[nEmpty]),
+					double_push = PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask,
+					west_captures = PawnAttacks::westAttackPawn<SIDE>(BBs[nWhitePawn + SIDE] ^ hor_pinned_pawns,
+						possible_captures),
+					east_captures = PawnAttacks::eastAttackPawn<SIDE>(BBs[nWhitePawn + SIDE] ^ hor_pinned_pawns,
+						possible_captures),
+					promote_moves = west_captures & promote_rank_mask;
+
+				// processing pawn promotions by captures
+				while (promote_moves) {
+					PawnHelpers::pawnPromotionGenHelper<SIDE, true, east_att_off>(popLS1B(promote_moves), it);
+				}
+
+				promote_moves = east_captures & promote_rank_mask;
+				while (promote_moves) {
+					PawnHelpers::pawnPromotionGenHelper<SIDE, true, west_att_off>(popLS1B(promote_moves), it);
+				}
 
 				while (single_push) {
 					target = popLS1B(single_push);
@@ -164,11 +191,13 @@ namespace MoveGenerator {
 					*it++ = (MoveItem::encode<MoveItem::encodeType::DOUBLE_PUSH>(target + DoubleOff, target, PAWN, SIDE));
 				}
 
+				west_captures &= ~promote_rank_mask;
 				while (west_captures) {
 					target = popLS1B(west_captures);
 					*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + east_att_off, target, PAWN, SIDE);
 				}
 
+				east_captures &= ~promote_rank_mask;
 				while (east_captures) {
 					target = popLS1B(east_captures);
 					*it++ = MoveItem::encode<MoveItem::encodeType::CAPTURE>(target + west_att_off, target, PAWN, SIDE);
@@ -264,15 +293,14 @@ namespace MoveGenerator {
 		// double check case skipping - only king moves to non-attacked squares are permitted
 		// when there is double check situation
 		if (!isDoubleChecked(checkers)) {
-			pinData::pinned = pinnedPiece<SIDE>(pinData::king_sq);
+			pinData::diag_pin = pinnedDiagonal<SIDE>(pinData::king_sq);
+			pinData::hv_pin = pinnedHorizonVertic<SIDE>(pinData::king_sq);
+			pinData::pinned = pinData::diag_pin | pinData::hv_pin;
 			checkData::legal_squares = UINT64_MAX;
-			pinData::pin_mask[0] = ~pinData::pinned;
-			pinData::pin_mask[1] = pinData::pinned;
 
 			if (check) {
 				const int checker_sq = getLS1BIndex(checkers);
 				checkData::legal_squares = inBetween(pinData::king_sq, checker_sq) | bitU64(checker_sq);
-
 			}
 
 			// exclude pinned knights directly, since pinned knight can't move anywhere
@@ -303,10 +331,12 @@ namespace MoveGenerator {
 		// prepare king square and proper rook square
 		static constexpr int rsq1 = SIDE ? h8 : h1;
 		static constexpr int rsq2 = SIDE ? b8 : b1;
+		static constexpr int rook_left = SIDE ? a8 : a1;
 
 		// checking castling rights change at opponent side - white move
 		if (game_state.castle.checkLegalCastle<SIDE & ROOK>() and
-			attack<ROOK>(BBs[nOccupied], rsq1) & BBs[nWhiteKing + SIDE]) {
+			attack<ROOK>(BBs[nOccupied], rsq1) & BBs[nWhiteKing + SIDE] and
+			bitU64(rsq1) & BBs[nWhiteRook + SIDE]) {
 				bool ind_f = true;
 
 				// check whether fields between rook and king aren't attacked
@@ -322,7 +352,8 @@ namespace MoveGenerator {
 
 		// and queen side
 		if (game_state.castle.checkLegalCastle<SIDE & QUEEN>() and
-			attack<ROOK>(BBs[nOccupied], rsq2) & BBs[nWhiteKing + SIDE]) {
+			attack<ROOK>(BBs[nOccupied], rook_left) & BBs[nWhiteKing + SIDE] and
+			bitU64(rook_left) & BBs[nWhiteRook + SIDE]) {
 				bool ind_f = true;
 
 				for (int sq = pinData::king_sq - 1; sq > rsq2; sq--) {
@@ -359,6 +390,19 @@ namespace MovePerform {
 			nWhiteKing + Side;
 	}
 
+	inline void captureCase(const MoveItem::iMove& move, bool side, int target) {
+		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+			popBit(BBs[nBlack - side], target);
+
+			for (auto pc = nBlackPawn - side; pc <= nBlackQueen; pc += 2) {
+				if (getBit(BBs[pc], target)) {
+					popBit(BBs[pc], target);
+					break;
+				}
+			}
+		}
+	}
+
 	// perform given move
 	void makeMove(const MoveItem::iMove& move) {
 		int target = move.getMask<MoveItem::iMask::TARGET>() >> 6,
@@ -377,7 +421,8 @@ namespace MovePerform {
 			popBit(BBs[nBlack - side], ep_pawn);
 			popBit(BBs[nOccupied], origin);
 			moveBit(BBs[nOccupied], ep_pawn, target);
-			moveBit(BBs[nEmpty], ep_pawn, origin);
+			setBit(BBs[nEmpty], origin);
+			moveBit(BBs[nEmpty], target, ep_pawn);
 			return;
 		}
 		else if (const auto promotion = move.getMask<MoveItem::iMask::PROMOTION>()) {
@@ -386,6 +431,8 @@ namespace MovePerform {
 			moveBit(BBs[nWhite + side], origin, target);
 			moveBit(BBs[nOccupied], origin, target);
 			moveBit(BBs[nEmpty], target, origin);
+			// maybe there is also a capture?
+			captureCase(move, side, target);
 			return;
 		}
 		else if (move.getMask<MoveItem::iMask::CASTLE_F>()) {
@@ -416,16 +463,7 @@ namespace MovePerform {
 		moveBit(BBs[nEmpty], target, origin);
 
 		// captured piece updating
-		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
-			popBit(BBs[nBlack - side], target);
-
-			for (auto pc = nBlackPawn - side; pc <= nBlackQueen; pc += 2) {
-				if (getBit(BBs[pc], target)) {
-					popBit(BBs[pc], target);
-					break;
-				}
-			}
-		}
+		captureCase(move, side, target);
 
 		// setting new en passant position, if legal and possible
 		if (move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>()) {
@@ -481,12 +519,11 @@ namespace MoveGenerator {
 
 		template <int Depth>
 		unsigned long long dPerft() {
-			const auto move_list = MoveGenerator::generateLegalMoves();
 			const auto bbs_cpy = BBs;
 			const auto gstate_cpy = game_state;
 			unsigned long long total = 0;
 
-			for (const auto& move : move_list) {
+			for (const auto& move : MoveGenerator::generateLegalMoves()) {
 				MovePerform::makeMove(move);
 				total += dPerft<Depth - 1>();
 				MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
@@ -507,7 +544,7 @@ namespace MoveGenerator {
 
 		template <int Depth>
 		void perft() {
-			static_assert(Depth > 0 && "Unvalid depth size");
+			static_assert(Depth > 0, "Unvalid depth size");
 
 			Timer::go();
 
@@ -550,7 +587,8 @@ namespace MoveGenerator {
 		template void perft<8>();
 		template void perft<9>();
 		template void perft<10>();
-	}
+
+	} // namespace Analisis
 
 
 } // namespace MoveGenerator

@@ -15,16 +15,11 @@ int main() {
 	std::ios::sync_with_stdio(false);
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
-	
-	//BBs.parseFEN(BitBoardsSet::start_pos);
-	//BBs.parseFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
-	//BBs.parseFEN("rnbqkbnr/pppp1ppp/8/8/3PpP2/4B3/PPP1P1PP/RN1QKBNR b KQkq f4 0 1");
-	//BBs.printBoard();
 
-	std::string fen;
+	std::string fen = "n6Q/4Pkp1/K1Pp4/2pP3P/4B1q1/P1p2p2/8/8 w - - 0 1";
 
-	while (std::getline(std::cin, fen)) {
+	//while (std::getline(std::cin, fen)) {
 		BBs.parseFEN(fen);
-		MoveGenerator::Analisis::perft<4>();
-	}
+		MoveGenerator::Analisis::perft<6>();
+	//}
 }
