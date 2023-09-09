@@ -20,6 +20,6 @@ int main() {
 
 	while (std::getline(std::cin, fen)) {
 		BBs.parseFEN(fen);
-		MoveGenerator::Analisis::perft<6>();
+		MoveGenerator::Analisis::perft<5>();
 	}
 }
