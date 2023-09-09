@@ -152,12 +152,15 @@ namespace MoveGenerator {
 
 		template <enumSide SIDE, int SingleOff, int DoubleOff, bool Check>
 		auto diffPawnGenerate(MoveList::iterator& it) -> std::enable_if_t<!Check> {
-			static constexpr U64 double_push_mask = SIDE == WHITE ? Constans::r4_rank : Constans::r5_rank;
-			static constexpr int east_att_off = SIDE == WHITE ? Compass::soEa : Compass::noEa,
+			static constexpr U64 
+				double_push_mask = SIDE == WHITE ? Constans::r4_rank : Constans::r5_rank,
+				promote_rank_mask = SIDE == WHITE ? Constans::r8_rank : Constans::r1_rank;
+			static constexpr int 
+				east_att_off = SIDE == WHITE ? Compass::soEa : Compass::noEa,
 				west_att_off = SIDE == WHITE ? Compass::soWe : Compass::noWe;
-			static constexpr U64 promote_rank_mask = SIDE == WHITE ? Constans::r8_rank : Constans::r1_rank;
 
-			const U64 hor_pinned_pawns = pinData::pinned & BBs[nWhitePawn + SIDE] & Constans::f_by_index[pinData::king_sq % 8],
+			const U64 
+				hor_pinned_pawns = pinData::pinned & BBs[nWhitePawn + SIDE] & Constans::f_by_index[pinData::king_sq % 8],
 				possible_captures = BBs[nBlack - SIDE] & pinData::ksq_diag;
 
 			int target;
@@ -237,13 +240,14 @@ namespace MoveGenerator {
 	// in the background or not
 	template <enumSide SIDE, bool Check>
 	void generateOfPawns(MoveList::iterator& it) {
-
 		// calculate offset for origin squares only once for every generated function
-		static constexpr int single_off = SIDE == WHITE ? Compass::sout : Compass::nort,
+		static constexpr int 
+			single_off = SIDE == WHITE ? Compass::sout : Compass::nort,
 			double_off = single_off * 2,
 			west_att_off = SIDE == WHITE ? Compass::soWe : Compass::noWe,
 			east_att_off = SIDE == WHITE ? Compass::soEa : Compass::noEa;
-		static constexpr U64 promote_rank_mask = SIDE == WHITE ? Constans::r8_rank : Constans::r1_rank,
+		static constexpr U64 
+			promote_rank_mask = SIDE == WHITE ? Constans::r8_rank : Constans::r1_rank,
 			double_push_mask = SIDE == WHITE ? Constans::r4_rank : Constans::r5_rank;
 
 		const U64 unpinned = BBs[nWhitePawn + SIDE] & ~pinData::pinned;
@@ -346,9 +350,10 @@ namespace MoveGenerator {
 			return;
 
 		// prepare king square and proper rook square
-		static constexpr int rsq1 = SIDE ? h8 : h1;
-		static constexpr int rsq2 = SIDE ? b8 : b1;
-		static constexpr int rook_left = SIDE ? a8 : a1;
+		static constexpr int 
+			rsq1 = SIDE ? h8 : h1, 
+			rsq2 = SIDE ? b8 : b1, 
+			rook_left = SIDE ? a8 : a1;
 
 		// checking castling rights change at opponent side - white move
 		if (game_state.castle.checkLegalCastle<SIDE & ROOK>() and
@@ -399,11 +404,11 @@ namespace MovePerform {
 	// handy functions helping getting proper piece index in bitboards set
 	template <enumSide Side>
 	size_t bbsIndex(uint32_t pc) {
-		return pc == PAWN ? nWhitePawn + Side :
-			pc == KNIGHT ? nWhiteKnight + Side :
-			pc == BISHOP ? nWhiteBishop + Side :
-			pc == ROOK ? nWhiteRook + Side :
-			pc == QUEEN ? nWhiteQueen + Side:
+		return pc == PAWN ? nWhitePawn   + Side :
+			pc == KNIGHT  ? nWhiteKnight + Side :
+			pc == BISHOP  ? nWhiteBishop + Side :
+			pc == ROOK    ? nWhiteRook   + Side :
+			pc == QUEEN   ? nWhiteQueen  + Side :
 			nWhiteKing + Side;
 	}
 
@@ -486,12 +491,15 @@ namespace MovePerform {
 		if (move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>()) {
 			game_state.ep_sq = target;
 		} // updating castling rights
-		else if (piece == ROOK and origin == (side ? a8 : a1))
+		else if (piece == ROOK and origin == (side ? a8 : a1)) {
 			game_state.castle &= ~(1 << (!side * 2));
-		else if (piece == ROOK and origin == (side ? h8 : h1))
+		}
+		else if (piece == ROOK and origin == (side ? h8 : h1)) {
 			game_state.castle &= ~(1 << (3 - side * 2));
-		else if (piece == KING)
+		}
+		else if (piece == KING) {
 			game_state.castle &= ~(12 - side * 9);
+		}
 	}
 
 	// unmake move using copy-make approach
@@ -507,8 +515,9 @@ namespace MoveGenerator {
 
 	namespace Analisis {
 
+#ifdef __DEBUG__
 		void populateMoveList(MoveList& move_list) {
-			auto helper = [](bool mask, std::string text, char s = ' ') {
+			static auto helper = [](bool mask, std::string text, char s = ' ') {
 				if (mask) {
 					std::cout << s << text;
 				}
@@ -533,6 +542,7 @@ namespace MoveGenerator {
 
 			std::cout << std::endl;
 		}
+#endif
 
 		template <int Depth>
 		unsigned long long dPerft() {
