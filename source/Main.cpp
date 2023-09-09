@@ -16,10 +16,10 @@ int main() {
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
 
-	std::string fen = "n6Q/4Pkp1/K1Pp4/2pP3P/4B1q1/P1p2p2/8/8 w - - 0 1";
+	std::string fen = "K7/N3PPB1/1p4p1/P2Q4/2p3R1/1k6/1Pb3p1/q7 b - - 0 1";
 
 	//while (std::getline(std::cin, fen)) {
 		BBs.parseFEN(fen);
-		MoveGenerator::Analisis::perft<6>();
+		MoveGenerator::Analisis::perft<3>();
 	//}
 }
