@@ -28,11 +28,6 @@ namespace MoveGenerator {
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
 	inline auto pinMask(U64) -> std::enable_if_t<Pin and PC == QUEEN, U64> {
-		//if (any_queens) {
-		//	return attack<QUEEN>(BBs[nBlack - SIDE], pinData::king_sq)
-		//		& (xRayQueenAttack(BBs[nBlack - SIDE], BBs[nWhiteQueen + SIDE], pinData::king_sq))
-		//		| inBetween(pinData::king_sq, getLS1BIndex(BBs[nWhiteQueen + SIDE]));
-		//}
 		return UINT64_MAX;
 	}
 
@@ -69,7 +64,7 @@ namespace MoveGenerator {
 	template <enumPiece PC, enumSide SIDE, bool Pin>
 	inline auto sqAvaible(int sq) -> std::enable_if_t<Pin and PC == QUEEN, U64> {
 		return attack<QUEEN>(BBs[nBlack - SIDE], pinData::king_sq)
-			& (xRayQueenAttack(BBs[nBlack - SIDE], BBs[nWhiteQueen + SIDE], pinData::king_sq))
+			& (xRayQueenAttack(BBs[nBlack - SIDE], bitU64(sq), pinData::king_sq))
 			| inBetween(pinData::king_sq, sq);
 	}
 
@@ -127,7 +122,8 @@ namespace MoveGenerator {
 		template <enumSide SIDE, int Offset, int EP_Offset>
 		void pawnEPGenHelper(MoveList::iterator& it) {
 
-			const U64 exclude_ep_cap = BBs[nOccupied] & ~(bitU64(game_state.ep_sq) | bitU64(game_state.ep_sq + Offset));
+			const U64 exclude_ep_cap = BBs[nOccupied] & ~(bitU64(game_state.ep_sq) | bitU64(game_state.ep_sq + Offset))
+				| bitU64(game_state.ep_sq - EP_Offset);
 
 			// checking en passant capture legality
 			if (attack<ROOK>(exclude_ep_cap, pinData::king_sq)
@@ -230,10 +226,10 @@ namespace MoveGenerator {
 					return;
 
 				if (PawnAttacks::eastAttackPawn<SIDE>(BBs[nWhitePawn + SIDE] & pinData::diag_pin, bitU64(game_state.ep_sq - SingleOff))) {
-					*it++ = MoveItem::encodeEnPassant<SIDE>(game_state.ep_sq + west_att_off, game_state.ep_sq - SingleOff);
+					*it++ = MoveItem::encodeEnPassant<SIDE>(game_state.ep_sq + Compass::west, game_state.ep_sq - SingleOff);
 				}
 				else if (PawnAttacks::westAttackPawn<SIDE>(BBs[nWhitePawn + SIDE] & pinData::diag_pin, bitU64(game_state.ep_sq - SingleOff))) {
-					*it++ = MoveItem::encodeEnPassant<SIDE>(game_state.ep_sq + east_att_off, game_state.ep_sq - SingleOff);
+					*it++ = MoveItem::encodeEnPassant<SIDE>(game_state.ep_sq + Compass::east, game_state.ep_sq - SingleOff);
 				}
 			}
 		};
