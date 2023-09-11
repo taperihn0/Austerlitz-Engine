@@ -21,7 +21,7 @@ namespace {
 			U64 pieces = BBs[It];
 			
 			while (pieces) {
-				dst |= attack<static_cast<enumPiece>(It / 2)>(occ, popLS1B(pieces));
+				dst |= attack<toPieceType(It)>(occ, popLS1B(pieces));
 			}
 
 			static_for(dst, occ, std::integral_constant<int, It + 2>());

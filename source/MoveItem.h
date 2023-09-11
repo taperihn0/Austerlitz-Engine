@@ -55,6 +55,11 @@ namespace MoveItem {
 		inline uint32_t getMask() const noexcept {
 			return cmove & static_cast<uint32_t>(MASK);
 		}
+
+		inline auto& print() const {
+			return std::cout << ' ' << index_to_square[getMask<iMask::ORIGIN>()]
+				<< index_to_square[getMask<iMask::TARGET>() >> 6] << '\n';
+		}
 	private:
 		uint32_t cmove;
 	};

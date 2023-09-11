@@ -585,9 +585,7 @@ namespace MoveGenerator {
 				total += (single = dPerft<Depth - 1>());
 
 #ifdef __DEBUG__
-				std::cout << ' ' << index_to_square[move.getMask<MoveItem::iMask::ORIGIN>()]
-					<< index_to_square[move.getMask<MoveItem::iMask::TARGET>() >> 6]
-					<< ": " << single << '\n';
+				move.print() << ": " << single << '\n';
 #endif
 
 				MovePerform::unmakeMove(bbs_cpy, gstate_cpy);

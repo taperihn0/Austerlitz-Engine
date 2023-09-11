@@ -197,7 +197,3 @@ void BitBoardsSet::printBoard() {
 
 	std::cout << std::endl << std::endl;
 }
-
-void BitBoardsSet::clear() {
-	bbs.fill(eU64);
-}

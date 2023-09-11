@@ -1,5 +1,6 @@
-﻿#include "HeaderFile.h"
-#include <string>
+﻿#include "AttackTables.h"
+#include "MoveGeneration.h"
+#include "Search.h"
 
 // global variables storing universal piece data
 BitBoardsSet BBs;
@@ -16,10 +17,8 @@ int main() {
 	InitState::initMAttacksTables<ROOK>();
 	InitState::initMAttacksTables<BISHOP>();
 
-	std::string fen;
+	BBs.parseFEN(BitBoardsSet::start_pos);
+	const auto bm = Search::bestMove();
 
-	while (std::getline(std::cin, fen)) {
-		BBs.parseFEN(fen);
-		MoveGenerator::Analisis::perft<5>();
-	}
+	bm.print();
 }

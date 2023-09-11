@@ -143,19 +143,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\BitBoardsSet.cpp" />
+    <ClCompile Include="source\Evaluation.cpp" />
     <ClCompile Include="source\LegalityTest.cpp" />
     <ClCompile Include="source\MagicBitBoards.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\MoveGeneration.cpp" />
+    <ClCompile Include="source\Search.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\Evaluation.h" />
+    <ClInclude Include="source\Search.h" />
     <ClInclude Include="source\static.h" />
     <ClInclude Include="source\BitBoardsSet.h" />
     <ClInclude Include="source\GeneratingMagics.h" />
     <ClInclude Include="source\LegalityTest.h" />
     <ClInclude Include="source\MagicBitBoards.h" />
     <ClInclude Include="source\AttackTables.h" />
-    <ClInclude Include="source\HeaderFile.h" />
     <ClInclude Include="source\MoveGeneration.h" />
     <ClInclude Include="source\MoveItem.h" />
     <ClInclude Include="source\MoveSystem.h" />

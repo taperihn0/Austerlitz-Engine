@@ -69,14 +69,13 @@ struct gState {
 	enumSide turn;
 	castleRights castle;
 	int halfmove, fullmove;
-	//std::array<bool, 2> rook_king_move_block;
 };
 
 extern gState game_state;
 
 
 // piece enum for their bitboards
-enum enumPiece_bbs {
+enum enumPiece_bbs : int {
 	nWhitePawn,
 	nBlackPawn,
 
@@ -103,12 +102,16 @@ enum enumPiece_bbs {
 
 
 // custom operators returning proper type of index of std::array
-inline constexpr size_t operator-(enumPiece_bbs pc, enumSide s) {
+inline constexpr size_t operator-(enumPiece_bbs pc, enumSide s) noexcept {
 	return static_cast<size_t>(pc) - static_cast<size_t>(s);
 }
 
-inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) {
+inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) noexcept {
 	return static_cast<size_t>(pc) + static_cast<size_t>(s);
+}
+
+inline constexpr enumPiece toPieceType(size_t pc) noexcept {
+	return static_cast<enumPiece>(pc / 2);
 }
 
 // handy functions helping getting proper piece index in bitboards set
@@ -187,6 +190,8 @@ public:
 
 	void clear();
 
+	int count(size_t piece_get);
+
 	static constexpr const char* start_pos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 private:
 	// board display purpose
@@ -209,6 +214,14 @@ inline void BitBoardsSet::operator=(const BitBoardsSet& cbbs) noexcept(nothrow_c
 
 inline const std::string& BitBoardsSet::getFEN() noexcept(nothrow_str_cpy_constr) {
 	return fen;
+}
+
+inline void BitBoardsSet::clear() {
+	bbs.fill(eU64);
+}
+
+inline int BitBoardsSet::count(size_t piece_get) {
+	return bitCount(bbs[piece_get]);
 }
 
 // declare global BitBoardsSet containing piece structure data
