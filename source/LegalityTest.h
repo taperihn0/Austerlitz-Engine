@@ -83,8 +83,16 @@ U64 xRayRookAttack(U64 occ, U64 blockers, int sq);
 U64 xRayQueenAttack(U64 occ, U64 blockers, int sq);
 
 
+// is-square-attacked funtions returing true whether square
+// is attacked by opponent piece
+
 template <enumSide PC_SIDE>
 bool isSquareAttacked(int sq);
+
+inline bool isSquareAttacked(int sq, bool side) {
+	return side ? isSquareAttacked<BLACK>(sq)
+		: isSquareAttacked<WHITE>(sq);
+}
 
 
 template <enumSide PC_SIDE, enumPiece PC = ANY>

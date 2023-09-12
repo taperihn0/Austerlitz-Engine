@@ -5,6 +5,10 @@
 
 namespace Search {
 
+	static constexpr int
+		low_bound = -5000000,
+		high_bound = 5000000;
+
 	MoveItem::iMove best_move;
 
 	// break recursion and return evalutation of current position
@@ -17,7 +21,19 @@ namespace Search {
 	// only root node sets best move
 	template <bool Root, int Depth>
 	auto alphaBeta(int alpha, int beta) -> std::enable_if_t<Depth, int> {
+		// use fully-legal moves generator
 		const auto move_list = MoveGenerator::generateLegalMoves();
+
+		// no legal moves detected
+		if (!move_list.size()) {
+			// is this situation a check?
+			if (isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)) {
+				return low_bound + 100 - Depth;
+			} 
+			// stalemate case
+			return 0;
+		}
+
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
 		int score;
@@ -45,10 +61,6 @@ namespace Search {
 
 	// display best move according to search algorithm
 	MoveItem::iMove bestMove() {
-		static constexpr int
-			low_bound = -5000000,
-			high_bound = 5000000;
-
 		alphaBeta<true, 2>(low_bound, high_bound);
 		return best_move;
 	}

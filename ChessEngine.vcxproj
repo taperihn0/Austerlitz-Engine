@@ -149,6 +149,7 @@
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\MoveGeneration.cpp" />
     <ClCompile Include="source\Search.cpp" />
+    <ClCompile Include="source\UCI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Evaluation.h" />
@@ -164,6 +165,7 @@
     <ClInclude Include="source\MoveSystem.h" />
     <ClInclude Include="source\BitBoard.h" />
     <ClInclude Include="source\Timer.h" />
+    <ClInclude Include="source\UCI.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
