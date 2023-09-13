@@ -161,6 +161,26 @@ void BitBoardsSet::parseGState(int i) {
 
 void BitBoardsSet::printBoard() {
 	int sq_piece;
+	// only position part of fen
+	std::string fen_pos = std::string(fen, 0, fen.find_first_of(' ')),
+		states = " ";
+
+	// load current states manually
+	states += "wb"[game_state.turn];
+	states += ' ';
+
+	for (int i = 3; i >= 0; i--) {
+		if (game_state.castle & (1 << i)) {
+			states += "qkQK"[i];
+		}
+	}
+
+	states += ' ';
+	states += game_state.ep_sq == -1 ? "-" : index_to_square[game_state.ep_sq];
+	states += ' ';
+	states += static_cast<char>(game_state.halfmove + '0');
+	states += ' ';
+	states += static_cast<char>(game_state.fullmove + '0');
 
 	std::string frame = "\t+";
 	for (int r = 0; r < 8; r++) {
@@ -188,7 +208,7 @@ void BitBoardsSet::printBoard() {
 
 	std::cout << std::endl << frame << std::endl
 		<< "\t  a   b   c   d   e   f   g   h" << std::endl << std::endl
-		<< "  FEN Notation: " << fen << std::endl
+		<< "  FEN Notation: " << fen_pos << states << std::endl
 		<< "  Castling rights: ";
 
 	for (int i = 3; i >= 0; i--) {

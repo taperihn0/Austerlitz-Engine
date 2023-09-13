@@ -1,12 +1,10 @@
+#include "UCI.h"
 #include "MoveItem.h"
 #include "MoveGeneration.h"
+#include "Search.h"
 #include <iostream>
 #include <string>
-#include <sstream>
 
-
-#define TOGUI_S std::cout
-#define FROMGUI_S std::cin
 
 #define OPTIMIZE() \
 		std::ios::sync_with_stdio(false); \
@@ -34,13 +32,35 @@ namespace UCI {
 
 	// return introducing string
 	inline std::string introduce() {
-		static constexpr const char* engine_name = "id name Austerlitz*";
-		static constexpr const char* author = "id author Szymon BS";
+		static constexpr const char* engine_name = "id name Austerlitz@";
+		static constexpr const char* author = "id author Szymon BSdie";
 
 		std::stringstream strm;
 		strm << engine_name << '\n'
 			<< author << "\nuciok\n";
 		return strm.str();
+	}
+
+	// serve "go" command
+	void parseGo(std::istringstream& strm) {
+		std::string com;
+		int depth;
+		
+		strm >> std::skipws >> com;
+
+		if (com == "depth") {
+			strm >> std::skipws >> depth;
+			TOGUI_S << "bestmove ";
+			Search::bestMove().print() << '\n';
+		}
+		else if (com == "perft") {
+			strm >> std::skipws >> depth;
+			MoveGenerator::Analisis::perftDriver(depth);
+		}
+		else {
+			TOGUI_S << "command not supported yet\n";
+			return;
+		}
 	}
 
 	// parse given position and perform moves
@@ -66,6 +86,10 @@ namespace UCI {
 
 			BBs.parseFEN(fen);
 		}
+		else if (com != "current") {
+			TOGUI_S << "position [fen | startpos | current] moves[optionally] ...\n";
+			return;
+		}
 
 		strm >> std::skipws >> com;
 		if (com != "moves")
@@ -74,18 +98,25 @@ namespace UCI {
 		// scan given moves and perform them on real board
 		while (strm >> std::skipws >> move) {
 			casted = constructMove(move, game_state.turn);
+			bool illegal = true;
 
 			// check move validity
 			for (const auto& move : MoveGenerator::generateLegalMoves()) {
 				if (casted == move) {
 					MovePerform::makeMove(move);
+					illegal = false;
 					break;
 				}
+			}
+
+			if (illegal) {
+				TOGUI_S << "illegal move '" << move << "'\nAll previous moves was performed\n";
+				return;
 			}
 		}
 	}
 
-
+	// main UCI loop
 	void goLoop() {
 		// optimization flags
 		OPTIMIZE();
@@ -94,7 +125,6 @@ namespace UCI {
 		// introduce yourself
 		TOGUI_S << introduce();
 
-		// main UCI loop
 		while (true) {
 			if (!std::getline(FROMGUI_S, line))
 				break;
@@ -108,12 +138,11 @@ namespace UCI {
 			else if (token == "ucinewgame") BBs.parseFEN(BitBoardsSet::start_pos);
 			else if (token == "uci") TOGUI_S << introduce();
 			else if (token == "print") BBs.printBoard();
+			else if (token == "go") parseGo(strm);
 			else if (token == "quit") break;
 		}
 	}
 
 }
 
-#undef TOGUI_S
-#undef FROMGUI_S
 #undef OPTIMIZE

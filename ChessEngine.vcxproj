@@ -148,6 +148,7 @@
     <ClCompile Include="source\MagicBitBoards.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\MoveGeneration.cpp" />
+    <ClCompile Include="source\MoveItem.cpp" />
     <ClCompile Include="source\Search.cpp" />
     <ClCompile Include="source\UCI.cpp" />
   </ItemGroup>

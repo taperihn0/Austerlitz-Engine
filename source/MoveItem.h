@@ -3,19 +3,20 @@
 #include "BitBoard.h"
 #include "BitBoardsSet.h"
 #include "MoveSystem.h"
+#include "UCI.h"
 
 
 /* move list resources -
 	* move item consists of:
 	* 0000 0000 0000 0000 0011 1111 origin square    - 6 bits (0..63 val range)
 	* 0000 0000 0000 1111 1100 0000 target square    - 6 bits (0..63 val range)
-	* 0000 0000 0111 0000 0000 0000 piece            - 3 bits (0..5 value range)
+	* 0000 0000 0111 0000 0000 0000 piece            - 3 bits (0..5 val range)
 	* 0000 0000 1000 0000 0000 0000 double push flag - 1 bit
 	* 0000 0001 0000 0000 0000 0000 capture flag     - 1 bit
 	* 0000 0010 0000 0000 0000 0000 en passant flag  - 1 bit
 	* 0000 0100 0000 0000 0000 0000 castle flag      - 1 bit
 	* 0000 1000 0000 0000 0000 0000 side flag        - 1 bit
-	* 0111 0000 0000 0000 0000 0000 promotion flag   - 3 bits (0..5)
+	* 0111 0000 0000 0000 0000 0000 promotion flag   - 3 bits (0..5 val range)
 	* 
 	*						    23 bits of total:
 	*						    uint32_t is enought for storing move data
@@ -69,15 +70,15 @@ namespace MoveItem {
 		}
 
 		inline auto& print() const {
-			return std::cout << ' ' << index_to_square[getMask<iMask::ORIGIN>()]
-				<< index_to_square[getMask<iMask::TARGET>() >> 6] << '\n';
+			return TOGUI_S << index_to_square[getMask<iMask::ORIGIN>()]
+				<< index_to_square[getMask<iMask::TARGET>() >> 6] << " nbrq"[getMask<iMask::PROMOTION>() >> 20];
 		}
 	private:
 		uint32_t cmove;
 	};
 
 	// claim move item states and return encoded move item ready to save in move list
-	// special functions of more arguments than only origin and target squares:
+	// special fast functions of more arguments than only origin and target squares:
 		
 	// decide about capture flag relevancy
 	template <enumPiece PC, enumSide SIDE>
@@ -94,6 +95,11 @@ namespace MoveItem {
 	template <enumSide Side, enumPiece Promoted, bool Capture = false>
 	inline uint32_t encodePromotion(int origin, int target) noexcept {
 		return (Promoted << 20) | (Side << 19) | (Capture << 16) | (target << 6) | origin;
+	}
+
+	template <enumSide Side>
+	inline uint32_t encodePromotion(int origin, int target, int promoted, bool capture) noexcept {
+		return (promoted << 20) | (Side << 19) | (capture << 16) | (target << 6) | origin;
 	}
 
 	template <enumSide Side>
@@ -125,57 +131,8 @@ namespace MoveItem {
 		return (side << 19) | (piece << 12) | (1 << 15) | (target << 6) | origin;
 	}
 
+	// 'cast' given data to a move of a iMove class, without any further encoding data, like en passant or castling flag
 	template <enumSide SIDE>
-	MoveItem::iMove toMove(int target, int origin, char promo) {
-		const bool is_pawn = bitU64(origin) & BBs[nWhitePawn + SIDE],
-			capture = bitU64(target) & BBs[nBlack - SIDE];
-
-		// check en passant capture
-		if (is_pawn and target == game_state.ep_sq + (SIDE ? Compass::nort : Compass::sout)) {
-			return encodeEnPassant<SIDE>(origin, target);
-		} // promotion detection
-		else if (is_pawn and promo != '\0') {
-			MoveItem::iMove res;
-
-			switch (std::tolower(promo)) {
-			case 'n':
-				res = capture ? encodePromotion<SIDE, KNIGHT, true>(origin, target)
-					: encodePromotion<SIDE, KNIGHT>(origin, target);
-				break;
-			case 'b':
-				res = capture ? encodePromotion<SIDE, BISHOP, true>(origin, target)
-					: encodePromotion<SIDE, BISHOP>(origin, target);
-				break;
-			case 'r':
-				res = capture ? encodePromotion<SIDE, ROOK, true>(origin, target)
-					: encodePromotion<SIDE, ROOK>(origin, target);
-				break;
-			case 'q':
-				res = capture ? encodePromotion<SIDE, QUEEN, true>(origin, target)
-					: encodePromotion<SIDE, QUEEN>(origin, target);
-				break;
-			default: break;
-			}
-
-			return res;
-		} // double push detection
-		else if (is_pawn and ((SIDE ? Constans::r5_rank : Constans::r4_rank) & bitU64(target))) {
-			return encode<encodeType::DOUBLE_PUSH>(origin, target, PAWN, SIDE);
-		} // check castle
-		else if (getLS1BIndex(BBs[nWhiteKing + SIDE]) == origin and
-			((game_state.castle.checkLegalCastle<SIDE & ROOK>() and target == SIDE ? g8 : g1) or
-				(game_state.castle.checkLegalCastle<SIDE & QUEEN>() and target == SIDE ? c8 : c1))) {
-			return encodeCastle<SIDE>(origin, target);
-		}
-
-		// get piece type
-		for (auto piece = nWhitePawn + SIDE; piece <= nBlackKing; piece += 2) {
-			if (bitU64(origin) & BBs[piece]) {
-				return encodeQuietCapture<SIDE>(origin, target, capture, toPieceType(piece));
-			}
-		}
-
-		return 0;
-	}
+	iMove toMove(int target, int origin, char promo);
 
 } // namespace MoveItem

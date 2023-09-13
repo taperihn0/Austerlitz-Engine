@@ -63,9 +63,12 @@ namespace MoveGenerator {
 		// loop through move list and display newly generated moves
 		void populateMoveList(const MoveList& move_list);
 
-		// perft function testing whether move generator is bug-free
+		// open this perft test passing compile-time depth manually
 		template <int Depth>
 		void perft();
+
+		// perft function testing whether move generator is bug-free
+		void perftDriver(int depth);
 
 	}
 

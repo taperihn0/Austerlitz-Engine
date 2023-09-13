@@ -1,5 +1,7 @@
-﻿#include "AttackTables.h"
+﻿#include "BitBoardsSet.h"
+#include "AttackTables.h"
 #include "UCI.h"
+#include "MagicBitBoards.h"
 
 
 // global variables storing universal piece data
@@ -13,13 +15,7 @@ mData mdata;
 gState game_state;
 
 int main() {
-	InitState::initMAttacksTables<ROOK>();
-	InitState::initMAttacksTables<BISHOP>();
-
-	//BBs.parseFEN(BitBoardsSet::start_pos);
-	//const auto bm = Search::bestMove();
-
-	//bm.print();
+	InitState::initMAttacksTables();
 
 	UCI::goLoop();
 }

@@ -6,10 +6,6 @@
 #include "AttackTables.h"
 
 
-// helper type checking template
-template <enumPiece pT, enumPiece pT1, enumPiece pT2>
-using checkEqual = std::enable_if_t<pT == pT1 or pT == pT2>;
-
 // structure storing actual magic numberic data
 struct mData {
 
@@ -320,54 +316,17 @@ namespace {
 
     };
 
-
-    // InitState namespace contains program init functions which needs to be called
-    // when the program starts
-    namespace InitState {
-
-        // initialize look-up attacks tables for sliders except queen
-        // moving definition of this function to implementation .cpp file cause linker error
-        template <enumPiece pT, class =
-            checkEqual<pT, ROOK, BISHOP>>
-        void initMAttacksTables() {
-            U64 att, subset;
-            int n;
-
-            for (int sq = 0; sq < 64; sq++) {
-                switch (pT) {
-                case ROOK:
-                    att = mTabs::rRook[sq];
-                    n = mTabs::rbRook[sq];
-                    break;
-                case BISHOP:
-                    att = mTabs::rBishop[sq];
-                    n = mTabs::rbBishop[sq];
-                    break;
-                default: return;
-                }
-
-                // loop throught occupancy subsets: generate each subset from index and fill look-up attacks tables
-                for (int i = 0; i < (1 << n); i++) {
-                    subset = indexSubsetU64(i, att, n);
-
-                    switch (pT) {
-                    case ROOK:
-                        mdata.mRookAtt[sq][mIndexHash(subset, mTabs::mRook[sq], n)]
-                            = attackSquaresRook(subset, sq);
-                        break;
-                    case BISHOP:
-                        mdata.mBishopAtt[sq][mIndexHash(subset, mTabs::mBishop[sq], n)]
-                            = attackSquaresBishop(subset, sq);
-                        break;
-                    default: return;
-                    }
-                }
-            }
-        }
-
-    }
-
 } // namespace
+
+
+// InitState namespace contains program init functions which needs to be called
+// when the program starts
+namespace InitState {
+
+    // initialize look-up attacks tables for sliders except queen
+    void initMAttacksTables();
+
+}
 
 
 // handy function templates for generating sliding pieces attacks using pre-generated magic bitboards
@@ -412,13 +371,13 @@ inline U64 attack<QUEEN>(U64 occ, int sq) noexcept {
 
 
 template <enumPiece pT, class =
-    checkEqual<pT, BISHOP, ROOK>>
+    std::enable_if_t<pT == ROOK or pT == BISHOP>>
 void printMagics();
 
 template <enumPiece pT, class =
-    checkEqual<pT, BISHOP, ROOK>>
+    std::enable_if_t<pT == ROOK or pT == BISHOP>>
 void printRelevantOccupancy();
 
 template <enumPiece pT, class =
-    checkEqual<pT, BISHOP, ROOK>>
+    std::enable_if_t<pT == ROOK or pT == BISHOP>>
 void printRelevantBits();

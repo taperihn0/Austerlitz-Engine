@@ -36,29 +36,30 @@ namespace {
 		return res;
 	}
 
+} // namespace
 
-	// pre-run-called functions
-	namespace InitState {
 
-		// resources for initialization compile-time array
-		namespace cexprArr {
+// pre-run-called functions
+namespace InitState {
 
-			struct CArr {
-				constexpr CArr()
+	// resources for initialization compile-time array
+	namespace cexprArr {
+
+		struct CArr {
+			constexpr CArr()
 				: arr{} {
-					for (int i = 0; i < 64; i++) {
-						for (int j = 0; j < 64; j++) {
-							arr[i][j] = inBetweenConstr(i, j);
-						}
+				for (int i = 0; i < 64; i++) {
+					for (int j = 0; j < 64; j++) {
+						arr[i][j] = inBetweenConstr(i, j);
 					}
 				}
-				U64 arr[64][64];
-			};
+			}
+			U64 arr[64][64];
+		};
 
-		}
 	}
+}
 
-} // namespace
 
 // pre-initialization of compile-time
 namespace RectangularLookUp {

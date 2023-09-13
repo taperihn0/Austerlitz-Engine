@@ -17,20 +17,20 @@ inline constexpr auto cU64(T s) noexcept {
 	return static_cast<U64>(s);
 }
 
-namespace {
-	namespace InitState {
-		struct CArr_ {
-			constexpr CArr_()
-				: arr{} {
-				for (int i = 0; i < 64; i++) {
-					arr[i] = cU64(1) << i;
-				}
-			}
 
-			U64 arr[64];
-		};
-	}
+namespace InitState {
+	struct CArr_ {
+		constexpr CArr_()
+			: arr{} {
+			for (int i = 0; i < 64; i++) {
+				arr[i] = cU64(1) << i;
+			}
+		}
+
+		U64 arr[64];
+	};
 }
+
 
 namespace BitU64LookUp {
 	constexpr auto u64bit = InitState::CArr_();

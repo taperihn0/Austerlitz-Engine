@@ -527,9 +527,9 @@ namespace MoveGenerator {
 			std::cout << "MoveList.size: " << move_list.size() << std::endl << std::endl << ' ';
 
 			for (auto move : move_list) {
-				std::cout << index_to_square[move.getMask<MoveItem::iMask::ORIGIN>()]
-					<< index_to_square[move.getMask<MoveItem::iMask::TARGET>() >> 6];
+				move.print();
 
+				// printing extra move data
 				auto tmp = move.getMask<MoveItem::iMask::PROMOTION>();
 				if (tmp) std::cout << promotion_piece[(tmp >> 20) - 1] << " promotion";
 				helper(move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>(), "double push");
@@ -571,8 +571,6 @@ namespace MoveGenerator {
 
 		template <int Depth>
 		void perft() {
-			static_assert(Depth > 0, "Unvalid depth size");
-
 			Timer::go();
 
 			const auto move_list = MoveGenerator::generateLegalMoves();
@@ -602,16 +600,45 @@ namespace MoveGenerator {
 				<< "[depth " << Depth << ']' << std::endl;
 		}
 
-		template void perft<1>();
-		template void perft<2>();
-		template void perft<3>();
-		template void perft<4>();
-		template void perft<5>();
-		template void perft<6>();
-		template void perft<7>();
-		template void perft<8>();
-		template void perft<9>();
-		template void perft<10>();
+		// explicit template instantion
+#define INSTANTION(d) template void perft<d>();
+		INSTANTION(1);
+		INSTANTION(2);
+		INSTANTION(3);
+		INSTANTION(4);
+		INSTANTION(5);
+		INSTANTION(6);
+		INSTANTION(7);
+		INSTANTION(8);
+		INSTANTION(9);
+		INSTANTION(10);
+#undef INSTANTION
+		
+		// helper macro
+#define CALL(d) perft<d>(); \
+				break;
+
+		void perftDriver(int depth) {
+			assert(depth > 0 && "Unvalid depth");
+
+			switch (depth) {
+			case 1:  CALL(1);
+			case 2:  CALL(2);
+			case 3:  CALL(3);
+			case 4:  CALL(4);
+			case 5:  CALL(5);
+			case 6:  CALL(6);
+			case 7:  CALL(7);
+			case 8:  CALL(8);
+			case 9:  CALL(9);
+			case 10: CALL(10);
+			default: 
+				TOGUI_S << "Depth not supported";
+				break;
+			}
+		}
+
+#undef CALL
 
 	} // namespace Analisis
 

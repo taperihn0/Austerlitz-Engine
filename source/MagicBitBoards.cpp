@@ -1,6 +1,36 @@
 #include "MagicBitBoards.h"
 
 
+void InitState::initMAttacksTables() {
+    U64 att_r, att_b, subset, att;
+    int n_r, n_b;
+
+    for (int sq = 0; sq < 64; sq++) {
+        att_r = mTabs::rRook[sq];
+        n_r = mTabs::rbRook[sq];
+        att_b = mTabs::rBishop[sq];
+        n_b = mTabs::rbBishop[sq];
+
+        // loop throught occupancy subsets: generate each subset from index and fill look-up attacks tables
+        for (const auto n : { n_r, n_b }) {
+            bool r = n == n_r;
+            att = r ? att_r : att_b;
+
+            for (int i = 0; i < (1 << n); i++) {
+                subset = indexSubsetU64(i, att, n);
+
+                if (r)
+                    mdata.mRookAtt[sq][mIndexHash(subset, mTabs::mRook[sq], n)]
+                    = attackSquaresRook(subset, sq);
+                else
+                    mdata.mBishopAtt[sq][mIndexHash(subset, mTabs::mBishop[sq], n)]
+                    = attackSquaresBishop(subset, sq);
+            }
+        }
+    }
+}
+
+
 template <enumPiece pT, class>
 void printMagics() {
     std::cout << "std::array<U64, 64> m"
