@@ -522,7 +522,6 @@ namespace MoveGenerator {
 					std::cout << s << text;
 				}
 			};
-			static constexpr std::array<char, 4> promotion_piece = { 'n', 'b', 'r', 'q' };
 
 			std::cout << "MoveList.size: " << move_list.size() << std::endl << std::endl << ' ';
 
@@ -531,7 +530,7 @@ namespace MoveGenerator {
 
 				// printing extra move data
 				auto tmp = move.getMask<MoveItem::iMask::PROMOTION>();
-				if (tmp) std::cout << promotion_piece[(tmp >> 20) - 1] << " promotion";
+				if (tmp) std::cout << " nbrq"[tmp >> 20] << " promotion";
 				helper(move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>(), "double push");
 				helper(move.getMask<MoveItem::iMask::CAPTURE_F>(), "capture");
 				helper(move.getMask<MoveItem::iMask::EN_PASSANT_F>(), "en passant");
@@ -619,7 +618,7 @@ namespace MoveGenerator {
 				break;
 
 		void perftDriver(int depth) {
-			assert(depth > 0 && "Unvalid depth");
+			assert(depth > 0 && "Unvalid depth size");
 
 			switch (depth) {
 			case 1:  CALL(1);

@@ -24,6 +24,7 @@
     <ProjectGuid>{e3f6bf6c-5599-4a82-af3d-2efadec124ed}</ProjectGuid>
     <RootNamespace>ChessEngine</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Austerlitz</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

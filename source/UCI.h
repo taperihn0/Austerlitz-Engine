@@ -1,3 +1,5 @@
+#pragma once
+
 #include <sstream>
 
 
@@ -9,6 +11,6 @@ namespace UCI {
 	
 	void parsePosition(std::istringstream&);
 
-	void goLoop();
+	void goLoop(int argc, char* argv[]);
 
 }

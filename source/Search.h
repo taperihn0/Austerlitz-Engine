@@ -5,6 +5,6 @@
 
 namespace Search {
 
-	MoveItem::iMove bestMove();
+	MoveItem::iMove bestMove(int depth);
 
 }

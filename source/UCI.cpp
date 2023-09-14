@@ -6,12 +6,6 @@
 #include <string>
 
 
-#define OPTIMIZE() \
-		std::ios::sync_with_stdio(false); \
-		TOGUI_S.tie(NULL); \
-		FROMGUI_S.tie(NULL); \
-
-
 namespace UCI {
 
 	// construct a move based on a normal string notation
@@ -50,17 +44,19 @@ namespace UCI {
 
 		if (com == "depth") {
 			strm >> std::skipws >> depth;
+			const auto move = Search::bestMove(depth);
 			TOGUI_S << "bestmove ";
-			Search::bestMove().print() << '\n';
+			move.print() << '\n';
 		}
 		else if (com == "perft") {
 			strm >> std::skipws >> depth;
 			MoveGenerator::Analisis::perftDriver(depth);
-		}
-		else {
-			TOGUI_S << "command not supported yet\n";
 			return;
 		}
+		
+		const auto move = Search::bestMove(6);
+		TOGUI_S << "bestmove ";
+		move.print() << '\n';
 	}
 
 	// parse given position and perform moves
@@ -117,17 +113,18 @@ namespace UCI {
 	}
 
 	// main UCI loop
-	void goLoop() {
-		// optimization flags
-		OPTIMIZE();
+	void goLoop(int argc, char* argv[]) {
+		std::ios_base::sync_with_stdio(false);
 		std::string line, token;
 
-		// introduce yourself
-		TOGUI_S << introduce();
+		for (int i = 1; i < argc; i++)
+			line += std::string(argv[i]) + " ";
 
-		while (true) {
-			if (!std::getline(FROMGUI_S, line))
-				break;
+		TOGUI_S << "Polish Chess Engine: Austerlitz by Simon BSdie\n";
+
+		do {
+			if (argc == 1 and !std::getline(FROMGUI_S, line))
+				line = "quit";
 
 			std::istringstream strm(line);
 
@@ -139,8 +136,7 @@ namespace UCI {
 			else if (token == "uci") TOGUI_S << introduce();
 			else if (token == "print") BBs.printBoard();
 			else if (token == "go") parseGo(strm);
-			else if (token == "quit") break;
-		}
+		} while (line != "quit" and argc == 1);
 	}
 
 }

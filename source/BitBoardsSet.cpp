@@ -1,23 +1,18 @@
 #include "BitBoardsSet.h"
 
 
-std::array<char, 12> BitBoardsSet::piece_char = {
-	'P', 'p', 'N', 'n', 'B', 'b', 'R', 'r', 'Q', 'q', 'K', 'k'
-};
-
 BitBoardsSet::BitBoardsSet(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) {
 	bbs = cbbs.bbs;
 }
 
-BitBoardsSet::BitBoardsSet(const std::string& _fen) {
+BitBoardsSet::BitBoardsSet(const std::string& fen) {
 	clear();
-	parseFEN(_fen);
+	parseFEN(fen);
 }
 
-void BitBoardsSet::parseFEN(const std::string& _fen) {
+void BitBoardsSet::parseFEN(const std::string& fen) {
 	clear();
 
-	fen = _fen;
 	int x = 0, y = 7;
 
 	for (int i = 0; i < size(fen); i++) {
@@ -28,7 +23,7 @@ void BitBoardsSet::parseFEN(const std::string& _fen) {
 			continue;
 		}
 		else if (c == ' ') {
-			parseGState(i + 1);
+			parseGState(fen, i + 1);
 			break;
 		}
 
@@ -106,7 +101,7 @@ void BitBoardsSet::parseFEN(const std::string& _fen) {
 	bbs[nEmpty] = ~bbs[nOccupied];
 }
 
-void BitBoardsSet::parseGState(int i) {
+void BitBoardsSet::parseGState(const std::string& fen, int i) {
 	switch (fen[i]) {
 	case 'w':
 		game_state.turn = WHITE;
@@ -161,9 +156,8 @@ void BitBoardsSet::parseGState(int i) {
 
 void BitBoardsSet::printBoard() {
 	int sq_piece;
-	// only position part of fen
-	std::string fen_pos = std::string(fen, 0, fen.find_first_of(' ')),
-		states = " ";
+
+	std::string states;
 
 	// load current states manually
 	states += "wb"[game_state.turn];
@@ -200,7 +194,7 @@ void BitBoardsSet::printBoard() {
 				}
 			}
 
-			std::cout << ' ' << (sq_piece != -1 ? piece_char[sq_piece] : ' ') << " |";
+			std::cout << ' ' << (sq_piece != -1 ? "PpNnBbRrQqKk"[sq_piece] : ' ') << " |";
 		}
 
 		std::cout << ' ' << (8 - i);
@@ -208,7 +202,7 @@ void BitBoardsSet::printBoard() {
 
 	std::cout << std::endl << frame << std::endl
 		<< "\t  a   b   c   d   e   f   g   h" << std::endl << std::endl
-		<< "  FEN Notation: " << fen_pos << states << std::endl
+		<< "  FEN game states: " << states << std::endl
 		<< "  Castling rights: ";
 
 	for (int i = 3; i >= 0; i--) {

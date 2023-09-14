@@ -22,14 +22,24 @@ namespace Eval {
 		int eval = 0, sq;
 		U64 piece_bb;
 
+		// own material and position score
 		for (auto piece = nWhitePawn + SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
 
 			while (piece_bb) {
 				sq = popLS1B(piece_bb);
+				eval += 
+					Value::piece_material[piece] + Value::position_score[toPieceType(piece)][properSquare<SIDE>(sq)];
+			}
+		}
 
-				// consider piece material score and his position score
-				eval +=
+		// opponent evaluation score
+		for (auto piece = nBlackPawn - SIDE; piece <= nBlackKing; piece += 2) {
+			piece_bb = BBs[piece];
+
+			while (piece_bb) {
+				sq = popLS1B(piece_bb);
+				eval -= 
 					Value::piece_material[piece] + Value::position_score[toPieceType(piece)][properSquare<SIDE>(sq)];
 			}
 		}

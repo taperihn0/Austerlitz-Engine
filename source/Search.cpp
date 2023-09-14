@@ -2,6 +2,7 @@
 #include "MoveGeneration.h"
 #include "Evaluation.h"
 
+#define _SEARCH_DEBUG false
 
 namespace Search {
 
@@ -39,6 +40,10 @@ namespace Search {
 		int score;
 
 		for (const auto& move : move_list) {
+#if _SEARCH_DEBUG
+			move.print() << '\n';
+#endif
+
 			MovePerform::makeMove(move);
 			score = -alphaBeta<false, Depth - 1>(-beta, -alpha);
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
@@ -59,9 +64,31 @@ namespace Search {
 		return alpha;
 	}
 
+#define CALL(d) alphaBeta<true, d>(low_bound, high_bound); \
+				break;
+
 	// display best move according to search algorithm
-	MoveItem::iMove bestMove() {
-		alphaBeta<true, 2>(low_bound, high_bound);
+	MoveItem::iMove bestMove(int depth) {
+		assert(depth > 0 && "Unvalid depth size");
+
+		switch (depth) {
+		case 1:  CALL(1);
+		case 2:  CALL(2);
+		case 3:  CALL(3);
+		case 4:  CALL(4);
+		case 5:  CALL(5);
+		case 6:  CALL(6);
+		case 7:  CALL(7);
+		case 8:  CALL(8);
+		case 9:  CALL(9);
+		case 10: CALL(10);
+		default:
+			TOGUI_S << "Depth not supported";
+			break;
+		}
+
 		return best_move;
 	}
+
+#undef CALL
 }
