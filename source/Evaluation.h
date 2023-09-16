@@ -29,7 +29,6 @@ namespace Eval {
 
 		constexpr std::array<int, 12> piece_material = {
 			PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE,
-			-PAWN_VALUE, -KNIGHT_VALUE, -BISHOP_VALUE, -ROOK_VALUE, -QUEEN_VALUE, -KING_VALUE,
 		};
 
 		// single lookup table for score of each square for evary single piece
@@ -127,5 +126,8 @@ namespace Eval {
 		// setting template parameter so then I won't have to
 		return game_state.turn == WHITE ? templEval<WHITE>() : templEval<BLACK>();
 	}
+
+	// quiescence search - protect from dangerous consequences of horizon effect
+	int qSearch(int alpha, int beta);
 
 }

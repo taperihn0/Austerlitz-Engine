@@ -58,6 +58,12 @@ public:
 // move generation resources
 namespace MoveGenerator {
 
+	// generation type for move generator
+	enum GenType {
+		LEGAL,
+		CAPTURES,
+	};
+
 	namespace Analisis {
 
 		// loop through move list and display newly generated moves
@@ -73,6 +79,7 @@ namespace MoveGenerator {
 	}
 
 	// main generation function, generating all the legal moves for all the turn-to-move pieces
+	template <GenType gType>
 	MoveList generateLegalMoves();
 
 } 

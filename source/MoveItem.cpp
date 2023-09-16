@@ -7,19 +7,20 @@ MoveItem::iMove MoveItem::toMove(int target, int origin, char promo) {
 		capture = bitU64(target) & BBs[nBlack - SIDE];
 
 	// check en passant capture
-	if (is_pawn and target == game_state.ep_sq + (SIDE ? Compass::nort : Compass::sout)) {
+	if (is_pawn and target == game_state.ep_sq + (SIDE ? Compass::sout : Compass::nort)) {
 		return encodeEnPassant<SIDE>(origin, target);
 	} // promotion detection
 	else if (is_pawn and promo != '\0') {
 		static std::string promo_arr = " nbrq";
 		return encodePromotion<SIDE>(origin, target, static_cast<int>(promo_arr.find(promo)), capture);
 	} // double push detection
-	else if (is_pawn and ((SIDE ? Constans::r5_rank : Constans::r4_rank) & bitU64(target))) {
+	else if (is_pawn and (SIDE ? Constans::r7_rank : Constans::r2_rank) & bitU64(origin)
+		and (SIDE ? Constans::r5_rank : Constans::r4_rank) & bitU64(target)) {
 		return encode<encodeType::DOUBLE_PUSH>(origin, target, PAWN, SIDE);
 	} // check castle
 	else if (getLS1BIndex(BBs[nWhiteKing + SIDE]) == origin and
-		((game_state.castle.checkLegalCastle<SIDE & ROOK>() and target == SIDE ? g8 : g1) or
-			(game_state.castle.checkLegalCastle<SIDE & QUEEN>() and target == SIDE ? c8 : c1))) {
+		((game_state.castle.checkLegalCastle<SIDE & ROOK>() and target == (SIDE ? g8 : g1)) or
+			(game_state.castle.checkLegalCastle<SIDE & QUEEN>() and target == (SIDE ? c8 : c1)))) {
 		return encodeCastle<SIDE>(origin, target);
 	}
 

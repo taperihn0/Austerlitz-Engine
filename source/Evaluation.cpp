@@ -1,4 +1,5 @@
 #include "Evaluation.h"
+#include "MoveGeneration.h"
 
 
 namespace Eval {
@@ -8,14 +9,13 @@ namespace Eval {
 
 	template <>
 	inline int properSquare<WHITE>(int square) {
-		return square;
+		return mirrored_square[square];
 	}
 
 	template <>
 	inline int properSquare<BLACK>(int square) {
-		return mirrored_square[square];
+		return square;
 	}
-
 
 	template <enumSide SIDE>
 	int templEval() {
@@ -29,7 +29,7 @@ namespace Eval {
 			while (piece_bb) {
 				sq = popLS1B(piece_bb);
 				eval += 
-					Value::piece_material[piece] + Value::position_score[toPieceType(piece)][properSquare<SIDE>(sq)];
+					Value::piece_material[toPieceType(piece)] + Value::position_score[toPieceType(piece)][properSquare<SIDE>(sq)];
 			}
 		}
 
@@ -40,7 +40,7 @@ namespace Eval {
 			while (piece_bb) {
 				sq = popLS1B(piece_bb);
 				eval -= 
-					Value::piece_material[piece] + Value::position_score[toPieceType(piece)][properSquare<SIDE>(sq)];
+					Value::piece_material[toPieceType(piece)] + Value::position_score[toPieceType(piece)][properSquare<!SIDE>(sq)];
 			}
 		}
 
@@ -49,4 +49,32 @@ namespace Eval {
 
 	template int templEval<WHITE>();
 	template int templEval<BLACK>();
+
+	int qSearch(int alpha, int beta) {
+		const int eval = evaluate();
+
+		if (eval >= beta) 
+			return beta;
+		else if (eval > alpha) 
+			alpha = eval;
+
+		// generate opponent capture moves
+		const auto capt_list = MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>();
+		const auto bbs_cpy = BBs;
+		const auto gstate_cpy = game_state;
+		int score;
+
+		for (const auto& capt : capt_list) {
+			MovePerform::makeMove(capt);
+			score = -qSearch(-beta, -alpha);
+			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
+
+			if (score >= beta)
+				return beta;
+			else if (score > alpha)
+				alpha = score;
+		}
+
+		return alpha;
+	}
 }

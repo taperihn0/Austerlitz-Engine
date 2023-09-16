@@ -9,7 +9,7 @@
 namespace UCI {
 
 	// construct a move based on a normal string notation
-	MoveItem::iMove constructMove(std::string move, bool side) {
+	MoveItem::iMove constructMove(std::string move) {
 		int origin, target;
 		char promo = '\0';
 
@@ -20,14 +20,14 @@ namespace UCI {
 			promo = move.back();
 		}
 
-		return side ? MoveItem::toMove<BLACK>(target, origin, promo)
+		return game_state.turn ? MoveItem::toMove<BLACK>(target, origin, promo)
 			: MoveItem::toMove<WHITE>(target, origin, promo);
 	}
 
 	// return introducing string
 	inline std::string introduce() {
 		static constexpr const char* engine_name = "id name Austerlitz@";
-		static constexpr const char* author = "id author Szymon BSdie";
+		static constexpr const char* author = "id author Simon B.";
 
 		std::stringstream strm;
 		strm << engine_name << '\n'
@@ -38,24 +38,22 @@ namespace UCI {
 	// serve "go" command
 	void parseGo(std::istringstream& strm) {
 		std::string com;
-		int depth;
-		
+		int depth = 6;
+
 		strm >> std::skipws >> com;
 
 		if (com == "depth") {
 			strm >> std::skipws >> depth;
-			const auto move = Search::bestMove(depth);
-			TOGUI_S << "bestmove ";
-			move.print() << '\n';
 		}
 		else if (com == "perft") {
 			strm >> std::skipws >> depth;
 			MoveGenerator::Analisis::perftDriver(depth);
 			return;
 		}
-		
-		const auto move = Search::bestMove(6);
-		TOGUI_S << "bestmove ";
+
+		const auto move = Search::bestMove(depth);
+		TOGUI_S << "info score cp " << Search::search_results.score << " depth " << depth 
+			<< " nodes " << Search::search_results.nodes << "\nbestmove ";
 		move.print() << '\n';
 	}
 
@@ -93,11 +91,11 @@ namespace UCI {
 
 		// scan given moves and perform them on real board
 		while (strm >> std::skipws >> move) {
-			casted = constructMove(move, game_state.turn);
+			casted = constructMove(move);
 			bool illegal = true;
 
 			// check move validity
-			for (const auto& move : MoveGenerator::generateLegalMoves()) {
+			for (const auto& move : MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>()) {
 				if (casted == move) {
 					MovePerform::makeMove(move);
 					illegal = false;
@@ -106,7 +104,7 @@ namespace UCI {
 			}
 
 			if (illegal) {
-				TOGUI_S << "illegal move '" << move << "'\nAll previous moves was performed\n";
+				TOGUI_S << "illegal move '" << move << "'\n";
 				return;
 			}
 		}
@@ -120,7 +118,7 @@ namespace UCI {
 		for (int i = 1; i < argc; i++)
 			line += std::string(argv[i]) + " ";
 
-		TOGUI_S << "Polish Chess Engine: Austerlitz by Simon BSdie\n";
+		TOGUI_S << "Polish Chess Engine: Austerlitz@ by Simon B.\n";
 
 		do {
 			if (argc == 1 and !std::getline(FROMGUI_S, line))

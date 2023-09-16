@@ -16,7 +16,7 @@
  * 0000 0010 0000 0000 0000 0000 en passant flag  - 1 bit
  * 0000 0100 0000 0000 0000 0000 castle flag      - 1 bit
  * 0000 1000 0000 0000 0000 0000 side flag        - 1 bit
- * 0111 0000 0000 0000 0000 0000 promotion flag   - 3 bits (0..5 val range)
+ * 0111 0000 0000 0000 0000 0000 promotion piece  - 3 bits (0..5 val range)
  * 
  *						    23 bits of total:
  *						    uint32_t is enought for storing move data
