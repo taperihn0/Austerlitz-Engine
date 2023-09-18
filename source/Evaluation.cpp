@@ -55,7 +55,7 @@ namespace Eval {
 	template int templEval<WHITE>();
 	template int templEval<BLACK>();
 
-	int qSearch(int alpha, int beta) {
+	int qSearch(int alpha, int beta, int Ply) {
 		const int eval = evaluate();
 		Search::search_results.nodes++;
 
@@ -71,11 +71,11 @@ namespace Eval {
 		int score;
 
 		// capture ordering
-		Order::sort(capt_list);
+		Order::sort(capt_list, Ply);
 
 		for (const auto& capt : capt_list) {
 			MovePerform::makeMove(capt);
-			score = -qSearch(-beta, -alpha);
+			score = -qSearch(-beta, -alpha, Ply + 1);
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 
 			if (score >= beta)

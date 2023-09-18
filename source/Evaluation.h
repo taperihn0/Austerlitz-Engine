@@ -128,6 +128,6 @@ namespace Eval {
 	}
 
 	// quiescence search - protect from dangerous consequences of horizon effect
-	int qSearch(int alpha, int beta);
+	int qSearch(int alpha, int beta, int Ply);
 
 }

@@ -20,10 +20,14 @@ namespace Order {
 		}};
 	};
 
+	// Killer Moves lookup table
+	using killerLookUp = std::array<std::array<MoveItem::iMove, 100>, 2>;
+	extern killerLookUp killer;
+
 	// return value, also so called 'score' of given move
-	int moveScore(const MoveItem::iMove& move);
+	int moveScore(const MoveItem::iMove& move, int ply);
 
 	// sort given move list based on score of each move
-	void sort(MoveList& move_list);
+	void sort(MoveList& move_list, int ply);
 
 } // namespace Order

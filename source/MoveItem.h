@@ -60,7 +60,7 @@ namespace MoveItem {
 			cmove = data;
 		}
 
-		bool operator==(iMove b) {
+		bool operator==(const iMove& b) const {
 			return cmove == b.cmove;
 		}
 

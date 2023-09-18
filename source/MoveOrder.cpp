@@ -4,7 +4,7 @@
 
 namespace Order {
 
-	int moveScore(const MoveItem::iMove& move) {
+	int moveScore(const MoveItem::iMove& move, int ply) {
 		// distinguish between quiets and captures
 		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 			const int att = move.getMask<MoveItem::iMask::PIECE>() >> 12;
@@ -24,18 +24,24 @@ namespace Order {
 
 			return MVV_LVA::lookup[att][victim];
 		}
-		//else /* if quiets */ 
+		else /* if quiets */ {
+			// killer moves score slightly less than basic captures
+			if (move == killer[0][ply])
+				return 99;
+			else if (move == killer[1][ply])
+				return 80;
+		}
 
 		return 1;
 	}
 	
 
-	void sort(MoveList& move_list) {
+	void sort(MoveList& move_list, int ply) {
 		std::unordered_map<uint32_t, int> hash;
 
-		std::sort(move_list.begin(), move_list.end(), [&hash](const MoveItem::iMove& a, const MoveItem::iMove& b) {
-			if (!hash[a.raw()]) hash[a.raw()] = moveScore(a);
-			if (!hash[b.raw()]) hash[b.raw()] = moveScore(b);
+		std::sort(move_list.begin(), move_list.end(), [&hash, ply](const MoveItem::iMove& a, const MoveItem::iMove& b) {
+			if (!hash[a.raw()]) hash[a.raw()] = moveScore(a, ply);
+			if (!hash[b.raw()]) hash[b.raw()] = moveScore(b, ply);
 			return hash[a.raw()] > hash[b.raw()];
 		});
 	}

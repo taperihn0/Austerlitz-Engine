@@ -5,7 +5,6 @@
 #define _PERFT_GENTYPE LEGAL
 
 namespace pinData {
-
 	// cache table to store inbetween paths of king and his x-ray attackers
 	// for pinned pieces, since such pinned piece can only move through their inbetween path
 	// mask for diagonal pinmask (simply bishop attack from king square), horizontally or vertically pinned, 

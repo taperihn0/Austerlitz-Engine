@@ -16,14 +16,14 @@ namespace Search {
 	MoveItem::iMove best_move, best_so_far;
 
 	// break recursion and return evalutation of current position
-	template <bool Root, int Depth>
+	template <bool Root, int Depth, int Ply>
 	inline auto alphaBeta(int alpha, int beta) -> std::enable_if_t<!Depth, int> {
-		return Eval::qSearch(alpha, beta);
+		return Eval::qSearch(alpha, beta, Ply);
 	}
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
 	// only root node sets best move
-	template <bool Root, int Depth>
+	template <bool Root, int Depth, int Ply>
 	auto alphaBeta(int alpha, int beta) -> std::enable_if_t<Depth, int> {
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
@@ -44,7 +44,7 @@ namespace Search {
 		int score, old_alpha = alpha;
 
 		// move ordering
-		Order::sort(move_list);
+		Order::sort(move_list, Ply);
 
 		for (const auto& move : move_list) {
 #if _SEARCH_DEBUG
@@ -52,11 +52,17 @@ namespace Search {
 #endif
 
 			MovePerform::makeMove(move);
-			score = -alphaBeta<false, Depth - 1>(-beta, -alpha);
+			score = -alphaBeta<false, Depth - 1, Ply + 1>(-beta, -alpha);
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 
 			// fail hard beta-cutoff
 			if (score >= beta) {
+				// store killer move
+				if (!move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+					Order::killer[1][Ply] = Order::killer[0][Ply];
+					Order::killer[0][Ply] = move;
+				}
+
 				return beta;
 			}
 			else if (score > alpha) {
@@ -68,21 +74,21 @@ namespace Search {
 		}
 
 		if constexpr (Root) {
-			if (old_alpha != alpha)
-				best_move = best_so_far;
+			if (old_alpha != alpha) best_move = best_so_far;
 		}
 
 		// fail low cutoff (return best option)
 		return alpha;
 	}
 
-#define CALL(d) search_results.score = -alphaBeta<true, d>(low_bound, high_bound); \
+#define CALL(d) search_results.score = -alphaBeta<true, d, 0>(low_bound, high_bound); \
 				break;
 
 	// display best move according to search algorithm
 	MoveItem::iMove bestMove(int depth) {
 		assert(depth > 0 && "Unvalid depth size");
 		search_results.nodes = 0;
+		Order::killer = {};
 
 		switch (depth) {
 		case 1:  CALL(1);

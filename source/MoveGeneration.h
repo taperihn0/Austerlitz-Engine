@@ -29,19 +29,19 @@ public:
 	// ending iterator of generated moves
 	iterator it;
 
-	iterator begin() {
+	inline iterator begin() {
 		return move_list.begin();
 	}
 
-	iterator end() {
+	inline iterator end() {
 		return it;
 	}
 
-	c_iterator begin() const {
+	inline c_iterator begin() const {
 		return move_list.cbegin();
 	}
 
-	c_iterator end() const {
+	inline c_iterator end() const {
 		return static_cast<c_iterator>(it);
 	}
 

@@ -54,6 +54,7 @@ namespace InitState {
 					}
 				}
 			}
+
 			U64 arr[64][64];
 		};
 

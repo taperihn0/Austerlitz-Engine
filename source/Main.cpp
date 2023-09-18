@@ -16,6 +16,7 @@ mData mdata;
 gState game_state;
 
 Search::Results Search::search_results;
+Order::killerLookUp Order::killer;
 
 int main(int argc, char* argv[]) {
 	InitState::initMAttacksTables();
