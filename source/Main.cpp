@@ -3,6 +3,7 @@
 #include "UCI.h"
 #include "MagicBitBoards.h"
 #include "Search.h"
+#include "MoveOrder.h"
 
 // global variables storing universal piece data
 BitBoardsSet BBs(BitBoardsSet::start_pos);

@@ -1,21 +1,23 @@
 #include "Search.h"
 #include "MoveGeneration.h"
 #include "Evaluation.h"
+#include "MoveOrder.h"
+#include <limits>
 
 #define _SEARCH_DEBUG false
 
 namespace Search {
 
+	// set some safe bufor to prevent overflows
 	static constexpr int
-		low_bound = -5000000,
-		high_bound = 5000000;
+		low_bound = std::numeric_limits<int>::min() + 100000,
+		high_bound = std::numeric_limits<int>::max() - 100000;
 
 	MoveItem::iMove best_move, best_so_far;
 
 	// break recursion and return evalutation of current position
 	template <bool Root, int Depth>
 	inline auto alphaBeta(int alpha, int beta) -> std::enable_if_t<!Depth, int> {
-		search_results.nodes++;
 		return Eval::qSearch(alpha, beta);
 	}
 
@@ -24,23 +26,25 @@ namespace Search {
 	template <bool Root, int Depth>
 	auto alphaBeta(int alpha, int beta) -> std::enable_if_t<Depth, int> {
 		// use fully-legal moves generator
-		const auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
-		const auto legal = move_list.size();
+		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
+		
+		search_results.nodes++;
 
 		// no legal moves detected
-		if (!legal) {
-			// is this situation a check?
+		if (!move_list.size()) {
+			// is this situation a checkmate?
 			if (isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn))
-				return low_bound + 100 - Depth;
+				return low_bound + 1000 - Depth;
 			// stalemate case
 			return 0;
 		}
 
-		search_results.nodes += legal;
-
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
 		int score, old_alpha = alpha;
+
+		// move ordering
+		Order::sort(move_list);
 
 		for (const auto& move : move_list) {
 #if _SEARCH_DEBUG
@@ -96,15 +100,11 @@ namespace Search {
 			break;
 		}
 
+		// proper static evaluation value
 		if (!game_state.turn ^ (depth % 2 == 0))
 			search_results.score = -search_results.score;
 
 		return best_move;
-
-		//game_state.turn == BLACK and depth % 2 == 0 -> (-) 1 1
-		//game_state.turn == BLACK and depth % 2 != 0 -> (+) 1 0
-		//game_state.turn == WHITE and depth % 2 == 0 -> (+) 0 1
-		//game_state.turn == WHITE and depth % 2 != 0 -> (-) 0 0
 	}
 
 #undef CALL

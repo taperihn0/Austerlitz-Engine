@@ -1,5 +1,7 @@
 #include "Evaluation.h"
 #include "MoveGeneration.h"
+#include "Search.h"
+#include "MoveOrder.h"
 
 
 namespace Eval {
@@ -21,26 +23,29 @@ namespace Eval {
 	int templEval() {
 		int eval = 0, sq;
 		U64 piece_bb;
+		enumPiece epiece;
 
 		// own material and position score
 		for (auto piece = nWhitePawn + SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
+			epiece = toPieceType(piece);
 
 			while (piece_bb) {
 				sq = popLS1B(piece_bb);
 				eval += 
-					Value::piece_material[toPieceType(piece)] + Value::position_score[toPieceType(piece)][properSquare<SIDE>(sq)];
+					Value::piece_material[epiece] + Value::position_score[epiece][properSquare<SIDE>(sq)];
 			}
 		}
 
 		// opponent evaluation score
 		for (auto piece = nBlackPawn - SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
+			epiece = toPieceType(piece);
 
 			while (piece_bb) {
 				sq = popLS1B(piece_bb);
 				eval -= 
-					Value::piece_material[toPieceType(piece)] + Value::position_score[toPieceType(piece)][properSquare<!SIDE>(sq)];
+					Value::piece_material[epiece] + Value::position_score[epiece][properSquare<!SIDE>(sq)];
 			}
 		}
 
@@ -52,6 +57,7 @@ namespace Eval {
 
 	int qSearch(int alpha, int beta) {
 		const int eval = evaluate();
+		Search::search_results.nodes++;
 
 		if (eval >= beta) 
 			return beta;
@@ -59,10 +65,13 @@ namespace Eval {
 			alpha = eval;
 
 		// generate opponent capture moves
-		const auto capt_list = MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>();
+		auto capt_list = MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>();
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
 		int score;
+
+		// capture ordering
+		Order::sort(capt_list);
 
 		for (const auto& capt : capt_list) {
 			MovePerform::makeMove(capt);

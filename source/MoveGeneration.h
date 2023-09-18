@@ -45,6 +45,14 @@ public:
 		return static_cast<c_iterator>(it);
 	}
 
+	inline const MoveItem::iMove& operator[](size_t i) const {
+		return move_list[i];
+	}
+
+	inline MoveItem::iMove& operator[](size_t i) {
+		return move_list[i];
+	}
+
 	inline std::size_t size() const {
 		return std::distance(move_list.begin(), static_cast<c_iterator>(it));
 	}

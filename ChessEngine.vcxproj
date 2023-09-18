@@ -152,11 +152,13 @@
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\MoveGeneration.cpp" />
     <ClCompile Include="source\MoveItem.cpp" />
+    <ClCompile Include="source\MoveOrder.cpp" />
     <ClCompile Include="source\Search.cpp" />
     <ClCompile Include="source\UCI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Evaluation.h" />
+    <ClInclude Include="source\MoveOrder.h" />
     <ClInclude Include="source\Search.h" />
     <ClInclude Include="source\static.h" />
     <ClInclude Include="source\BitBoardsSet.h" />

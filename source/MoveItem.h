@@ -73,6 +73,11 @@ namespace MoveItem {
 			return TOGUI_S << index_to_square[getMask<iMask::ORIGIN>()]
 				<< index_to_square[getMask<iMask::TARGET>() >> 6] << " nbrq"[getMask<iMask::PROMOTION>() >> 20];
 		}
+
+		inline uint32_t raw() const noexcept {
+			return cmove;
+		}
+
 	private:
 		uint32_t cmove;
 	};
@@ -109,7 +114,7 @@ namespace MoveItem {
 
 	template <enumSide Side>
 	inline uint32_t encodeCastle(int origin, int target) noexcept {
-		return (Side << 19) | (1 << 18) | (KING << 12) | (target << 6) | origin;
+		return (Side << 19) | (1 << 18) | (target << 6) | origin;
 	}
 
 	// direct function template as a parameter of a specific encoding mode
