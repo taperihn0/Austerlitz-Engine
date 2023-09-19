@@ -70,8 +70,9 @@ namespace MoveItem {
 		}
 
 		inline auto& print() const {
-			return TOGUI_S << index_to_square[getMask<iMask::ORIGIN>()]
-				<< index_to_square[getMask<iMask::TARGET>() >> 6] << " nbrq"[getMask<iMask::PROMOTION>() >> 20];
+			return *UCI_o.os << index_to_square[getMask<iMask::ORIGIN>()]
+				<< index_to_square[getMask<iMask::TARGET>() >> 6] 
+				<< " nbrq"[getMask<iMask::PROMOTION>() >> 20];
 		}
 
 		inline uint32_t raw() const noexcept {

@@ -4,6 +4,7 @@
 #include "MagicBitBoards.h"
 #include "Search.h"
 #include "MoveOrder.h"
+#include "SearchBenchmark.h"
 
 // global variables storing universal piece data
 BitBoardsSet BBs(BitBoardsSet::start_pos);
@@ -17,8 +18,21 @@ gState game_state;
 
 Search::Results Search::search_results;
 Order::killerLookUp Order::killer;
+Order::historyLookUp Order::history_moves;
+Order::butterflyLookUp Order::butterfly;
+
+UCI UCI_o;
+SearchBenchmark bench;
 
 int main(int argc, char* argv[]) {
+	//for (auto& side : Order::history_moves)
+	//	for (auto& from : side)
+	//		from.fill(1);
+
+	for (auto& side : Order::butterfly)
+		for (auto& from : side)
+			from.fill(1);
+
 	InitState::initMAttacksTables();
-	UCI::goLoop(argc, argv);
+	UCI_o.goLoop(argc, argv);
 }

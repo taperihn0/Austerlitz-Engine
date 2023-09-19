@@ -2,24 +2,19 @@
 
 #include <chrono>
 
-// no-instance timer class
+// timer class
 class Timer {
 public:
-	Timer(const Timer&) = delete;
+	Timer() = default;
 	
-	static std::chrono::system_clock clock;
-	static std::chrono::system_clock::time_point _start, _stop;
+	void go() noexcept;
+	void stop() noexcept;
 
-	static void go() noexcept;
-	static void stop() noexcept;
-
-	static auto duration();
+	auto duration();
 private:
-	Timer() {};
+	std::chrono::system_clock clock;
+	std::chrono::system_clock::time_point _start, _stop;
 };
-
-std::chrono::system_clock Timer::clock;
-std::chrono::system_clock::time_point Timer::_start, Timer::_stop;
 
 inline void Timer::go() noexcept {
 	_start = clock.now();

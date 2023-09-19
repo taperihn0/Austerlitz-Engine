@@ -5,10 +5,12 @@
 namespace Order {
 
 	int moveScore(const MoveItem::iMove& move, int ply) {
+		int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
+
 		// distinguish between quiets and captures
 		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 			const int att = move.getMask<MoveItem::iMask::PIECE>() >> 12;
-			int victim, target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
+			int victim;
 			bool side = move.getMask<MoveItem::iMask::SIDE_F>();
 
 			if (move.getMask<MoveItem::iMask::EN_PASSANT_F>())
@@ -22,17 +24,17 @@ namespace Order {
 				}
 			}
 
-			return MVV_LVA::lookup[att][victim];
+			return MVV_LVA::lookup[att][victim] + 1000000;
 		}
-		else /* if quiets */ {
-			// killer moves score slightly less than basic captures
-			if (move == killer[0][ply])
-				return 99;
-			else if (move == killer[1][ply])
-				return 80;
-		}
+		
+		// killer moves score slightly less than basic captures
+		if (move == killer[0][ply])
+			return 900000;
+		else if (move == killer[1][ply])
+			return 800000;
 
-		return 1;
+		int from = move.getMask<MoveItem::iMask::ORIGIN>();
+		return (20 * history_moves[game_state.turn][from][target]) / butterfly[game_state.turn][from][target] + 1;
 	}
 	
 

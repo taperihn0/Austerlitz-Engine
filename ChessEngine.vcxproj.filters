@@ -92,5 +92,8 @@
     <ClInclude Include="source\MoveOrder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\SearchBenchmark.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

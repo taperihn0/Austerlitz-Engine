@@ -157,6 +157,7 @@
     <ClCompile Include="source\UCI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\SearchBenchmark.h" />
     <ClInclude Include="source\Evaluation.h" />
     <ClInclude Include="source\MoveOrder.h" />
     <ClInclude Include="source\Search.h" />

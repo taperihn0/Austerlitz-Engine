@@ -609,7 +609,8 @@ namespace MoveGenerator {
 
 		template <int Depth>
 		void perft() {
-			Timer::go();
+			static Timer timer;
+			timer.go();
 
 			const auto move_list = MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>();
 			const auto bbs_cpy = BBs;
@@ -627,8 +628,8 @@ namespace MoveGenerator {
 				MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			}
 
-			Timer::stop();
-			const auto duration = Timer::duration();
+			timer.stop();
+			const auto duration = timer.duration();
 
 			const auto perform_kn = total * 1. / duration;
 
@@ -671,7 +672,7 @@ namespace MoveGenerator {
 			case 9:  CALL(9);
 			case 10: CALL(10);
 			default: 
-				TOGUI_S << "Depth not supported";
+				*UCI_o.os << "Depth not supported";
 				break;
 			}
 		}

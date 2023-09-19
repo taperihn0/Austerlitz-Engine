@@ -1,7 +1,6 @@
 #include "Search.h"
 #include "MoveGeneration.h"
 #include "Evaluation.h"
-#include "MoveOrder.h"
 #include <limits>
 
 #define _SEARCH_DEBUG false
@@ -43,6 +42,8 @@ namespace Search {
 		const auto gstate_cpy = game_state;
 		int score, old_alpha = alpha;
 
+		int from, to;
+
 		// move ordering
 		Order::sort(move_list, Ply);
 
@@ -55,12 +56,18 @@ namespace Search {
 			score = -alphaBeta<false, Depth - 1, Ply + 1>(-beta, -alpha);
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 
+			from = move.getMask<MoveItem::iMask::ORIGIN>();
+			to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
+			Order::butterfly[game_state.turn][from][to] += Depth;
+
 			// fail hard beta-cutoff
 			if (score >= beta) {
-				// store killer move
 				if (!move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+					// store killer move
 					Order::killer[1][Ply] = Order::killer[0][Ply];
 					Order::killer[0][Ply] = move;
+					// store move as a history move
+					Order::history_moves[game_state.turn][from][to] += Depth * Depth;
 				}
 
 				return beta;
@@ -88,7 +95,6 @@ namespace Search {
 	MoveItem::iMove bestMove(int depth) {
 		assert(depth > 0 && "Unvalid depth size");
 		search_results.nodes = 0;
-		Order::killer = {};
 
 		switch (depth) {
 		case 1:  CALL(1);
@@ -102,7 +108,7 @@ namespace Search {
 		case 9:  CALL(9);
 		case 10: CALL(10);
 		default:
-			TOGUI_S << "Depth not supported";
+			*UCI_o.os << "Depth not supported";
 			break;
 		}
 

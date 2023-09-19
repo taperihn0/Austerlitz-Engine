@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MoveItem.h"
+#include "MoveOrder.h"
 
 
 namespace Search {
@@ -13,5 +14,9 @@ namespace Search {
 	extern Results search_results;
 
 	MoveItem::iMove bestMove(int depth);
+
+	inline void killerReset() {
+		Order::killer = {};
+	}
 
 }

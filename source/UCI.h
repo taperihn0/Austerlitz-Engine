@@ -3,14 +3,13 @@
 #include <sstream>
 
 
-#define TOGUI_S std::cout
-#define FROMGUI_S std::cin
-
-
-namespace UCI {
-	
+class UCI {
+public:
+	UCI();
 	void parsePosition(std::istringstream&);
+	void goLoop(int argc = 1, char* argv[] = nullptr);
+	std::istream* is;
+	std::ostream* os;
+};
 
-	void goLoop(int argc, char* argv[]);
-
-}
+extern UCI UCI_o;
