@@ -4,3 +4,4 @@
 
 - *smarter MVV/LVA lookup table values*
 - *apply countermove heuristic*
+- *mate killers*
