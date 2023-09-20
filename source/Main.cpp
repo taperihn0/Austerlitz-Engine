@@ -24,11 +24,10 @@ Order::butterflyLookUp Order::butterfly;
 UCI UCI_o;
 SearchBenchmark bench;
 
-int main(int argc, char* argv[]) {
-	//for (auto& side : Order::history_moves)
-	//	for (auto& from : side)
-	//		from.fill(1);
+PV::lenghtPV PV::pv_len;
+PV::linePV PV::pv_line;
 
+int main(int argc, char* argv[]) {
 	for (auto& side : Order::butterfly)
 		for (auto& from : side)
 			from.fill(1);

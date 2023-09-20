@@ -13,3 +13,9 @@ public:
 };
 
 extern UCI UCI_o;
+
+// useful and pretty macros
+#define OS *UCI_o.os
+#define IS *UCI_o.is
+#define OS_DST UCI_o.os
+#define IS_DST UCI_o.is

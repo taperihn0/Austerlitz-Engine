@@ -8,33 +8,30 @@
 #include <fstream>
 
 
+// simple benchmark driver
 class SearchBenchmark {
 public:
-	SearchBenchmark();
+	SearchBenchmark() = default;
 	void start();
 private:
 	std::ifstream src;
 };
 
-
-inline SearchBenchmark::SearchBenchmark()
-	: src() {}
-
-
+// execute commands located in .txt file and measure time
 inline void SearchBenchmark::start() {
 	static Timer timer;
 
 	src.open("source\\BenchmarkScript.txt");
 
-	UCI_o.is = &src;
+	IS_DST = &src;
 	timer.go();
 
 	UCI_o.goLoop();
 
 	timer.stop();
 	src.close();
-	UCI_o.is = &std::cin;
-	*UCI_o.os << "Total time: " << timer.duration() << " ms\n";
+	IS_DST = &std::cin;
+	OS << "Total time: " << timer.duration() << " ms\n";
 }
 
 

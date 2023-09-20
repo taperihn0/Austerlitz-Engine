@@ -9,14 +9,16 @@ namespace Search {
 
 	// set some safe bufor to prevent overflows
 	static constexpr int
-		low_bound = std::numeric_limits<int>::min() + 100000,
-		high_bound = std::numeric_limits<int>::max() - 100000;
+		low_bound = std::numeric_limits<int>::min() + 1000000,
+		high_bound = std::numeric_limits<int>::max() - 1000000;
 
 	MoveItem::iMove best_move, best_so_far;
 
 	// break recursion and return evalutation of current position
 	template <bool Root, int Depth, int Ply>
 	inline auto alphaBeta(int alpha, int beta) -> std::enable_if_t<!Depth, int> {
+		// init PV table lenght
+		std::get<Ply>(PV::pv_len) = 0;
 		return Eval::qSearch(alpha, beta, Ply);
 	}
 
@@ -26,7 +28,6 @@ namespace Search {
 	auto alphaBeta(int alpha, int beta) -> std::enable_if_t<Depth, int> {
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
-		
 		search_results.nodes++;
 
 		// no legal moves detected
@@ -40,9 +41,8 @@ namespace Search {
 
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
-		int score, old_alpha = alpha;
-
-		int from, to;
+		int score, from, to;
+		const int old_alpha = alpha;
 
 		// move ordering
 		Order::sort(move_list, Ply);
@@ -56,6 +56,7 @@ namespace Search {
 			score = -alphaBeta<false, Depth - 1, Ply + 1>(-beta, -alpha);
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 
+			// register move appearance in butterfly board
 			from = move.getMask<MoveItem::iMask::ORIGIN>();
 			to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 			Order::butterfly[game_state.turn][from][to] += Depth;
@@ -75,6 +76,10 @@ namespace Search {
 			else if (score > alpha) {
 				alpha = score;
 
+				PV::pv_line[Ply][0] = move;
+				std::memcpy(&PV::pv_line[Ply][1], &PV::pv_line[Ply + 1], PV::pv_len[Ply + 1] * sizeof(move));
+				PV::pv_len[Ply] = PV::pv_len[Ply + 1] + 1;
+
 				if constexpr (Root)
 					best_so_far = move;
 			}
@@ -92,7 +97,7 @@ namespace Search {
 				break;
 
 	// display best move according to search algorithm
-	MoveItem::iMove bestMove(int depth) {
+	void bestMove(int depth) {
 		assert(depth > 0 && "Unvalid depth size");
 		search_results.nodes = 0;
 
@@ -108,7 +113,7 @@ namespace Search {
 		case 9:  CALL(9);
 		case 10: CALL(10);
 		default:
-			*UCI_o.os << "Depth not supported";
+			OS << "Depth not supported";
 			break;
 		}
 
@@ -116,7 +121,15 @@ namespace Search {
 		if (!game_state.turn ^ (depth % 2 == 0))
 			search_results.score = -search_results.score;
 
-		return best_move;
+		OS  << "info score cp " << Search::search_results.score << " depth " << depth
+			<< " nodes " << Search::search_results.nodes
+			<< " pv ";
+
+		for (int cnt = 0; cnt < PV::pv_len[0]; cnt++)
+			PV::pv_line[0][cnt].print() << ' ';
+
+		OS << "\nbestmove ";
+		PV::pv_line[0][0].print() << '\n';
 	}
 
 #undef CALL

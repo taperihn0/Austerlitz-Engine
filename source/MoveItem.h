@@ -70,7 +70,7 @@ namespace MoveItem {
 		}
 
 		inline auto& print() const {
-			return *UCI_o.os << index_to_square[getMask<iMask::ORIGIN>()]
+			return OS << index_to_square[getMask<iMask::ORIGIN>()]
 				<< index_to_square[getMask<iMask::TARGET>() >> 6] 
 				<< " nbrq"[getMask<iMask::PROMOTION>() >> 20];
 		}

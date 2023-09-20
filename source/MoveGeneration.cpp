@@ -672,7 +672,7 @@ namespace MoveGenerator {
 			case 9:  CALL(9);
 			case 10: CALL(10);
 			default: 
-				*UCI_o.os << "Depth not supported";
+				OS << "Depth not supported";
 				break;
 			}
 		}

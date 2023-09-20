@@ -32,7 +32,7 @@ namespace Eval {
 
 			while (piece_bb) {
 				sq = popLS1B(piece_bb);
-				eval += 
+				eval +=
 					Value::piece_material[epiece] + Value::position_score[epiece][properSquare<SIDE>(sq)];
 			}
 		}
@@ -44,7 +44,7 @@ namespace Eval {
 
 			while (piece_bb) {
 				sq = popLS1B(piece_bb);
-				eval -= 
+				eval -=
 					Value::piece_material[epiece] + Value::position_score[epiece][properSquare<!SIDE>(sq)];
 			}
 		}
@@ -61,8 +61,7 @@ namespace Eval {
 
 		if (eval >= beta) 
 			return beta;
-		else if (eval > alpha) 
-			alpha = eval;
+		alpha = std::max(alpha, eval);
 
 		// generate opponent capture moves
 		auto capt_list = MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>();
@@ -80,8 +79,7 @@ namespace Eval {
 
 			if (score >= beta)
 				return beta;
-			else if (score > alpha)
-				alpha = score;
+			alpha = std::max(alpha, eval);
 		}
 
 		return alpha;

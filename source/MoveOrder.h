@@ -5,6 +5,8 @@
 
 
 namespace Order {
+	
+	static constexpr int max_Ply = 128;
 
 	// Most Valuable Victim - Least Valuable Attacker lookup data structure
 	namespace MVV_LVA {
@@ -21,13 +23,14 @@ namespace Order {
 	};
 
 	// Killer Moves lookup table
-	using killerLookUp = std::array<std::array<MoveItem::iMove, 100>, 2>;
+	using killerLookUp = std::array<std::array<MoveItem::iMove, Order::max_Ply>, 2>;
 	extern killerLookUp killer;
 	
 	// History Moves lookup table in format [side][from][to]
 	using historyLookUp = std::array<std::array<std::array<int, 64>, 64>, 2>;
 	extern historyLookUp history_moves;
 
+	// butterfly board of format [side][from][to]
 	using butterflyLookUp = std::array<std::array<std::array<int, 64>, 64>, 2>;
 	extern butterflyLookUp butterfly;
 

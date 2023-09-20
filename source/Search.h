@@ -4,6 +4,16 @@
 #include "MoveOrder.h"
 
 
+namespace PV {
+	// Principal Variation database tables
+	using lenghtPV = std::array<int, Order::max_Ply>;
+	extern lenghtPV pv_len;
+
+	using linePV = std::array<std::array<MoveItem::iMove, Order::max_Ply>, Order::max_Ply>;
+	extern linePV pv_line;
+};
+
+
 namespace Search {
 
 	struct Results {
@@ -13,7 +23,7 @@ namespace Search {
 
 	extern Results search_results;
 
-	MoveItem::iMove bestMove(int depth);
+	void bestMove(int depth);
 
 	inline void killerReset() {
 		Order::killer = {};

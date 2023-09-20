@@ -120,7 +120,7 @@ namespace {
 			return soutOne(singlePushPawn<BLACK>(pawns, empty)) & empty;
 		}
 
-	}
+	} // namespace PawnPushes
 
 	// pawn attacks functions - 
 	//  for white and black pawns 
@@ -158,6 +158,6 @@ namespace {
 			return soWeOne(pawns) & opp_occ;
 		}
 
-	}
+	} // namespace PawnAttacks
 
 } // namespace

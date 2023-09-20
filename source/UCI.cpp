@@ -56,10 +56,7 @@ void parseGo(std::istringstream& strm) {
 		return;
 	}
 
-	const auto move = Search::bestMove(depth);
-	*UCI_o.os << "info score cp " << Search::search_results.score << " depth " << depth 
-		<< " nodes " << Search::search_results.nodes << "\nbestmove ";
-	move.print() << '\n';
+	Search::bestMove(depth);
 }
 
 // parse given position and perform moves
@@ -91,7 +88,7 @@ void UCI::parsePosition(std::istringstream& strm) {
 		BBs.parseFEN(fen);
 	}
 	else if (com != "current") {
-		*os << "position [fen | startpos | current] moves[optionally] ...\n";
+		OS << "position [fen | startpos | current] moves[optionally] ...\n";
 		return;
 	}
 
@@ -114,7 +111,7 @@ void UCI::parsePosition(std::istringstream& strm) {
 		}
 
 		if (illegal) {
-			*os << "illegal move '" << move << "'\n";
+			OS << "illegal move '" << move << "'\n";
 			return;
 		}
 	}
@@ -128,20 +125,20 @@ void UCI::goLoop(int argc, char* argv[]) {
 		line += std::string(argv[i]) + " ";
 
 	if (is == &std::cin)
-		*os << "Polish Chess Engine: Austerlitz@ by Simon B.\n";
+		OS << "Polish Chess Engine: Austerlitz@ by Simon B.\n";
 
 	do {
-		if (argc == 1 and !std::getline(*is, line))
+		if (argc == 1 and !std::getline(IS, line))
 			line = "quit";
 
 		std::istringstream strm(line);
 
 		strm >> std::skipws >> token;
 
-		if (token == "isready") *os << "readyok\n";
+		if (token == "isready") OS << "readyok\n";
 		else if (token == "position") parsePosition(strm);
 		else if (token == "ucinewgame") BBs.parseFEN(BitBoardsSet::start_pos);
-		else if (token == "uci") *os << introduce();
+		else if (token == "uci") OS << introduce();
 		else if (token == "print") BBs.printBoard();
 		else if (token == "go") parseGo(strm);
 		else if (token == "benchmark") bench.start();

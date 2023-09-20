@@ -5,13 +5,13 @@
 namespace Order {
 
 	int moveScore(const MoveItem::iMove& move, int ply) {
-		int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
+		const int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 
 		// distinguish between quiets and captures
 		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 			const int att = move.getMask<MoveItem::iMask::PIECE>() >> 12;
 			int victim;
-			bool side = move.getMask<MoveItem::iMask::SIDE_F>();
+			const bool side = move.getMask<MoveItem::iMask::SIDE_F>();
 
 			if (move.getMask<MoveItem::iMask::EN_PASSANT_F>())
 				return MVV_LVA::lookup[PAWN][PAWN];
@@ -27,14 +27,15 @@ namespace Order {
 			return MVV_LVA::lookup[att][victim] + 1000000;
 		}
 		
-		// killer moves score slightly less than basic captures
+		// killer moves score less than basic captures
 		if (move == killer[0][ply])
 			return 900000;
 		else if (move == killer[1][ply])
 			return 800000;
 
-		int from = move.getMask<MoveItem::iMask::ORIGIN>();
-		return (20 * history_moves[game_state.turn][from][target]) / butterfly[game_state.turn][from][target] + 1;
+		// relative history move score
+		const int from = move.getMask<MoveItem::iMask::ORIGIN>();
+		return (13 * history_moves[game_state.turn][from][target]) / butterfly[game_state.turn][from][target] + 1;
 	}
 	
 
