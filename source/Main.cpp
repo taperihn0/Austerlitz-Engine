@@ -34,7 +34,5 @@ int main(int argc, char* argv[]) {
 			from.fill(1);
 
 	InitState::initMAttacksTables();
-	//UCI_o.goLoop(argc, argv);
-
-	printBitBoard(bitU64(5));
+	UCI_o.goLoop(argc, argv);
 }

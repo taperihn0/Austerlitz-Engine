@@ -18,12 +18,12 @@ inline constexpr auto cU64(T s) noexcept {
 	return static_cast<U64>(s);
 }
 
+
 namespace BitU64LookUp {
 	constexpr auto u64bit = cexpr::CexprArr<false, U64, 64>([](int i) {
 		return cU64(1) << i;
 	});
 }
-
 
 // set single bit on a bitboard and return such result
 template <typename T, class =
