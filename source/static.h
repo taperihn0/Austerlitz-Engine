@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include "BitBoardsSet.h"
 
 // compile-time custom helper functions
 namespace {
@@ -26,5 +27,6 @@ namespace {
 
 			static_for(dst, occ, std::integral_constant<int, It + 2>());
 		}
+
 	}
 }

@@ -154,6 +154,7 @@
     <ClCompile Include="source\MoveItem.cpp" />
     <ClCompile Include="source\MoveOrder.cpp" />
     <ClCompile Include="source\Search.cpp" />
+    <ClCompile Include="source\staticLookup.h" />
     <ClCompile Include="source\UCI.cpp" />
   </ItemGroup>
   <ItemGroup>

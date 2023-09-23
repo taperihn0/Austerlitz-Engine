@@ -38,40 +38,16 @@ namespace {
 
 } // namespace
 
-
-// pre-run-called functions
-namespace InitState {
-
-	// resources for initialization compile-time array
-	namespace cexprArr {
-
-		struct CArr {
-			constexpr CArr()
-				: arr{} {
-				for (int i = 0; i < 64; i++) {
-					for (int j = 0; j < 64; j++) {
-						arr[i][j] = inBetweenConstr(i, j);
-					}
-				}
-			}
-
-			U64 arr[64][64];
-		};
-
-	}
-}
-
-
 // pre-initialization of compile-time
 namespace RectangularLookUp {
-	constexpr auto inBetweenArr = InitState::cexprArr::CArr();
+	constexpr auto inBetweenArr = cexpr::CexprArr<true, U64, 64, 64>(inBetweenConstr);
 }
 
 
 // get proper inBetween bitboard element and check for index overflow
 inline U64 inBetween(int sq1, int sq2) noexcept {
 	assert(0 <= sq1 and sq1 < 64 and 0 <= sq2 and sq2 < 64 && "Rectangular look-up array index overflow");
-	return RectangularLookUp::inBetweenArr.arr[sq1][sq2];
+	return RectangularLookUp::inBetweenArr.get<true>(sq1, sq2);
 }
 
 // check whether king is double checked

@@ -6,6 +6,7 @@
 #include <array>
 #include <cassert>
 #include <nmmintrin.h>
+#include "staticLookup.h"
 
 // define bitboard data type 
 using U64 = uint64_t;
@@ -17,23 +18,10 @@ inline constexpr auto cU64(T s) noexcept {
 	return static_cast<U64>(s);
 }
 
-
-namespace InitState {
-	struct CArr_ {
-		constexpr CArr_()
-			: arr{} {
-			for (int i = 0; i < 64; i++) {
-				arr[i] = cU64(1) << i;
-			}
-		}
-
-		U64 arr[64];
-	};
-}
-
-
 namespace BitU64LookUp {
-	constexpr auto u64bit = InitState::CArr_();
+	constexpr auto u64bit = cexpr::CexprArr<false, U64, 64>([](int i) {
+		return cU64(1) << i;
+	});
 }
 
 
@@ -42,7 +30,7 @@ template <typename T, class =
 	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
 inline constexpr auto bitU64(T s) noexcept {
 	assert(s >= 0 and s < 64 && "Index overflow");
-	return BitU64LookUp::u64bit.arr[s];
+	return BitU64LookUp::u64bit.get<false>(s);
 }
 
 
