@@ -5,6 +5,7 @@
 #include "Search.h"
 #include "MoveOrder.h"
 #include "SearchBenchmark.h"
+#include "Zobrist.h"
 
 // global variables storing universal piece data
 BitBoardsSet BBs(BitBoardsSet::start_pos);
@@ -27,12 +28,10 @@ SearchBenchmark bench;
 PV::lenghtPV PV::pv_len;
 PV::linePV PV::pv_line;
 
-int main(int argc, char* argv[]) {
-	// initialize butterfly table of 1s
-	for (auto& side : Order::butterfly)
-		for (auto& from : side)
-			from.fill(1);
+Zobrist hash;
 
+int main(int argc, char* argv[]) {
+	InitState::initButterfly();
 	InitState::initMAttacksTables();
 	UCI_o.goLoop(argc, argv);
 }

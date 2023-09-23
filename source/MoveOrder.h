@@ -41,3 +41,15 @@ namespace Order {
 	void sort(MoveList& move_list, int ply);
 
 } // namespace Order
+
+
+namespace InitState {
+
+	// initialize butterfly table of 1s
+	inline void initButterfly() {
+		for (auto& side : Order::butterfly)
+			for (auto& from : side)
+				from.fill(1);
+	}
+
+}

@@ -156,6 +156,7 @@
     <ClCompile Include="source\Search.cpp" />
     <ClCompile Include="source\staticLookup.h" />
     <ClCompile Include="source\UCI.cpp" />
+    <ClCompile Include="source\Zobrist.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\SearchBenchmark.h" />
@@ -174,6 +175,7 @@
     <ClInclude Include="source\BitBoard.h" />
     <ClInclude Include="source\Timer.h" />
     <ClInclude Include="source\UCI.h" />
+    <ClInclude Include="source\Zobrist.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

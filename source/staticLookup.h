@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <cassert>
 
 
 namespace {
@@ -17,13 +18,15 @@ namespace {
 				helper<TwoDimension>(init);
 			}
 
-			template <bool D>
+			template <bool D = TwoDimension>
 			inline constexpr auto get(int i1, int i2 = 0) const -> std::enable_if_t<D, T> {
+				assert(i1 >= 0 and i1 < S1 and i2 >= 0 and i2 < S2 && "Index overflow");
 				return arr[i1][i2];
 			}
 
-			template <bool D>
+			template <bool D = TwoDimension>
 			inline constexpr auto get(int i1, int i2 = 0) const -> std::enable_if_t<!D, T> {
+				assert(i1 >= 0 and i1 < S1 && "Index overflow");
 				return arr[i1];
 			}
 

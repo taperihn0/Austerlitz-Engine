@@ -30,7 +30,7 @@ template <typename T, class =
 	std::enable_if_t<std::is_enum<T>::value or std::is_integral_v<T>>>
 inline constexpr auto bitU64(T s) noexcept {
 	assert(s >= 0 and s < 64 && "Index overflow");
-	return BitU64LookUp::u64bit.get<false>(s);
+	return BitU64LookUp::u64bit.get(s);
 }
 
 

@@ -47,7 +47,7 @@ namespace RectangularLookUp {
 // get proper inBetween bitboard element and check for index overflow
 inline U64 inBetween(int sq1, int sq2) noexcept {
 	assert(0 <= sq1 and sq1 < 64 and 0 <= sq2 and sq2 < 64 && "Rectangular look-up array index overflow");
-	return RectangularLookUp::inBetweenArr.get<true>(sq1, sq2);
+	return RectangularLookUp::inBetweenArr.get(sq1, sq2);
 }
 
 // check whether king is double checked

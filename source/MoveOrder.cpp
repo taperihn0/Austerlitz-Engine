@@ -3,7 +3,7 @@
 
 
 namespace Order {
-
+	
 	int moveScore(const MoveItem::iMove& move, int ply) {
 		const int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 
