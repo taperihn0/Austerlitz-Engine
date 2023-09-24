@@ -144,7 +144,6 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "go") parseGo(strm);
 		else if (token == "benchmark") bench.start();
 #if defined(__DEBUG__)
-		else if (token == "killer_reset") Search::killerReset();
 		else if (token == "zobrist_key") OS << hash.key << '\n';
 #endif
 	} while (line != "quit" and argc == 1);

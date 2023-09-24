@@ -6,6 +6,8 @@ position fen rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPP2PPP/RNBQKBNR w KQkq - 0 4
 go depth 9
 killer_reset
 
+quit
+
 position fen r2qkb1r/ppp2ppp/2n5/3Pp3/3n4/8/PPP2PPP/RN1QKB1R w KQkq - 0 11
 go depth 9
 killer_reset

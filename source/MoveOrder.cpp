@@ -1,4 +1,5 @@
 #include "MoveOrder.h"
+#include "Zobrist.h"
 #include <unordered_map>
 
 
@@ -6,6 +7,9 @@ namespace Order {
 	
 	int moveScore(const MoveItem::iMove& move, int ply) {
 		const int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
+
+		if (tt.read<ReadType::ONLY_BESTMOVE>(0, 0, 0) == move)
+			return 1500000;
 
 		// distinguish between quiets and captures
 		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
@@ -34,9 +38,9 @@ namespace Order {
 			return 800000;
 
 		// relative history move score
-		const int from = move.getMask<MoveItem::iMask::ORIGIN>();
+		const int pc = move.getMask<MoveItem::iMask::PIECE>() >> 12;
 		static constexpr int scale = 13;
-		return (scale * history_moves[game_state.turn][from][target]) / butterfly[game_state.turn][from][target] + 1;
+		return (scale * history_moves[pc][target]) / butterfly[pc][target] + 1;
 	}
 	
 

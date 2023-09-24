@@ -29,6 +29,7 @@ PV::lenghtPV PV::pv_len;
 PV::linePV PV::pv_line;
 
 Zobrist hash;
+TranspositionTable tt;
 
 int main(int argc, char* argv[]) {
 	InitState::initButterfly();

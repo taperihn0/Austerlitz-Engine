@@ -45,11 +45,6 @@ void Zobrist::generateKey() {
 }
 
 
-TranspositionTable::TranspositionTable() {
-	clear();
-}
-
-
 template <bool OnlyScore>
 inline auto transform(const HashEntry& entry) noexcept -> std::enable_if_t<OnlyScore, int> {
 	return entry.score;
@@ -62,36 +57,36 @@ inline auto transform(const HashEntry& entry) noexcept -> std::enable_if_t<!Only
 
 
 template <ReadType rType, bool OnlyScore>
-auto TranspositionTable::read(int alpha, int beta, unsigned _depth) -> std::conditional_t<OnlyScore, int, MoveItem::iMove> {
+auto TranspositionTable::read(int alpha, int beta, int _depth) -> std::conditional_t<OnlyScore, int, MoveItem::iMove> {
 	const auto& entry = htab[hash.key % hash_size];
-	HashEntry res;
 
 	// unmatching zobrist key (key collision) or unproper depth of an entry
-	if (entry.zobrist != hash.key
-		or entry.depth < _depth)
-		res = empty_entry;
-	else
-		switch (entry.flag) {
-		case HashEntry::Flag::HASH_ALPHA:
-			res = (entry.score <= alpha) ? entry : empty_entry;
-			break;
-		case HashEntry::Flag::HASH_BETA:
-			res = (entry.score >= beta) ? entry : empty_entry;
-			break;
-		default:
-			res = empty_entry;
-			break;
-		}
+	if (entry.zobrist != hash.key or entry.depth < _depth)
+		return transform<OnlyScore>(empty_entry);
 
-	return transform<OnlyScore>(res);
+	switch (entry.flag) {
+	case HashEntry::Flag::HASH_EXACT:
+		return transform<OnlyScore>(entry);
+	case HashEntry::Flag::HASH_ALPHA:
+		if constexpr (OnlyScore)
+			return transform<OnlyScore>(entry);
+		return transform<OnlyScore>((entry.score <= alpha) ? entry : empty_entry);
+	case HashEntry::Flag::HASH_BETA:
+		if constexpr (OnlyScore)
+			return transform<OnlyScore>(entry);
+		return transform<OnlyScore>((entry.score >= beta) ? entry : empty_entry);
+	default: break;
+	}
+
+	return transform<OnlyScore>(empty_entry);
 }
 
 
-template int TranspositionTable::read<ReadType::ONLY_SCORE, true>(int, int, unsigned);
-template MoveItem::iMove TranspositionTable::read<ReadType::ONLY_BESTMOVE, false>(int, int, unsigned);
+template int TranspositionTable::read<ReadType::ONLY_SCORE, true>(int, int, int);
+template MoveItem::iMove TranspositionTable::read<ReadType::ONLY_BESTMOVE, false>(int, int, int);
 
 
-void TranspositionTable::write(unsigned _depth, int _score, HashEntry::Flag _flag, MoveItem::iMove _bestmv) {
+void TranspositionTable::write(int _depth, int _score, HashEntry::Flag _flag, MoveItem::iMove _bestmv) {
 	auto& entry = htab[hash.key % hash_size];
 	entry.zobrist = hash.key;
 	entry.score = _score;

@@ -26,12 +26,12 @@ namespace Order {
 	using killerLookUp = std::array<std::array<MoveItem::iMove, Order::max_Ply>, 2>;
 	extern killerLookUp killer;
 	
-	// History Moves lookup table in format [side][from][to]
-	using historyLookUp = std::array<std::array<std::array<int, 64>, 64>, 2>;
+	// History Moves lookup table in format [piece][to]
+	using historyLookUp = std::array<std::array<int, 64>, 12>;
 	extern historyLookUp history_moves;
 
-	// butterfly board of format [side][from][to]
-	using butterflyLookUp = std::array<std::array<std::array<int, 64>, 64>, 2>;
+	// butterfly board of format [piece][to]
+	using butterflyLookUp = std::array<std::array<int, 64>, 12>;
 	extern butterflyLookUp butterfly;
 
 	// return value, also so called 'score' of given move
@@ -47,9 +47,8 @@ namespace InitState {
 
 	// initialize butterfly table of 1s
 	inline void initButterfly() {
-		for (auto& side : Order::butterfly)
-			for (auto& from : side)
-				from.fill(1);
+		for (auto& pc : Order::butterfly)
+			pc.fill(1);
 	}
 
 }

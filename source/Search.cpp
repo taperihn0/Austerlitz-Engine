@@ -1,6 +1,7 @@
 #include "Search.h"
 #include "MoveGeneration.h"
 #include "Evaluation.h"
+#include "Zobrist.h"
 #include <limits>
 
 #define _SEARCH_DEBUG false
@@ -26,6 +27,12 @@ namespace Search {
 	auto alphaBeta(int alpha, int beta) -> std::enable_if_t<Depth, int> {
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
+		int tt_score;
+
+		if constexpr (Ply)
+			if (HashEntry::isValid(tt_score = tt.read<ReadType::ONLY_SCORE>(alpha, beta, Depth)))
+				return tt_score;
+
 		search_results.nodes++;
 
 		// no legal moves detected
@@ -39,8 +46,9 @@ namespace Search {
 
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
-		int score, from, to;
-		const int old_alpha = alpha;
+		const auto hash_cpy = hash.key;
+		int score, to, pc;
+		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
 
 		// move ordering
 		Order::sort(move_list, Ply);
@@ -53,11 +61,12 @@ namespace Search {
 			MovePerform::makeMove(move);
 			score = -alphaBeta<false, Depth - 1, Ply + 1>(-beta, -alpha);
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
+			hash.key = hash_cpy;
 
 			// register move appearance in butterfly board
-			from = move.getMask<MoveItem::iMask::ORIGIN>();
 			to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
-			Order::butterfly[game_state.turn][from][to] += Depth;
+			pc = move.getMask<MoveItem::iMask::PIECE>() >> 12;
+			Order::butterfly[pc][to] += Depth;
 
 			if (score > alpha) {
 				// fail hard beta-cutoff
@@ -67,11 +76,14 @@ namespace Search {
 						Order::killer[1][Ply] = Order::killer[0][Ply];
 						Order::killer[0][Ply] = move;
 						// store move as a history move
-						Order::history_moves[game_state.turn][from][to] += Depth * Depth;
+						Order::history_moves[pc][to] += Depth * Depth;
 					}
+
+					tt.write(Depth, beta, HashEntry::Flag::HASH_BETA, move);
 					return beta;
 				}
 
+				hash_flag = HashEntry::Flag::HASH_EXACT;
 				alpha = score;
 
 				PV::pv_line[Ply][0] = move;
@@ -79,6 +91,9 @@ namespace Search {
 				PV::pv_len[Ply] = PV::pv_len[Ply + 1] + 1;
 			}
 		}
+
+		// save current position in tt
+		tt.write(Depth, alpha, hash_flag, PV::pv_line[Ply][0]);
 
 		// fail low cutoff (return best option)
 		return alpha;
@@ -89,36 +104,47 @@ namespace Search {
 
 	// display best move according to search algorithm
 	void bestMove(int depth) {
+		// cleaning
 		search_results.nodes = 0;
+		Search::killerClear();
+		InitState::initButterfly();
+		PV::clear();
 
-		switch (depth) {
-		case 1:  CALL(1);
-		case 2:  CALL(2);
-		case 3:  CALL(3);
-		case 4:  CALL(4);
-		case 5:  CALL(5);
-		case 6:  CALL(6);
-		case 7:  CALL(7);
-		case 8:  CALL(8);
-		case 9:  CALL(9);
-		case 10: CALL(10);
-		default:
-			OS << "Unvalid depth size";
-			return;
+		for (auto& pc : Order::history_moves)
+			pc.fill(0);
+
+
+		for (int d = 1; d <= depth; d++) {
+			switch (d) {
+			case 1:  CALL(1);
+			case 2:  CALL(2);
+			case 3:  CALL(3);
+			case 4:  CALL(4);
+			case 5:  CALL(5);
+			case 6:  CALL(6);
+			case 7:  CALL(7);
+			case 8:  CALL(8);
+			case 9:  CALL(9);
+			case 10: CALL(10);
+			default:
+				OS << "Unvalid depth size";
+				return;
+			}
+
+			// proper static evaluation value
+			if (!game_state.turn ^ (depth % 2 == 0))
+				search_results.score = -search_results.score;
+
+			OS << "info score cp " << Search::search_results.score << " depth " << d
+				<< " nodes " << Search::search_results.nodes
+				<< " pv ";
+
+			for (int cnt = 0; cnt < PV::pv_len[0]; cnt++)
+				PV::pv_line[0][cnt].print() << ' ';
+			OS << '\n';
 		}
 
-		// proper static evaluation value
-		if (!game_state.turn ^ (depth % 2 == 0))
-			search_results.score = -search_results.score;
-
-		OS  << "info score cp " << Search::search_results.score << " depth " << depth
-			<< " nodes " << Search::search_results.nodes
-			<< " pv ";
-
-		for (int cnt = 0; cnt < PV::pv_len[0]; cnt++)
-			PV::pv_line[0][cnt].print() << ' ';
-
-		OS << "\nbestmove ";
+		OS << "bestmove ";
 		PV::pv_line[0][0].print() << '\n';
 	}
 

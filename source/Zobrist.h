@@ -38,7 +38,7 @@ struct HashEntry {
 	static inline bool isValid(MoveItem::iMove _move) noexcept;
 
 	U64 zobrist;
-	unsigned depth;
+	int depth;
 	Flag flag;
 	int score;
 	MoveItem::iMove best_move;
@@ -57,17 +57,18 @@ public:
 	static constexpr MoveItem::iMove no_move = 0;
 	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, no_score, no_move };
 
-	TranspositionTable();
+	TranspositionTable() = default;
 
 	template <ReadType rType, bool OnlyScore = rType == ReadType::ONLY_SCORE>
-	auto read(int alpha, int beta, unsigned _depth) -> std::conditional_t<OnlyScore, int, MoveItem::iMove>;
+	auto read(int alpha, int beta, int _depth) -> std::conditional_t<OnlyScore, int, MoveItem::iMove>;
 
-	void write(unsigned _depth, int _score, HashEntry::Flag _flag, MoveItem::iMove _bestmv);
+	void write(int _depth, int _score, HashEntry::Flag _flag, MoveItem::iMove _bestmv);
 	void clear();
 private:
 	std::array<HashEntry, hash_size> htab;
 };
 
+extern TranspositionTable tt;
 
 inline bool HashEntry::isValid(int _score) noexcept {
 	return _score != TranspositionTable::no_score;

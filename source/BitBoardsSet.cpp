@@ -13,6 +13,7 @@ BitBoardsSet::BitBoardsSet(const std::string& fen) {
 
 void BitBoardsSet::parseFEN(const std::string& fen) {
 	clear();
+	tt.clear();
 	int x = 0, y = 7;
 
 	for (int i = 0; i < size(fen); i++) {

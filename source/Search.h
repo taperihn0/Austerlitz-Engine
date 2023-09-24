@@ -11,6 +11,13 @@ namespace PV {
 
 	using linePV = std::array<std::array<MoveItem::iMove, Order::max_Ply>, Order::max_Ply>;
 	extern linePV pv_line;
+
+	inline void clear() {
+		pv_len.fill(0);
+
+		for (auto& row : pv_line)
+			row.fill(0);
+	}
 };
 
 
@@ -25,7 +32,7 @@ namespace Search {
 
 	void bestMove(int depth);
 
-	inline void killerReset() {
+	inline void killerClear() {
 		Order::killer = {};
 	}
 
