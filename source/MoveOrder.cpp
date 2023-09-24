@@ -35,7 +35,8 @@ namespace Order {
 
 		// relative history move score
 		const int from = move.getMask<MoveItem::iMask::ORIGIN>();
-		return (13 * history_moves[game_state.turn][from][target]) / butterfly[game_state.turn][from][target] + 1;
+		static constexpr int scale = 13;
+		return (scale * history_moves[game_state.turn][from][target]) / butterfly[game_state.turn][from][target] + 1;
 	}
 	
 

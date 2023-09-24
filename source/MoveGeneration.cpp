@@ -1,5 +1,6 @@
 #include "MoveGeneration.h"
 #include "Timer.h"
+#include "Zobrist.h"
 #include <string>
 
 #define _PERFT_GENTYPE LEGAL
@@ -454,9 +455,11 @@ namespace MovePerform {
 	inline void captureCase(const MoveItem::iMove& move, bool side, int target) {
 		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 			popBit(BBs[nBlack - side], target);
-
+			
+			// look for captured piece
 			for (auto pc = nBlackPawn - side; pc <= nBlackQueen; pc += 2) {
 				if (getBit(BBs[pc], target)) {
+					hash.key ^= hash.piece_keys.get(pc, target);
 					popBit(BBs[pc], target);
 					break;
 				}
@@ -470,12 +473,22 @@ namespace MovePerform {
 			origin = move.getMask<MoveItem::iMask::ORIGIN>();
 		const bool side = move.getMask<MoveItem::iMask::SIDE_F>();
 
+		// update player to turn and en passant state in Zobrist key
+		hash.key ^= hash.side_key;
+		if (game_state.ep_sq != -1)
+			hash.key ^= hash.enpassant_keys.get(game_state.ep_sq);
+
 		// change player to turn and update en passant square
 		game_state.turn = !game_state.turn;
 		game_state.ep_sq = -1;
 
 		if (move.getMask<MoveItem::iMask::EN_PASSANT_F>()) {
 			const int ep_pawn = target + (side ? Compass::nort : Compass::sout);
+			
+			hash.key ^= hash.piece_keys.get(nWhitePawn + side, origin);
+			hash.key ^= hash.piece_keys.get(nWhitePawn + side, target);
+			hash.key ^= hash.piece_keys.get(nBlackPawn - side, ep_pawn);
+
 			moveBit(BBs[nWhitePawn + side], origin, target);
 			popBit(BBs[nBlackPawn - side], ep_pawn);
 			moveBit(BBs[nWhite + side], origin, target);
@@ -487,7 +500,12 @@ namespace MovePerform {
 			return;
 		}
 		else if (const auto promotion = move.getMask<MoveItem::iMask::PROMOTION>()) {
-			setBit(BBs[bbsIndex<WHITE>(promotion >> 20) + side], target);
+			const int promo_pc = static_cast<int>(bbsIndex<WHITE>(promotion >> 20)) + side;
+
+			hash.key ^= hash.piece_keys.get(nWhitePawn + side, origin);
+			hash.key ^= hash.piece_keys.get(promo_pc, target);
+
+			setBit(BBs[promo_pc], target);
 			popBit(BBs[nWhitePawn + side], origin);
 			moveBit(BBs[nWhite + side], origin, target);
 			moveBit(BBs[nOccupied], origin, target);
@@ -497,13 +515,22 @@ namespace MovePerform {
 			return;
 		}
 		else if (move.getMask<MoveItem::iMask::CASTLE_F>()) {
+			// update castling rights - exclude old castle state and set new castle state then
+			hash.key ^= hash.castle_keys.get(game_state.castle.raw());
 			game_state.castle &= ~(side ? 3 : 12);
+			hash.key ^= hash.castle_keys.get(game_state.castle.raw());
 
 			moveBit(BBs[nWhiteKing + side], origin, target);
 
 			const bool rook_side = target == g1 or target == g8;
-			const int rook_origin = (rook_side ? (side ? h8 : h1) : (side ? a8 : a1)),
+			const int 
+				rook_origin = (rook_side ? (side ? h8 : h1) : (side ? a8 : a1)),
 				rook_target = origin + (rook_side ? 1 : -1);
+
+			hash.key ^= hash.piece_keys.get(nWhiteKing + side, origin);
+			hash.key ^= hash.piece_keys.get(nWhiteKing + side, target);
+			hash.key ^= hash.piece_keys.get(nWhiteRook + side, rook_origin);
+			hash.key ^= hash.piece_keys.get(nWhiteRook + side, rook_target);
 
 			moveBit(BBs[nWhiteRook + side], rook_origin, rook_target);
 			moveBit(BBs[nWhite + side], origin, target);
@@ -517,8 +544,12 @@ namespace MovePerform {
 
 		// quiet moves or captures
 		const auto piece = move.getMask<MoveItem::iMask::PIECE>() >> 12;
+		const int bbs_pc = static_cast<int>(bbsIndex<WHITE>(piece)) + side;
 
-		moveBit(BBs[bbsIndex<WHITE>(piece) + side], origin, target);
+		hash.key ^= hash.piece_keys.get(bbs_pc, origin);
+		hash.key ^= hash.piece_keys.get(bbs_pc, target);
+
+		moveBit(BBs[bbs_pc], origin, target);
 		moveBit(BBs[nWhite + side], origin, target);
 		moveBit(BBs[nOccupied], origin, target);
 		moveBit(BBs[nEmpty], target, origin);
@@ -526,19 +557,23 @@ namespace MovePerform {
 		// captured piece updating
 		captureCase(move, side, target);
 
-		// setting new en passant position, if legal and possible
+		// exclude old castle state
+		hash.key ^= hash.castle_keys.get(game_state.castle.raw());
+
+		// setting new en passant position, if legal and possible (also in Zobrist notation)
 		if (move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>()) {
 			game_state.ep_sq = target;
+			hash.key ^= hash.enpassant_keys.get(game_state.ep_sq);
 		} // updating castling rights
-		else if (piece == ROOK and origin == (side ? a8 : a1)) {
+		else if (piece == ROOK and origin == (side ? a8 : a1))
 			game_state.castle &= ~(1 << (!side * 2));
-		}
-		else if (piece == ROOK and origin == (side ? h8 : h1)) {
+		else if (piece == ROOK and origin == (side ? h8 : h1))
 			game_state.castle &= ~(1 << (3 - side * 2));
-		}
-		else if (piece == KING) {
+		else if (piece == KING)
 			game_state.castle &= ~(12 - side * 9);
-		}
+
+		// update castle state in hash key
+		hash.key ^= hash.castle_keys.get(game_state.castle.raw());
 	}
 
 	// unmake move using copy-make approach

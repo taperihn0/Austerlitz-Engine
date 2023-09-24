@@ -1,4 +1,5 @@
 #include "BitBoardsSet.h"
+#include "Zobrist.h"
 
 
 BitBoardsSet::BitBoardsSet(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) {
@@ -12,7 +13,6 @@ BitBoardsSet::BitBoardsSet(const std::string& fen) {
 
 void BitBoardsSet::parseFEN(const std::string& fen) {
 	clear();
-
 	int x = 0, y = 7;
 
 	for (int i = 0; i < size(fen); i++) {
@@ -99,6 +99,7 @@ void BitBoardsSet::parseFEN(const std::string& fen) {
 	}
 
 	bbs[nEmpty] = ~bbs[nOccupied];
+	hash.generateKey();
 }
 
 void BitBoardsSet::parseGState(const std::string& fen, int i) {

@@ -12,8 +12,6 @@ namespace Search {
 		low_bound = std::numeric_limits<int>::min() + 1000000,
 		high_bound = std::numeric_limits<int>::max() - 1000000;
 
-	MoveItem::iMove best_move, best_so_far;
-
 	// break recursion and return evalutation of current position
 	template <bool Root, int Depth, int Ply>
 	inline auto alphaBeta(int alpha, int beta) -> std::enable_if_t<!Depth, int> {
@@ -61,32 +59,25 @@ namespace Search {
 			to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 			Order::butterfly[game_state.turn][from][to] += Depth;
 
-			// fail hard beta-cutoff
-			if (score >= beta) {
-				if (!move.getMask<MoveItem::iMask::CAPTURE_F>()) {
-					// store killer move
-					Order::killer[1][Ply] = Order::killer[0][Ply];
-					Order::killer[0][Ply] = move;
-					// store move as a history move
-					Order::history_moves[game_state.turn][from][to] += Depth * Depth;
+			if (score > alpha) {
+				// fail hard beta-cutoff
+				if (score >= beta) {
+					if (!move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+						// store killer move
+						Order::killer[1][Ply] = Order::killer[0][Ply];
+						Order::killer[0][Ply] = move;
+						// store move as a history move
+						Order::history_moves[game_state.turn][from][to] += Depth * Depth;
+					}
+					return beta;
 				}
 
-				return beta;
-			}
-			else if (score > alpha) {
 				alpha = score;
 
 				PV::pv_line[Ply][0] = move;
 				std::memcpy(&PV::pv_line[Ply][1], &PV::pv_line[Ply + 1], PV::pv_len[Ply + 1] * sizeof(move));
 				PV::pv_len[Ply] = PV::pv_len[Ply + 1] + 1;
-
-				if constexpr (Root)
-					best_so_far = move;
 			}
-		}
-
-		if constexpr (Root) {
-			if (old_alpha != alpha) best_move = best_so_far;
 		}
 
 		// fail low cutoff (return best option)
@@ -98,7 +89,6 @@ namespace Search {
 
 	// display best move according to search algorithm
 	void bestMove(int depth) {
-		assert(depth > 0 && "Unvalid depth size");
 		search_results.nodes = 0;
 
 		switch (depth) {
@@ -113,8 +103,8 @@ namespace Search {
 		case 9:  CALL(9);
 		case 10: CALL(10);
 		default:
-			OS << "Depth not supported";
-			break;
+			OS << "Unvalid depth size";
+			return;
 		}
 
 		// proper static evaluation value

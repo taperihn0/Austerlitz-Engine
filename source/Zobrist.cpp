@@ -1,7 +1,6 @@
 #include "Zobrist.h"
 #include "BitBoardsSet.h"
 
-
 // kind of 'wrapper' funcitions for random U64 generator
 inline U64 randomU64wrap_2(int, int) {
 	return randomU64();
@@ -11,15 +10,11 @@ inline U64 randomU64wrap_1(int) {
 	return randomU64();
 }
 
-
-// static data members initialization
-cexpr::CexprArr<true, U64, 12, 64> Zobrist::piece_keys(randomU64wrap_2);
-cexpr::CexprArr<false, U64, 16> Zobrist::castle_keys(randomU64wrap_1);
-cexpr::CexprArr<false, U64, 64> Zobrist::enpassant_keys(randomU64wrap_1);
-U64 Zobrist::side_key = randomU64();
-
-
-Zobrist::Zobrist() {
+Zobrist::Zobrist() 
+: piece_keys(randomU64wrap_2), 
+  castle_keys(randomU64wrap_1), 
+  enpassant_keys(randomU64wrap_1), 
+  side_key(randomU64()) {
 	generateKey();
 }
 
@@ -48,3 +43,4 @@ void Zobrist::generateKey() {
 
 	key ^= castle_keys.get(game_state.castle.raw());
 }
+
