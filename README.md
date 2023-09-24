@@ -5,3 +5,4 @@
 - *smarter MVV/LVA lookup table values*
 - *apply countermove heuristic*
 - *mate killers*
+- *replace by depth scheme in transposition table*
