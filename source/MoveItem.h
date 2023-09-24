@@ -50,7 +50,7 @@ namespace MoveItem {
 
 	class iMove {
 	public:
-		iMove(uint32_t enc)
+		constexpr iMove(uint32_t enc) noexcept
 			: cmove(enc) {}
 		iMove(const iMove&) = default;
 		iMove() = default;
