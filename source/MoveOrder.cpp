@@ -1,6 +1,6 @@
 #include "MoveOrder.h"
 #include "Zobrist.h"
-#include <unordered_map>
+#include "Search.h"
 
 
 namespace Order {
@@ -8,8 +8,10 @@ namespace Order {
 	int moveScore(const MoveItem::iMove& move, int ply) {
 		const int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 
-		if (tt.read<ReadType::ONLY_BESTMOVE>(0, 0, 0) == move)
-			return 1500000;
+		// pv move detected
+		//if (tt.read<ReadType::ONLY_BESTMOVE>(0, 0, 0) == move)
+		if (PV::pv_line[ply][0] == move)
+			return pv_score;
 
 		// distinguish between quiets and captures
 		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
@@ -43,14 +45,16 @@ namespace Order {
 		return (scale * history_moves[pc][target]) / butterfly[pc][target] + 1;
 	}
 	
+	// hash table for move ordering
+	static std::array<int, 0xFFF> m_score_hash;
 
 	void sort(MoveList& move_list, int ply) {
-		std::unordered_map<uint32_t, int> hash;
+		m_score_hash.fill(0);
 
-		std::sort(move_list.begin(), move_list.end(), [&hash, ply](const MoveItem::iMove& a, const MoveItem::iMove& b) {
-			if (!hash[a.raw()]) hash[a.raw()] = moveScore(a, ply);
-			if (!hash[b.raw()]) hash[b.raw()] = moveScore(b, ply);
-			return hash[a.raw()] > hash[b.raw()];
+		std::sort(move_list.begin(), move_list.end(), [ply](const MoveItem::iMove& a, const MoveItem::iMove& b) {
+			if (!m_score_hash[a.raw() & 0xFFF]) m_score_hash[a.raw() & 0xFFF] = moveScore(a, ply);
+			if (!m_score_hash[b.raw() & 0xFFF]) m_score_hash[b.raw() & 0xFFF] = moveScore(b, ply);
+			return m_score_hash[a.raw() & 0xFFF] > m_score_hash[b.raw() & 0xFFF];
 		});
 	}
 

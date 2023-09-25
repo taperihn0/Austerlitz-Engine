@@ -56,12 +56,16 @@ namespace MoveItem {
 		iMove() = default;
 
 		// no need to return a value
-		void operator=(uint32_t data) noexcept {
+		inline void operator=(uint32_t data) noexcept {
 			cmove = data;
 		}
 
-		bool operator==(const iMove& b) const {
+		inline bool operator==(iMove b) const noexcept {
 			return cmove == b.cmove;
+		}
+
+		inline bool operator!=(iMove b) const noexcept {
+			return cmove != b.cmove;
 		}
 
 		template <iMask MASK>

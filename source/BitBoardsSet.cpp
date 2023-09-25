@@ -1,5 +1,6 @@
 #include "BitBoardsSet.h"
 #include "Zobrist.h"
+#include "Search.h"
 
 
 BitBoardsSet::BitBoardsSet(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) {

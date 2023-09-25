@@ -6,7 +6,9 @@
 
 namespace Order {
 	
-	static constexpr int max_Ply = 128;
+	static constexpr int
+		max_Ply = 128,
+		pv_score = 1500000;
 
 	// Most Valuable Victim - Least Valuable Attacker lookup data structure
 	namespace MVV_LVA {
@@ -45,10 +47,14 @@ namespace Order {
 
 namespace InitState {
 
-	// initialize butterfly table of 1s
-	inline void initButterfly() {
-		for (auto& pc : Order::butterfly)
-			pc.fill(1);
+	// fill butterfly table of 1s
+	inline void clearButterfly() {
+		for (auto& x : Order::butterfly) x.fill(1);
+	}
+	
+	// clear history heuristic table
+	inline void clearHistory() {
+		for (auto& x : Order::history_moves) x.fill(0);
 	}
 
 }

@@ -32,7 +32,7 @@ Zobrist hash;
 TranspositionTable tt;
 
 int main(int argc, char* argv[]) {
-	InitState::initButterfly();
+	InitState::clearButterfly();
 	InitState::initMAttacksTables();
 	UCI_o.goLoop(argc, argv);
 }

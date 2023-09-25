@@ -44,10 +44,6 @@ struct HashEntry {
 	MoveItem::iMove best_move;
 };
 
-// type for read function in transposition table
-enum class ReadType {
-	ONLY_SCORE, ONLY_BESTMOVE,
-};
 
 // main transposition table class
 class TranspositionTable {
@@ -59,8 +55,7 @@ public:
 
 	TranspositionTable() = default;
 
-	template <ReadType rType, bool OnlyScore = rType == ReadType::ONLY_SCORE>
-	auto read(int alpha, int beta, int _depth) -> std::conditional_t<OnlyScore, int, MoveItem::iMove>;
+	int read(int alpha, int beta, int _depth);
 
 	void write(int _depth, int _score, HashEntry::Flag _flag, MoveItem::iMove _bestmv);
 	void clear();
@@ -72,8 +67,4 @@ extern TranspositionTable tt;
 
 inline bool HashEntry::isValid(int _score) noexcept {
 	return _score != TranspositionTable::no_score;
-}
-
-inline bool HashEntry::isValid(MoveItem::iMove _move) noexcept {
-	return _move.raw() != TranspositionTable::no_move.raw();
 }

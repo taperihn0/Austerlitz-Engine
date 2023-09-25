@@ -14,7 +14,7 @@ namespace Search {
 		high_bound = std::numeric_limits<int>::max() - 1000000;
 
 	// break recursion and return evalutation of current position
-	template <bool Root, int Depth, int Ply>
+	template <int Depth, int Ply>
 	inline auto alphaBeta(int alpha, int beta) -> std::enable_if_t<!Depth, int> {
 		// init PV table lenght
 		std::get<Ply>(PV::pv_len) = 0;
@@ -22,16 +22,16 @@ namespace Search {
 	}
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
-	// only root node sets best move
-	template <bool Root, int Depth, int Ply>
+	template <int Depth, int Ply>
 	auto alphaBeta(int alpha, int beta) -> std::enable_if_t<Depth, int> {
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
-		int tt_score;
 
-		if constexpr (Ply)
-			if (HashEntry::isValid(tt_score = tt.read<ReadType::ONLY_SCORE>(alpha, beta, Depth)))
+		if constexpr (Ply) {
+			int tt_score;
+			if (HashEntry::isValid(tt_score = tt.read(alpha, beta, Depth)))
 				return tt_score;
+		}
 
 		search_results.nodes++;
 
@@ -50,6 +50,8 @@ namespace Search {
 		int score, to, pc;
 		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
 
+		bool pv_left = true;
+
 		// move ordering
 		Order::sort(move_list, Ply);
 
@@ -57,9 +59,19 @@ namespace Search {
 #if _SEARCH_DEBUG
 			move.print() << '\n';
 #endif
-
 			MovePerform::makeMove(move);
-			score = -alphaBeta<false, Depth - 1, Ply + 1>(-beta, -alpha);
+
+			// principal variation search
+			if (pv_left)
+				score = -alphaBeta<Depth - 1, Ply + 1>(-beta, -alpha);
+			else {
+				// adjust null window for 'worse' moves
+				score = -alphaBeta<Depth - 1, Ply + 1>(-alpha - 1, -alpha);
+				if (score > alpha and score < beta) // sometimes these 'worse' moves are still really interesting
+													// so that there is a need to search them once again to get accurate score
+					score = -alphaBeta<Depth - 1, Ply + 1>(-beta, -alpha);
+			}
+
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			hash.key = hash_cpy;
 
@@ -79,39 +91,41 @@ namespace Search {
 						Order::history_moves[pc][to] += Depth * Depth;
 					}
 
-					tt.write(Depth, beta, HashEntry::Flag::HASH_BETA, move);
+					tt.write(Depth, beta, HashEntry::Flag::HASH_BETA, 0);
 					return beta;
 				}
 
 				hash_flag = HashEntry::Flag::HASH_EXACT;
 				alpha = score;
 
+				pv_left = false;
 				PV::pv_line[Ply][0] = move;
-				std::memcpy(&PV::pv_line[Ply][1], &PV::pv_line[Ply + 1], PV::pv_len[Ply + 1] * sizeof(move));
+
+				for (int i = 0; i < PV::pv_len[Ply + 1]; i++)
+					PV::pv_line[Ply][i + 1] = PV::pv_line[Ply + 1][i];
+
 				PV::pv_len[Ply] = PV::pv_len[Ply + 1] + 1;
 			}
 		}
 
 		// save current position in tt
-		tt.write(Depth, alpha, hash_flag, PV::pv_line[Ply][0]);
+		tt.write(Depth, alpha, hash_flag, 0);
 
 		// fail low cutoff (return best option)
 		return alpha;
 	}
 
-#define CALL(d) search_results.score = -alphaBeta<true, d, 0>(low_bound, high_bound); \
+#define CALL(d) search_results.score = -alphaBeta<d, 0>(low_bound, high_bound); \
 				break;
 
 	// display best move according to search algorithm
 	void bestMove(int depth) {
 		// cleaning
 		search_results.nodes = 0;
-		Search::killerClear();
-		InitState::initButterfly();
+		Search::clearKiller();
+		InitState::clearButterfly();
 		PV::clear();
-
-		for (auto& pc : Order::history_moves)
-			pc.fill(0);
+		InitState::clearHistory();
 
 
 		for (int d = 1; d <= depth; d++) {
@@ -130,10 +144,6 @@ namespace Search {
 				OS << "Unvalid depth size";
 				return;
 			}
-
-			// proper static evaluation value
-			if (!game_state.turn ^ (depth % 2 == 0))
-				search_results.score = -search_results.score;
 
 			OS << "info score cp " << Search::search_results.score << " depth " << d
 				<< " nodes " << Search::search_results.nodes

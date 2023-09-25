@@ -2,6 +2,7 @@
 #include "MoveGeneration.h"
 #include "Search.h"
 #include "MoveOrder.h"
+#include "Zobrist.h"
 
 
 namespace Eval {
@@ -67,6 +68,7 @@ namespace Eval {
 		auto capt_list = MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>();
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
+		const auto hash_cpy = hash.key;
 		int score;
 
 		// capture ordering
@@ -76,10 +78,11 @@ namespace Eval {
 			MovePerform::makeMove(capt);
 			score = -qSearch(-beta, -alpha, Ply + 1);
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
+			hash.key = hash_cpy;
 
 			if (score >= beta)
 				return beta;
-			alpha = std::max(alpha, eval);
+			alpha = std::max(alpha, score);
 		}
 
 		return alpha;
