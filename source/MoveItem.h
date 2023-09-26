@@ -27,15 +27,17 @@ namespace MoveItem {
 	// enum classes used for separating bit masks and encoding type
 	// masks for extracting relevant bits from 32-bit int data
 	enum class iMask {
-		ORIGIN        = 0x3F,
-		TARGET        = 0xFC0,
-		PIECE         = 0x7000,
+		ORIGIN		  = 0x3F,
+		TARGET		  = 0xFC0,
+		PIECE		  = 0x7000,
 		DOUBLE_PUSH_F = 0x8000,
 		CAPTURE_F     = 0x10000,
 		EN_PASSANT_F  = 0x20000,
 		CASTLE_F      = 0x40000,
 		SIDE_F        = 0x80000,
-		PROMOTION     = 0x700000
+		PROMOTION     = 0x700000,
+
+		COORDS = ORIGIN | TARGET
 	};
 
 	// encoding mode
@@ -76,7 +78,7 @@ namespace MoveItem {
 		inline auto& print() const {
 			return OS << index_to_square[getMask<iMask::ORIGIN>()]
 				<< index_to_square[getMask<iMask::TARGET>() >> 6] 
-				<< " nbrq"[getMask<iMask::PROMOTION>() >> 20];
+				<< "\0nbrq"[getMask<iMask::PROMOTION>() >> 20];
 		}
 
 		inline uint32_t raw() const noexcept {

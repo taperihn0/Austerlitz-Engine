@@ -10,7 +10,7 @@ namespace {
 		// simple custom absolute function with constexpr system 
 		template <typename T, class =
 			std::enable_if_t<std::is_arithmetic_v<T>>>
-		constexpr auto abs(T x) noexcept {
+		inline constexpr auto abs(T x) noexcept {
 			return x < 0 ? -x : x;
 		}
 

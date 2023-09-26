@@ -4,10 +4,10 @@
 #include <string>
 
 #define _PERFT_GENTYPE LEGAL
-#define _HASH_DEBUG \
+#define _HASH_DEBUG() \
 	Zobrist deb = hash; \
 	hash.generateKey(); \
-	assert(hash.key == deb.key && "HASH ERROR"); \
+	assert(hash.key == deb.key && "HASH ERROR");
 		
 
 namespace pinData {

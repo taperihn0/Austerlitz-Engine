@@ -27,6 +27,7 @@ namespace Search {
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
 
+		// do not use tt in root (no best move in pv_line set)
 		if constexpr (Ply) {
 			int tt_score;
 			if (HashEntry::isValid(tt_score = tt.read(alpha, beta, Depth)))
@@ -91,7 +92,7 @@ namespace Search {
 						Order::history_moves[pc][to] += Depth * Depth;
 					}
 
-					tt.write(Depth, beta, HashEntry::Flag::HASH_BETA, 0);
+					tt.write(Depth, beta, HashEntry::Flag::HASH_BETA);
 					return beta;
 				}
 
@@ -109,7 +110,7 @@ namespace Search {
 		}
 
 		// save current position in tt
-		tt.write(Depth, alpha, hash_flag, 0);
+		tt.write(Depth, alpha, hash_flag);
 
 		// fail low cutoff (return best option)
 		return alpha;
@@ -150,12 +151,19 @@ namespace Search {
 				<< " pv ";
 
 			for (int cnt = 0; cnt < PV::pv_len[0]; cnt++)
-				PV::pv_line[0][cnt].print() << ' ';
+				PV::pv_line[0][cnt].print();
 			OS << '\n';
 		}
 
 		OS << "bestmove ";
-		PV::pv_line[0][0].print() << '\n';
+		PV::pv_line[0][0].print();
+
+		if (depth >= 2) {
+			OS << "ponder ";
+			PV::pv_line[1][0].print();
+		}
+
+		OS << '\n';
 	}
 
 #undef CALL

@@ -185,7 +185,7 @@ namespace {
 
 	// Population count for magic bitboards 
 	//  - counting bits set to one in a 64-bits number 'x'
-	int bitCount(U64 x) noexcept {
+	int bitCount(U64 x) {
 #if defined(__INTEL_COMPILER) or defined(_MSC_VER)
 		return static_cast<int>(_mm_popcnt_u64(x));
 #elif defined(__GNUC__)
@@ -219,7 +219,7 @@ inline constexpr int getLS1BIndex(U64 bb) noexcept {
 }
 #endif
 
-inline int popLS1B(U64& bb) noexcept {
+inline int popLS1B(U64& bb) {
 	assert(bb != eU64);
 	int res = getLS1BIndex(bb);
 	bb &= bb - 1;

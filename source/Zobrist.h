@@ -2,7 +2,6 @@
 
 #include "BitBoard.h"
 #include "GeneratingMagics.h"
-#include "MoveItem.h"
 
 
 struct Zobrist {
@@ -35,13 +34,11 @@ struct HashEntry {
 	};
 
 	static inline bool isValid(int _score) noexcept;
-	static inline bool isValid(MoveItem::iMove _move) noexcept;
 
 	U64 zobrist;
 	int depth;
 	Flag flag;
 	int score;
-	MoveItem::iMove best_move;
 };
 
 
@@ -50,14 +47,13 @@ class TranspositionTable {
 public:
 	static constexpr size_t hash_size = 0x400000;
 	static constexpr int no_score = std::numeric_limits<int>::min();
-	static constexpr MoveItem::iMove no_move = 0;
-	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, no_score, no_move };
+	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, no_score };
 
 	TranspositionTable() = default;
 
 	int read(int alpha, int beta, int _depth);
 
-	void write(int _depth, int _score, HashEntry::Flag _flag, MoveItem::iMove _bestmv);
+	void write(int _depth, int _score, HashEntry::Flag _flag);
 	void clear();
 private:
 	std::array<HashEntry, hash_size> htab;

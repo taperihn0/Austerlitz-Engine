@@ -9,7 +9,6 @@ namespace Order {
 		const int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 
 		// pv move detected
-		//if (tt.read<ReadType::ONLY_BESTMOVE>(0, 0, 0) == move)
 		if (PV::pv_line[ply][0] == move)
 			return pv_score;
 
@@ -46,15 +45,18 @@ namespace Order {
 	}
 	
 	// hash table for move ordering
-	static std::array<int, 0xFFF> m_score_hash;
+	static constexpr int move_coords = static_cast<int>(MoveItem::iMask::COORDS);
+	static std::array<int, move_coords> m_score_hash;
 
 	void sort(MoveList& move_list, int ply) {
 		m_score_hash.fill(0);
 
 		std::sort(move_list.begin(), move_list.end(), [ply](const MoveItem::iMove& a, const MoveItem::iMove& b) {
-			if (!m_score_hash[a.raw() & 0xFFF]) m_score_hash[a.raw() & 0xFFF] = moveScore(a, ply);
-			if (!m_score_hash[b.raw() & 0xFFF]) m_score_hash[b.raw() & 0xFFF] = moveScore(b, ply);
-			return m_score_hash[a.raw() & 0xFFF] > m_score_hash[b.raw() & 0xFFF];
+			if (!m_score_hash[a.raw() & move_coords]) 
+				m_score_hash[a.raw() & move_coords] = moveScore(a, ply);
+			if (!m_score_hash[b.raw() & move_coords]) 
+				m_score_hash[b.raw() & move_coords] = moveScore(b, ply);
+			return m_score_hash[a.raw() & move_coords] > m_score_hash[b.raw() & move_coords];
 		});
 	}
 

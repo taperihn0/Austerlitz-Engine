@@ -66,13 +66,12 @@ int TranspositionTable::read(int alpha, int beta, int _depth) {
 }
 
 
-void TranspositionTable::write(int _depth, int _score, HashEntry::Flag _flag, MoveItem::iMove _bestmv) {
+void TranspositionTable::write(int _depth, int _score, HashEntry::Flag _flag) {
 	auto& entry = htab[hash.key % hash_size];
 	entry.zobrist = hash.key;
 	entry.score = _score;
 	entry.flag = _flag;
 	entry.depth = _depth;
-	entry.best_move = _bestmv;
 }
 
 void TranspositionTable::clear() {

@@ -15,12 +15,9 @@ namespace {
 		switch (side) {
 		case WHITE:
 			return noWeOne(piece) | noEaOne(piece);
-			break;
 		case BLACK:
 			return soWeOne(piece) | soEaOne(piece);
-			break;
-		default:
-			break;
+		default: break;
 		}
 
 		return eU64;
