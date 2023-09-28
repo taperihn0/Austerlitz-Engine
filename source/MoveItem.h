@@ -77,8 +77,8 @@ namespace MoveItem {
 
 		inline auto& print() const {
 			return OS << index_to_square[getMask<iMask::ORIGIN>()]
-				<< index_to_square[getMask<iMask::TARGET>() >> 6] 
-				<< "\0nbrq"[getMask<iMask::PROMOTION>() >> 20];
+				<< index_to_square[getMask<iMask::TARGET>() >> 6]
+				<< " nbrq"[getMask<iMask::PROMOTION>() >> 20];
 		}
 
 		inline uint32_t raw() const noexcept {

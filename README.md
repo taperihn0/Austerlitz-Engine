@@ -6,3 +6,4 @@
 - *apply countermove heuristic*
 - *mate killers*
 - *replace by depth scheme in transposition table*
+- *smarter depth reduction and more accurate conditions defining late moves*

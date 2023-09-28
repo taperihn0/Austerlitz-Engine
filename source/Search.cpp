@@ -13,24 +13,22 @@ namespace Search {
 		low_bound = std::numeric_limits<int>::min() + 1000000,
 		high_bound = std::numeric_limits<int>::max() - 1000000;
 
-	// break recursion and return evalutation of current position
-	template <int Depth, int Ply>
-	inline auto alphaBeta(int alpha, int beta) -> std::enable_if_t<!Depth, int> {
-		// init PV table lenght
-		std::get<Ply>(PV::pv_len) = 0;
-		return Eval::qSearch(alpha, beta, Ply);
-	}
-
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
-	template <int Depth, int Ply>
-	auto alphaBeta(int alpha, int beta) -> std::enable_if_t<Depth, int> {
+	int alphaBeta(int alpha, int beta, int depth, int ply) {
+		// break recursion and return evalutation of current position
+		if (depth <= 0) {
+			// init PV table lenght
+			PV::pv_len[ply] = 0;
+			return Eval::qSearch(alpha, beta, ply);
+		}
+
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
 
 		// do not use tt in root (no best move in pv_line set)
-		if constexpr (Ply) {
+		if (ply) {
 			int tt_score;
-			if (HashEntry::isValid(tt_score = tt.read(alpha, beta, Depth)))
+			if (HashEntry::isValid(tt_score = tt.read(alpha, beta, depth)))
 				return tt_score;
 		}
 
@@ -40,7 +38,7 @@ namespace Search {
 		if (!move_list.size()) {
 			// is this situation a checkmate?
 			if (isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn))
-				return low_bound + 1000 - Depth;
+				return low_bound + 1000 - depth;
 			// stalemate case
 			return 0;
 		}
@@ -54,23 +52,46 @@ namespace Search {
 		bool pv_left = true;
 
 		// move ordering
-		Order::sort(move_list, Ply);
+		Order::sort(move_list, ply);
 
-		for (const auto& move : move_list) {
+		for (int i = 0; i < move_list.size(); i++) {
+			const auto& move = move_list[i];
 #if _SEARCH_DEBUG
 			move.print() << '\n';
 #endif
 			MovePerform::makeMove(move);
 
 			// principal variation search
-			if (pv_left)
-				score = -alphaBeta<Depth - 1, Ply + 1>(-beta, -alpha);
+			if (pv_left and !i) {
+				score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
+			}
+			// if pv is still left, save time by checking uninteresting moves using null window
+			// if such node fails low, it's a sign we are offered good move (score > alpha)
+			// this technic is just Late Move Reduction
+			else if (pv_left and i) {
+				if (
+					ply >= 2
+					and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
+					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)
+					and !move.getMask<MoveItem::iMask::CAPTURE_F>() 
+					and move.getMask<MoveItem::iMask::PROMOTION>() != QUEEN
+					)
+					score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
+				else score = alpha + 1;
+
+				if (score > alpha) {
+					score = -alphaBeta(-alpha - 1, -alpha, depth - 1, ply + 1);
+
+					if (score > alpha and score < beta)
+						score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
+				}
+			} 
+			// if pv was found (assuming all other nodes are bad)
 			else {
-				// adjust null window for 'worse' moves
-				score = -alphaBeta<Depth - 1, Ply + 1>(-alpha - 1, -alpha);
-				if (score > alpha and score < beta) // sometimes these 'worse' moves are still really interesting
-													// so that there is a need to search them once again to get accurate score
-					score = -alphaBeta<Depth - 1, Ply + 1>(-beta, -alpha);
+				score = -alphaBeta(-alpha - 1, -alpha, depth - 1, ply + 1);
+
+				if (score > alpha and score < beta)
+					score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 			}
 
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
@@ -79,20 +100,20 @@ namespace Search {
 			// register move appearance in butterfly board
 			to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 			pc = move.getMask<MoveItem::iMask::PIECE>() >> 12;
-			Order::butterfly[pc][to] += Depth;
+			Order::butterfly[pc][to] += depth;
 
 			if (score > alpha) {
 				// fail hard beta-cutoff
 				if (score >= beta) {
 					if (!move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 						// store killer move
-						Order::killer[1][Ply] = Order::killer[0][Ply];
-						Order::killer[0][Ply] = move;
+						Order::killer[1][ply] = Order::killer[0][ply];
+						Order::killer[0][ply] = move;
 						// store move as a history move
-						Order::history_moves[pc][to] += Depth * Depth;
+						Order::history_moves[pc][to] += depth * depth;
 					}
 
-					tt.write(Depth, beta, HashEntry::Flag::HASH_BETA);
+					tt.write(depth, beta, HashEntry::Flag::HASH_BETA);
 					return beta;
 				}
 
@@ -100,27 +121,29 @@ namespace Search {
 				alpha = score;
 
 				pv_left = false;
-				PV::pv_line[Ply][0] = move;
+				PV::pv_line[ply][0] = move;
 
-				for (int i = 0; i < PV::pv_len[Ply + 1]; i++)
-					PV::pv_line[Ply][i + 1] = PV::pv_line[Ply + 1][i];
+				for (int i = 0; i < PV::pv_len[ply + 1]; i++)
+					PV::pv_line[ply][i + 1] = PV::pv_line[ply + 1][i];
 
-				PV::pv_len[Ply] = PV::pv_len[Ply + 1] + 1;
+				PV::pv_len[ply] = PV::pv_len[ply + 1] + 1;
 			}
 		}
 
 		// save current position in tt
-		tt.write(Depth, alpha, hash_flag);
+		tt.write(depth, alpha, hash_flag);
 
 		// fail low cutoff (return best option)
 		return alpha;
 	}
 
-#define CALL(d) search_results.score = -alphaBeta<d, 0>(low_bound, high_bound); \
+#define CALL(d) search_results.score = -alphaBeta<d>(low_bound, high_bound, 0); \
 				break;
 
 	// display best move according to search algorithm
 	void bestMove(int depth) {
+		assert(depth > 0 && "Unvalid depth");
+
 		// cleaning
 		search_results.nodes = 0;
 		Search::clearKiller();
@@ -130,37 +153,23 @@ namespace Search {
 
 
 		for (int d = 1; d <= depth; d++) {
-			switch (d) {
-			case 1:  CALL(1);
-			case 2:  CALL(2);
-			case 3:  CALL(3);
-			case 4:  CALL(4);
-			case 5:  CALL(5);
-			case 6:  CALL(6);
-			case 7:  CALL(7);
-			case 8:  CALL(8);
-			case 9:  CALL(9);
-			case 10: CALL(10);
-			default:
-				OS << "Unvalid depth size";
-				return;
-			}
+			search_results.score = -alphaBeta(low_bound, high_bound, d, 0);
 
 			OS << "info score cp " << Search::search_results.score << " depth " << d
 				<< " nodes " << Search::search_results.nodes
 				<< " pv ";
 
 			for (int cnt = 0; cnt < PV::pv_len[0]; cnt++)
-				PV::pv_line[0][cnt].print();
+				PV::pv_line[0][cnt].print() << ' ';
 			OS << '\n';
 		}
 
 		OS << "bestmove ";
-		PV::pv_line[0][0].print();
+		PV::pv_line[0][0].print() << ' ';
 
 		if (depth >= 2) {
 			OS << "ponder ";
-			PV::pv_line[1][0].print();
+			PV::pv_line[1][0].print() << ' ';
 		}
 
 		OS << '\n';
