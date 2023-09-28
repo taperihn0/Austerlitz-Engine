@@ -7,3 +7,4 @@
 - *mate killers*
 - *replace by depth scheme in transposition table*
 - *smarter depth reduction and more accurate conditions defining late moves*
+- *try to consider castle factor in static evaluation*
