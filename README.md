@@ -7,4 +7,8 @@
 - *mate killers*
 - *replace by depth scheme in transposition table*
 - *smarter depth reduction and more accurate conditions defining late moves*
+<<<<<<< HEAD
 - *try to improve null move pruning performance*
+=======
+- *try to consider castle factor in static evaluation*
+>>>>>>> b428ca6b94735a02c0db146ef1fc20642567d34d
