@@ -581,10 +581,26 @@ namespace MovePerform {
 		hash.key ^= hash.castle_keys.get(game_state.castle.raw());
 	}
 
+	// update hash key and player to turn
+	void makeNull() {
+		game_state.turn = !game_state.turn;
+		hash.key ^= hash.side_key;
+		if (game_state.ep_sq != -1)
+			hash.key ^= hash.enpassant_keys.get(game_state.ep_sq);
+		game_state.ep_sq = -1;
+	}
+
 	// unmake move using copy-make approach
 	void unmakeMove(const BitBoardsSet& bbs_cpy, const gState& states_cpy) {
 		BBs = bbs_cpy;
 		game_state = states_cpy;
+	}
+
+	// copy-make approach
+	void unmakeNull(U64 hash_cpy, int ep_cpy) {
+		game_state.turn = !game_state.turn;
+		hash.key = hash_cpy;
+		game_state.ep_sq = ep_cpy;
 	}
 
 } // namespace MovePerform

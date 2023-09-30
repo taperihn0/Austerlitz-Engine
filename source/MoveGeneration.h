@@ -99,7 +99,12 @@ namespace MovePerform {
 	// decode move and perform move
 	void makeMove(const MoveItem::iMove& move);
 
+	// perform null move
+	void makeNull();
+
 	// unmake move - copy-make approach
 	void unmakeMove(const BitBoardsSet& bbs_cpy, const gState& states_cpy);
 
+	// unmake move - copy-make approach
+	void unmakeNull(U64 hash_cpy, int ep_cpy);
 }

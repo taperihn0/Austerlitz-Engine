@@ -14,7 +14,7 @@ namespace Search {
 		high_bound = std::numeric_limits<int>::max() - 1000000;
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
-	int alphaBeta(int alpha, int beta, int depth, int ply) {
+	int alphaBeta(int alpha, int beta, int depth, int ply, bool allow_nullm = true) {
 		// break recursion and return evalutation of current position
 		if (depth <= 0) {
 			// init PV table lenght
@@ -22,15 +22,31 @@ namespace Search {
 			return Eval::qSearch(alpha, beta, ply);
 		}
 
-		// use fully-legal moves generator
-		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
-
 		// do not use tt in root (no best move in pv_line set)
 		if (ply) {
 			int tt_score;
 			if (HashEntry::isValid(tt_score = tt.read(alpha, beta, depth)))
 				return tt_score;
 		}
+
+		// Null Move Pruning method
+		if (allow_nullm
+			and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)) {
+			static constexpr int R = 2;
+
+			const auto ep_cpy = game_state.ep_sq;
+			const auto hash_cpy = hash.key;
+			MovePerform::makeNull();
+			
+			// set allow_null_move to false - prevent from double move passing, it makes no sense then
+			const int score = -alphaBeta(-beta, -beta + 1, depth - 1 - R, ply + 1, false);
+
+			MovePerform::unmakeNull(hash_cpy, ep_cpy);
+			if (score >= beta) return beta;
+		}
+
+		// use fully-legal moves generator
+		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
 
 		search_results.nodes++;
 
@@ -68,9 +84,9 @@ namespace Search {
 			// if pv is still left, save time by checking uninteresting moves using null window
 			// if such node fails low, it's a sign we are offered good move (score > alpha)
 			// this technic is just Late Move Reduction
-			else if (pv_left and i) {
+			else {
 				if (
-					ply >= 2
+					pv_left and i > 2 and ply >= 3
 					and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
 					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)
 					and !move.getMask<MoveItem::iMask::CAPTURE_F>() 
@@ -86,13 +102,6 @@ namespace Search {
 						score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 				}
 			} 
-			// if pv was found (assuming all other nodes are bad)
-			else {
-				score = -alphaBeta(-alpha - 1, -alpha, depth - 1, ply + 1);
-
-				if (score > alpha and score < beta)
-					score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
-			}
 
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			hash.key = hash_cpy;
@@ -137,9 +146,6 @@ namespace Search {
 		return alpha;
 	}
 
-#define CALL(d) search_results.score = -alphaBeta<d>(low_bound, high_bound, 0); \
-				break;
-
 	// display best move according to search algorithm
 	void bestMove(int depth) {
 		assert(depth > 0 && "Unvalid depth");
@@ -153,7 +159,7 @@ namespace Search {
 
 
 		for (int d = 1; d <= depth; d++) {
-			search_results.score = -alphaBeta(low_bound, high_bound, d, 0);
+			search_results.score = alphaBeta(low_bound, high_bound, d, 0, false);
 
 			OS << "info score cp " << Search::search_results.score << " depth " << d
 				<< " nodes " << Search::search_results.nodes
@@ -174,6 +180,4 @@ namespace Search {
 
 		OS << '\n';
 	}
-
-#undef CALL
 }

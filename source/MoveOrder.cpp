@@ -16,7 +16,7 @@ namespace Order {
 		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 			const int att = move.getMask<MoveItem::iMask::PIECE>() >> 12;
 			int victim;
-			const bool side = move.getMask<MoveItem::iMask::SIDE_F>();
+			const bool side = move.getMask<MoveItem::iMask::SIDE_F>();;
 
 			if (move.getMask<MoveItem::iMask::EN_PASSANT_F>())
 				return MVV_LVA::lookup[PAWN][PAWN];

@@ -53,8 +53,8 @@ int TranspositionTable::read(int alpha, int beta, int _depth) {
 		return no_score;
 
 	switch (entry.flag) {
-		// returning entry.score when HASH_EXACT flag set causes undefined behaviour (why and how?)
 	case HashEntry::Flag::HASH_ALPHA:
+		return entry.score;
 	case HashEntry::Flag::HASH_EXACT:
 		return (entry.score <= alpha) ? entry.score : no_score;
 	case HashEntry::Flag::HASH_BETA:
