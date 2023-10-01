@@ -56,7 +56,7 @@ namespace Eval {
 	template int templEval<WHITE>();
 	template int templEval<BLACK>();
 
-	int qSearch(int alpha, int beta, int Ply) {
+	int qSearch(int alpha, int beta, int ply) {
 		const int eval = evaluate();
 		Search::search_results.nodes++;
 
@@ -72,11 +72,14 @@ namespace Eval {
 		int score;
 
 		// capture ordering
-		Order::sort(capt_list, Ply);
+		Order::sort(capt_list, ply);
 
-		for (const auto& capt : capt_list) {
-			MovePerform::makeMove(capt);
-			score = -qSearch(-beta, -alpha, Ply + 1);
+		//for (const auto& capt : capt_list) {
+		for (int i = 0; i < capt_list.size(); i++) {
+			MovePerform::makeMove(capt_list[i]);
+
+			score = -qSearch(-beta, -alpha, ply + 1);
+
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			hash.key = hash_cpy;
 

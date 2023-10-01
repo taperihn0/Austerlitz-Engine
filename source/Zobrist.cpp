@@ -53,9 +53,9 @@ int TranspositionTable::read(int alpha, int beta, int _depth) {
 		return no_score;
 
 	switch (entry.flag) {
-	case HashEntry::Flag::HASH_ALPHA:
-		return entry.score;
 	case HashEntry::Flag::HASH_EXACT:
+		return entry.score;
+	case HashEntry::Flag::HASH_ALPHA:
 		return (entry.score <= alpha) ? entry.score : no_score;
 	case HashEntry::Flag::HASH_BETA:
 		return (entry.score >= beta) ? entry.score : no_score;

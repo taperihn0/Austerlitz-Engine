@@ -2,11 +2,11 @@
 
 ### To do in the future:
 
-- *smarter MVV/LVA lookup table values*
+- *smarter MVV/LVA lookup table values / SEE in quiscence search*
 - *apply countermove heuristic*
 - *mate killers*
 - *replace by depth scheme in transposition table*
 - *smarter depth reduction and more accurate conditions defining late moves*
-- *try to improve null move pruning performance*
+- *experiment with null move pruning*
 - *try to consider castle factor in static evaluation*
-- *work on null move pruning*
+- *try gradual widening on re-searches in aspiration window search*

@@ -29,9 +29,11 @@ namespace Search {
 				return tt_score;
 		}
 
+		search_results.nodes++;
+		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
+
 		// Null Move Pruning method
-		if (allow_nullm
-			and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)) {
+		if (allow_nullm and !incheck and depth >= 2) {
 			static constexpr int R = 2;
 
 			const auto ep_cpy = game_state.ep_sq;
@@ -48,12 +50,10 @@ namespace Search {
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
 
-		search_results.nodes++;
-
 		// no legal moves detected
 		if (!move_list.size()) {
 			// is this situation a checkmate?
-			if (isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn))
+			if (incheck)
 				return low_bound + 1000 - depth;
 			// stalemate case
 			return 0;
@@ -65,8 +65,6 @@ namespace Search {
 		int score, to, pc;
 		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
 
-		bool pv_left = true;
-
 		// move ordering
 		Order::sort(move_list, ply);
 
@@ -77,19 +75,14 @@ namespace Search {
 #endif
 			MovePerform::makeMove(move);
 
-			// principal variation search
-			if (pv_left and !i) {
-				score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
-			}
 			// if pv is still left, save time by checking uninteresting moves using null window
 			// if such node fails low, it's a sign we are offered good move (score > alpha)
-			// this technic is just Late Move Reduction
-			else {
+			if (i) {
 				if (
-					pv_left and i > 2 and ply >= 3
+					depth >= 3
 					and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
 					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)
-					and !move.getMask<MoveItem::iMask::CAPTURE_F>() 
+					and !move.getMask<MoveItem::iMask::CAPTURE_F>()
 					and move.getMask<MoveItem::iMask::PROMOTION>() != QUEEN
 					)
 					score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
@@ -101,6 +94,9 @@ namespace Search {
 					if (score > alpha and score < beta)
 						score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 				}
+			}
+			else {
+				score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 			} 
 
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
@@ -129,11 +125,10 @@ namespace Search {
 				hash_flag = HashEntry::Flag::HASH_EXACT;
 				alpha = score;
 
-				pv_left = false;
 				PV::pv_line[ply][0] = move;
 
-				for (int i = 0; i < PV::pv_len[ply + 1]; i++)
-					PV::pv_line[ply][i + 1] = PV::pv_line[ply + 1][i];
+				for (int j = 0; j < PV::pv_len[ply + 1]; j++)
+					PV::pv_line[ply][j + 1] = PV::pv_line[ply + 1][j];
 
 				PV::pv_len[ply] = PV::pv_len[ply + 1] + 1;
 			}
@@ -157,11 +152,27 @@ namespace Search {
 		PV::clear();
 		InitState::clearHistory();
 
+		// aspiration window reduction size
+		static constexpr int window = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
 
-		for (int d = 1; d <= depth; d++) {
-			search_results.score = alphaBeta(low_bound, high_bound, d, 0, false);
+		int lbound = low_bound,
+			hbound = high_bound,
+			curr_dpt = 1;
+		
+		// aspiration window search
+		while (curr_dpt <= depth) {
+			search_results.score = alphaBeta(lbound, hbound, curr_dpt, 0, false);
 
-			OS << "info score cp " << Search::search_results.score << " depth " << d
+			// fail
+			if (search_results.score <= lbound or search_results.score >= hbound) {
+				lbound = low_bound, hbound = high_bound;
+				continue;
+			}
+			
+			// success - expand bounds for next search
+			lbound = search_results.score - window, hbound = search_results.score + window;
+
+			OS << "info score cp " << Search::search_results.score << " depth " << curr_dpt++
 				<< " nodes " << Search::search_results.nodes
 				<< " pv ";
 
