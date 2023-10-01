@@ -23,11 +23,9 @@ namespace Search {
 		}
 
 		// do not use tt in root (no best move in pv_line set)
-		if (ply) {
-			int tt_score;
-			if (HashEntry::isValid(tt_score = tt.read(alpha, beta, depth)))
-				return tt_score;
-		}
+		static int tt_score;
+		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth)))
+			return tt_score;
 
 		search_results.nodes++;
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
@@ -51,18 +49,29 @@ namespace Search {
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
 
 		// no legal moves detected
-		if (!move_list.size()) {
-			// is this situation a checkmate?
-			if (incheck)
-				return low_bound + 1000 - depth;
-			// stalemate case
-			return 0;
+		if (!move_list.size())
+			              // checkmate : stealmate score
+			return incheck ? low_bound + 1000 - depth : 0;
+		// reverse futility pruning
+		else if (depth == 1 and !incheck) {
+			static constexpr int margin = Eval::Value::PAWN_VALUE;
+			bool no_capt = true;
+
+			for (const auto& m : move_list) {
+				if (m.getMask<MoveItem::iMask::CAPTURE_F>()) {
+					no_capt = false;
+					break;
+				}
+			}
+
+			if (no_capt and Eval::evaluate() - margin >= beta)
+				return beta;
 		}
 
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
 		const auto hash_cpy = hash.key;
-		int score, to, pc;
+		static int score, to, pc;
 		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
 
 		// move ordering

@@ -138,7 +138,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 
 		if (token == "isready") OS << "readyok\n";
 		else if (token == "position") parsePosition(strm);
-		else if (token == "ucinewgame") BBs.parseFEN(BitBoardsSet::start_pos);
+		else if (token == "ucinewgame") { tt.clear(); BBs.parseFEN(BitBoardsSet::start_pos); }
 		else if (token == "uci") OS << introduce();
 		else if (token == "print") BBs.printBoard();
 		else if (token == "go") parseGo(strm);
@@ -148,5 +148,3 @@ void UCI::goLoop(int argc, char* argv[]) {
 #endif
 	} while (line != "quit" and argc == 1);
 }
-
-#undef OPTIMIZE

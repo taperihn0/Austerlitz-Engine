@@ -34,5 +34,6 @@ TranspositionTable tt;
 int main(int argc, char* argv[]) {
 	InitState::clearButterfly();
 	InitState::initMAttacksTables();
+	tt.clear();
 	UCI_o.goLoop(argc, argv);
 }
