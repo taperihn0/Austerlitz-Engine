@@ -2,6 +2,7 @@
 
 #include "BitBoard.h"
 #include "GeneratingMagics.h"
+#include "functional"
 
 
 struct Zobrist {
@@ -48,11 +49,9 @@ public:
 	static constexpr size_t hash_size = 0x400000;
 	static constexpr int no_score = std::numeric_limits<int>::min();
 	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, no_score };
-
 	TranspositionTable() = default;
 
 	int read(int alpha, int beta, int _depth);
-
 	void write(int _depth, int _score, HashEntry::Flag _flag);
 	void clear();
 private:
@@ -61,6 +60,44 @@ private:
 
 extern TranspositionTable tt;
 
+inline void TranspositionTable::clear() {
+	std::memset(htab.data(), no_score, sizeof(HashEntry) * hash_size);
+}
+
 inline bool HashEntry::isValid(int _score) noexcept {
 	return _score != TranspositionTable::no_score;
+}
+
+// list of keys of last positions
+class RepetitionTable {
+public:
+	static constexpr size_t tab_size = 600;
+	RepetitionTable() = default;
+
+	bool isRepetition();
+	void posRegister() noexcept;
+	void clear() noexcept;
+
+	int count;
+private:
+	std::array<U64, tab_size> tab;
+};
+
+extern RepetitionTable rep_tt;
+
+inline void RepetitionTable::posRegister() noexcept {
+	assert(count < tab_size && "Repetition table index overflow");
+	tab[count++] = hash.key;
+}
+
+
+inline void RepetitionTable::clear() noexcept {
+	count = 0;
+}
+
+
+inline bool RepetitionTable::isRepetition() {
+	for (int i = count - 4; i >= 0; i--)
+		if (tab[i] == hash.key) return true;
+	return false;
 }

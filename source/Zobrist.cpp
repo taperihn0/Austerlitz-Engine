@@ -74,7 +74,3 @@ void TranspositionTable::write(int _depth, int _score, HashEntry::Flag _flag) {
 	entry.depth = _depth;
 }
 
-void TranspositionTable::clear() {
-	for (auto& entry : htab)
-		entry = empty_entry;
-}

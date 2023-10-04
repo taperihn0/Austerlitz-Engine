@@ -11,16 +11,20 @@ namespace Search {
 	// set some safe bufor to prevent overflows
 	static constexpr int
 		low_bound = std::numeric_limits<int>::min() + 1000000,
-		high_bound = std::numeric_limits<int>::max() - 1000000;
+		high_bound = std::numeric_limits<int>::max() - 1000000,
+		draw_score = 0;
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
 	int alphaBeta(int alpha, int beta, int depth, int ply, bool allow_nullm = true) {
+
 		// break recursion and return evalutation of current position
 		if (depth <= 0) {
 			// init PV table lenght
 			PV::pv_len[ply] = 0;
 			return Eval::qSearch(alpha, beta, ply);
 		}
+		else if (ply and (rep_tt.isRepetition() or game_state.is50moveDraw()))
+			return draw_score;
 
 		// do not use tt in root (no best move in pv_line set)
 		static int tt_score;
@@ -31,17 +35,21 @@ namespace Search {
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
 		// Null Move Pruning method
-		if (allow_nullm and !incheck and depth >= 2) {
+		if (allow_nullm and !incheck and depth >= 3) {
 			static constexpr int R = 2;
 
 			const auto ep_cpy = game_state.ep_sq;
 			const auto hash_cpy = hash.key;
+
+			rep_tt.posRegister();
 			MovePerform::makeNull();
 			
 			// set allow_null_move to false - prevent from double move passing, it makes no sense then
 			const int score = -alphaBeta(-beta, -beta + 1, depth - 1 - R, ply + 1, false);
 
 			MovePerform::unmakeNull(hash_cpy, ep_cpy);
+			rep_tt.count--;
+
 			if (score >= beta) return beta;
 		}
 
@@ -51,7 +59,7 @@ namespace Search {
 		// no legal moves detected
 		if (!move_list.size())
 			              // checkmate : stealmate score
-			return incheck ? low_bound + 1000 - depth : 0;
+			return incheck ? low_bound + 1000 - depth : draw_score;
 		// reverse futility pruning
 		else if (depth == 1 and !incheck) {
 			static constexpr int margin = Eval::Value::PAWN_VALUE;
@@ -82,6 +90,7 @@ namespace Search {
 #if _SEARCH_DEBUG
 			move.print() << '\n';
 #endif
+			rep_tt.posRegister();
 			MovePerform::makeMove(move);
 
 			// if pv is still left, save time by checking uninteresting moves using null window
@@ -109,6 +118,7 @@ namespace Search {
 			} 
 
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
+			rep_tt.count--;
 			hash.key = hash_cpy;
 
 			// register move appearance in butterfly board
@@ -177,7 +187,7 @@ namespace Search {
 				lbound = low_bound, hbound = high_bound;
 				continue;
 			}
-			
+
 			// success - expand bounds for next search
 			lbound = search_results.score - window, hbound = search_results.score + window;
 

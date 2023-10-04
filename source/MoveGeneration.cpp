@@ -459,6 +459,7 @@ namespace MovePerform {
 
 	inline void captureCase(const MoveItem::iMove& move, bool side, int target) {
 		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+			game_state.halfmove = 0;
 			popBit(BBs[nBlack - side], target);
 			
 			// look for captured piece
@@ -486,6 +487,7 @@ namespace MovePerform {
 		// change player to turn and update en passant square
 		game_state.turn = !game_state.turn;
 		game_state.ep_sq = -1;
+		game_state.fullmove += side;
 
 		if (move.getMask<MoveItem::iMask::EN_PASSANT_F>()) {
 			const int ep_pawn = target + (side ? Compass::nort : Compass::sout);
@@ -493,6 +495,7 @@ namespace MovePerform {
 			hash.key ^= hash.piece_keys.get(nWhitePawn + side, origin);
 			hash.key ^= hash.piece_keys.get(nWhitePawn + side, target);
 			hash.key ^= hash.piece_keys.get(nBlackPawn - side, ep_pawn);
+			game_state.halfmove = 0;
 
 			moveBit(BBs[nWhitePawn + side], origin, target);
 			popBit(BBs[nBlackPawn - side], ep_pawn);
@@ -509,6 +512,7 @@ namespace MovePerform {
 
 			hash.key ^= hash.piece_keys.get(nWhitePawn + side, origin);
 			hash.key ^= hash.piece_keys.get(promo_pc, target);
+			game_state.halfmove = 0;
 
 			setBit(BBs[promo_pc], target);
 			popBit(BBs[nWhitePawn + side], origin);
@@ -524,6 +528,7 @@ namespace MovePerform {
 			hash.key ^= hash.castle_keys.get(game_state.castle.raw());
 			game_state.castle &= ~(side ? 3 : 12);
 			hash.key ^= hash.castle_keys.get(game_state.castle.raw());
+			game_state.halfmove++;
 
 			moveBit(BBs[nWhiteKing + side], origin, target);
 
@@ -553,6 +558,7 @@ namespace MovePerform {
 
 		hash.key ^= hash.piece_keys.get(bbs_pc, origin);
 		hash.key ^= hash.piece_keys.get(bbs_pc, target);
+		game_state.halfmove = piece == PAWN ? 0 : game_state.halfmove + 1;
 
 		moveBit(BBs[bbs_pc], origin, target);
 		moveBit(BBs[nWhite + side], origin, target);
@@ -569,6 +575,7 @@ namespace MovePerform {
 		if (move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>()) {
 			game_state.ep_sq = target;
 			hash.key ^= hash.enpassant_keys.get(game_state.ep_sq);
+			game_state.halfmove = 0;
 		} // updating castling rights
 		else if (piece == ROOK and origin == (side ? a8 : a1))
 			game_state.castle &= ~(1 << (!side * 2));
@@ -588,6 +595,7 @@ namespace MovePerform {
 		if (game_state.ep_sq != -1)
 			hash.key ^= hash.enpassant_keys.get(game_state.ep_sq);
 		game_state.ep_sq = -1;
+		game_state.halfmove++;
 	}
 
 	// unmake move using copy-make approach
@@ -601,6 +609,7 @@ namespace MovePerform {
 		game_state.turn = !game_state.turn;
 		hash.key = hash_cpy;
 		game_state.ep_sq = ep_cpy;
+		game_state.halfmove--;
 	}
 
 } // namespace MovePerform

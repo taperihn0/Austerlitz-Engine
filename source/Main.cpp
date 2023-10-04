@@ -30,6 +30,7 @@ PV::linePV PV::pv_line;
 
 Zobrist hash;
 TranspositionTable tt;
+RepetitionTable rep_tt;
 
 int main(int argc, char* argv[]) {
 	InitState::clearButterfly();

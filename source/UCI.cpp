@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 
+#define _CHECK_MOVE_LEGAL true
 
 UCI::UCI() 
 	: os(&std::cout), is(&std::cin) {
@@ -97,8 +98,11 @@ void UCI::parsePosition(std::istringstream& strm) {
 	if (com != "moves")
 		return;
 
+	rep_tt.clear();
+
 	// scan given moves and perform them on real board
 	while (strm >> std::skipws >> move) {
+#if _CHECK_MOVE_LEGAL
 		casted = constructMove(move);
 		bool illegal = true;
 
@@ -107,6 +111,7 @@ void UCI::parsePosition(std::istringstream& strm) {
 			if (casted == move) {
 				MovePerform::makeMove(move);
 				illegal = false;
+				rep_tt.posRegister();
 				break;
 			}
 		}
@@ -115,6 +120,10 @@ void UCI::parsePosition(std::istringstream& strm) {
 			OS << "illegal move '" << move << "'\n";
 			return;
 		}
+#elif
+		MovePerform::makeMove(move);
+		rep_tt.posRegister();
+#endif
 	}
 }
 
@@ -138,7 +147,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 
 		if (token == "isready") OS << "readyok\n";
 		else if (token == "position") parsePosition(strm);
-		else if (token == "ucinewgame") { tt.clear(); BBs.parseFEN(BitBoardsSet::start_pos); }
+		else if (token == "ucinewgame") { tt.clear(), rep_tt.clear(), BBs.parseFEN(BitBoardsSet::start_pos); }
 		else if (token == "uci") OS << introduce();
 		else if (token == "print") BBs.printBoard();
 		else if (token == "go") parseGo(strm);

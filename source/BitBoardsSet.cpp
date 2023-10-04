@@ -165,6 +165,9 @@ void BitBoardsSet::printBoard() {
 	states += "wb"[game_state.turn];
 	states += ' ';
 
+	if (!game_state.castle.raw())
+		states += '-';
+
 	for (int i = 3; i >= 0; i--) {
 		if (game_state.castle & (1 << i)) {
 			states += "qkQK"[i];
@@ -174,9 +177,9 @@ void BitBoardsSet::printBoard() {
 	states += ' ';
 	states += game_state.ep_sq == -1 ? "-" : index_to_square[game_state.ep_sq];
 	states += ' ';
-	states += static_cast<char>(game_state.halfmove + '0');
+	states += std::to_string(game_state.halfmove);
 	states += ' ';
-	states += static_cast<char>(game_state.fullmove + '0');
+	states += std::to_string(game_state.fullmove);
 
 	std::string frame = "\t+";
 	for (int r = 0; r < 8; r++) {

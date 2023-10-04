@@ -65,6 +65,12 @@ inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
 
 // game state variables
 struct gState {
+	static constexpr int max_move_rule = 50;
+
+	inline bool is50moveDraw() noexcept {
+		return halfmove >= max_move_rule;
+	}
+
 	int ep_sq;
 	enumSide turn;
 	castleRights castle;
