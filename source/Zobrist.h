@@ -51,8 +51,8 @@ public:
 	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, no_score };
 	TranspositionTable() = default;
 
-	int read(int alpha, int beta, int _depth);
-	void write(int _depth, int _score, HashEntry::Flag _flag);
+	int read(int alpha, int beta, int _depth, int ply);
+	void write(int _depth, int _score, HashEntry::Flag _flag, int ply);
 	void clear();
 private:
 	std::array<HashEntry, hash_size> htab;
@@ -97,7 +97,7 @@ inline void RepetitionTable::clear() noexcept {
 
 
 inline bool RepetitionTable::isRepetition() {
-	for (int i = count - 4; i >= 0; i--)
+	for (int i = count - 1; i >= 0; i--)
 		if (tab[i] == hash.key) return true;
 	return false;
 }

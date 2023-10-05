@@ -8,34 +8,34 @@
 
 namespace Search {
 
-	// set some safe bufor to prevent overflows
-	static constexpr int
-		low_bound = std::numeric_limits<int>::min() + 1000000,
-		high_bound = std::numeric_limits<int>::max() - 1000000,
-		draw_score = 0;
-
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
-	int alphaBeta(int alpha, int beta, int depth, int ply, bool allow_nullm = true) {
+	template <bool AllowNullMove = true>
+	int alphaBeta(int alpha, int beta, int depth, int ply) {
 
-		// break recursion and return evalutation of current position
+		// break condition and quiescence search
 		if (depth <= 0) {
 			// init PV table lenght
 			PV::pv_len[ply] = 0;
-			return Eval::qSearch(alpha, beta, ply);
+			const int qscore = Eval::qSearch(alpha, beta, ply);
+			tt.write(0, qscore, 
+				qscore == alpha ? HashEntry::Flag::HASH_ALPHA : 
+				qscore == beta ? HashEntry::Flag::HASH_BETA : 
+				HashEntry::Flag::HASH_EXACT, ply);
+			return qscore;
 		}
 		else if (ply and (rep_tt.isRepetition() or game_state.is50moveDraw()))
 			return draw_score;
 
-		// do not use tt in root (no best move in pv_line set)
+		// do not use tt in root
 		static int tt_score;
-		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth)))
+		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth, ply)))
 			return tt_score;
 
 		search_results.nodes++;
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
 		// Null Move Pruning method
-		if (allow_nullm and !incheck and depth >= 3) {
+		if (AllowNullMove and !incheck and depth >= 3) {
 			static constexpr int R = 2;
 
 			const auto ep_cpy = game_state.ep_sq;
@@ -45,7 +45,7 @@ namespace Search {
 			MovePerform::makeNull();
 			
 			// set allow_null_move to false - prevent from double move passing, it makes no sense then
-			const int score = -alphaBeta(-beta, -beta + 1, depth - 1 - R, ply + 1, false);
+			const int score = -alphaBeta<false>(-beta, -beta + 1, depth - 1 - R, ply + 1);
 
 			MovePerform::unmakeNull(hash_cpy, ep_cpy);
 			rep_tt.count--;
@@ -56,12 +56,12 @@ namespace Search {
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
 
-		// no legal moves detected
+		// no legal moves detected - checkmate or stealmate
 		if (!move_list.size())
-			              // checkmate : stealmate score
-			return incheck ? low_bound + 1000 - depth : draw_score;
-		// reverse futility pruning
-		else if (depth == 1 and !incheck) {
+			return incheck ? mate_score + ply : draw_score;
+		// reverse futility pruning - 
+		// perform when player A to move and then player B to move, before qsearch
+		else if (depth == 2 and !incheck) {
 			static constexpr int margin = Eval::Value::PAWN_VALUE;
 			bool no_capt = true;
 
@@ -137,7 +137,7 @@ namespace Search {
 						Order::history_moves[pc][to] += depth * depth;
 					}
 
-					tt.write(depth, beta, HashEntry::Flag::HASH_BETA);
+					tt.write(depth, beta, HashEntry::Flag::HASH_BETA, ply);
 					return beta;
 				}
 
@@ -153,9 +153,7 @@ namespace Search {
 			}
 		}
 
-		// save current position in tt
-		tt.write(depth, alpha, hash_flag);
-
+		tt.write(depth, alpha, hash_flag, ply);
 		// fail low cutoff (return best option)
 		return alpha;
 	}
@@ -180,7 +178,7 @@ namespace Search {
 		
 		// aspiration window search
 		while (curr_dpt <= depth) {
-			search_results.score = alphaBeta(lbound, hbound, curr_dpt, 0, false);
+			search_results.score = alphaBeta<false>(lbound, hbound, curr_dpt, 0);
 
 			// fail
 			if (search_results.score <= lbound or search_results.score >= hbound) {
@@ -190,8 +188,18 @@ namespace Search {
 
 			// success - expand bounds for next search
 			lbound = search_results.score - window, hbound = search_results.score + window;
+		
+			// (-) search result - opponent checkmating
+			if (search_results.score < mate_comp and search_results.score > mate_score)
+				OS << "info score mate " << (mate_score - search_results.score) / 2 - 1;
+			// (+) search result - engine checkmating
+			else if (search_results.score > -mate_comp and search_results.score < -mate_score)
+				OS << "info score mate " << (-search_results.score - mate_score) / 2 + 1;
+			// no checkmate
+			else
+				OS << "info score cp " << Search::search_results.score;
 
-			OS << "info score cp " << Search::search_results.score << " depth " << curr_dpt++
+			OS << " depth " << curr_dpt++
 				<< " nodes " << Search::search_results.nodes
 				<< " pv ";
 

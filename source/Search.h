@@ -22,6 +22,14 @@ namespace PV {
 
 namespace Search {
 
+	// set some safe bufor at bounds values to prevent overflows
+	static constexpr int
+		low_bound = std::numeric_limits<int>::min() + 1000000,
+		high_bound = std::numeric_limits<int>::max() - 1000000,
+		draw_score = 0,
+		mate_score = -std::numeric_limits<int>::max() / 4,
+		mate_comp = mate_score + 1000;
+
 	struct Results {
 		int score;
 		unsigned long long nodes;

@@ -1,5 +1,6 @@
 #include "Zobrist.h"
 #include "BitBoardsSet.h"
+#include "Search.h"
 
 // kind of 'wrapper' funcitions for random U64 generator
 inline U64 randomU64wrap_2(int, int) {
@@ -45,20 +46,25 @@ void Zobrist::generateKey() {
 }
 
 
-int TranspositionTable::read(int alpha, int beta, int _depth) {
+int TranspositionTable::read(int alpha, int beta, int _depth, int ply) {
 	const auto& entry = htab[hash.key % hash_size];
 
 	// unmatching zobrist key (key collision) or unproper depth of an entry
 	if (entry.zobrist != hash.key or entry.depth < _depth)
 		return no_score;
 
+	// 'extract' relative checkmate path from current node
+	const int res =
+		entry.score < Search::mate_comp ? entry.score + ply :
+		entry.score > -Search::mate_comp ? entry.score - ply : entry.score;
+
 	switch (entry.flag) {
 	case HashEntry::Flag::HASH_EXACT:
-		return entry.score;
+		return res;
 	case HashEntry::Flag::HASH_ALPHA:
-		return (entry.score <= alpha) ? entry.score : no_score;
+		return (res <= alpha) ? res : no_score;
 	case HashEntry::Flag::HASH_BETA:
-		return (entry.score >= beta) ? entry.score : no_score;
+		return (res >= beta) ? res : no_score;
 	default: break;
 	}
 
@@ -66,9 +72,14 @@ int TranspositionTable::read(int alpha, int beta, int _depth) {
 }
 
 
-void TranspositionTable::write(int _depth, int _score, HashEntry::Flag _flag) {
+void TranspositionTable::write(int _depth, int _score, HashEntry::Flag _flag, int ply) {
 	auto& entry = htab[hash.key % hash_size];
 	entry.zobrist = hash.key;
+
+	// set original path to checkmate
+	if (_score < Search::mate_comp) _score -= ply;
+	else if (_score > -Search::mate_comp) _score += ply;
+
 	entry.score = _score;
 	entry.flag = _flag;
 	entry.depth = _depth;
