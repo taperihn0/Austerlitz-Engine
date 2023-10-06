@@ -2,6 +2,7 @@
 #include "MoveGeneration.h"
 #include "Evaluation.h"
 #include "Zobrist.h"
+#include "Timer.h"
 #include <limits>
 
 #define _SEARCH_DEBUG false
@@ -11,6 +12,17 @@ namespace Search {
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
 	template <bool AllowNullMove = true>
 	int alphaBeta(int alpha, int beta, int depth, int ply) {
+
+		// (nodes & 1024 == 0) is an alternative operation to (nodes % 1024 == 0)
+		if (time_data.is_time and !(search_results.nodes & 1024) and !time_data.checkTimeLeft()) {
+			time_data.stop = true;
+			return 0;
+		}
+
+		// do not use tt in root
+		static int tt_score;
+		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth, ply)))
+			return tt_score;
 
 		// break condition and quiescence search
 		if (depth <= 0) {
@@ -25,11 +37,6 @@ namespace Search {
 		}
 		else if (ply and (rep_tt.isRepetition() or game_state.is50moveDraw()))
 			return draw_score;
-
-		// do not use tt in root
-		static int tt_score;
-		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth, ply)))
-			return tt_score;
 
 		search_results.nodes++;
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
@@ -113,13 +120,14 @@ namespace Search {
 						score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 				}
 			}
-			else {
+			else
 				score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
-			} 
 
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			rep_tt.count--;
 			hash.key = hash_cpy;
+
+			if (time_data.stop) return alpha;
 
 			// register move appearance in butterfly board
 			to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
@@ -159,7 +167,7 @@ namespace Search {
 	}
 
 	// display best move according to search algorithm
-	void bestMove(int depth) {
+	void bestMove(const int depth) {
 		assert(depth > 0 && "Unvalid depth");
 
 		// cleaning
@@ -175,6 +183,8 @@ namespace Search {
 		int lbound = low_bound,
 			hbound = high_bound,
 			curr_dpt = 1;
+
+		time_data.start = now();
 		
 		// aspiration window search
 		while (curr_dpt <= depth) {
@@ -196,16 +206,18 @@ namespace Search {
 			else if (search_results.score > -mate_comp and search_results.score < -mate_score)
 				OS << "info score mate " << (-search_results.score - mate_score) / 2 + 1;
 			// no checkmate
-			else
-				OS << "info score cp " << Search::search_results.score;
+			else OS << "info score cp " << Search::search_results.score;
 
-			OS << " depth " << curr_dpt++
+			OS  << " depth " << curr_dpt++
 				<< " nodes " << Search::search_results.nodes
+				<< " time " << sinceStart_ms(time_data.start)
 				<< " pv ";
 
 			for (int cnt = 0; cnt < PV::pv_len[0]; cnt++)
 				PV::pv_line[0][cnt].print() << ' ';
 			OS << '\n';
+
+			if (time_data.stop) break;
 		}
 
 		OS << "bestmove ";

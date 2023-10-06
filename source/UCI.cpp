@@ -45,20 +45,51 @@ inline std::string introduce() {
 // serve "go" command
 void parseGo(std::istringstream& strm) {
 	std::string com;
-	int depth = 6;
+	int depth;
 
 	strm >> std::skipws >> com;
 
 	if (com == "depth") {
 		strm >> std::skipws >> depth;
+		time_data.is_time = false, time_data.stop = false;
+		Search::bestMove(depth);
+	}
+	else if (com == "wtime") {
+		static int wtime, btime, winc, binc;
+		strm >> std::skipws >> wtime
+			>> std::skipws >> com >> std::skipws >> btime
+			>> std::skipws >> com >> std::skipws >> winc
+			>> std::skipws >> com >> std::skipws >> binc;
+
+		time_data.is_time = true, time_data.stop = false;
+		time_data.left = game_state.turn ? btime : wtime;
+		time_data.inc = game_state.turn ? binc : winc;
+
+		// to change in the future: time for single move calculation
+		time_data.this_move = time_data.left / (42 - game_state.fullmove * 2) + (time_data.inc / 2);
+
+		if (time_data.this_move >= time_data.left)
+			time_data.this_move -= 500_ms;
+
+		if (time_data.this_move < 50_ms)
+			time_data.this_move = 100_ms;
+
+		Search::bestMove(Search::max_depth);
+	}
+	else if (com == "movetime") {
+		static int mtime;
+		strm >> std::skipws >> mtime;
+
+		time_data.is_time = true, time_data.stop = false;
+		time_data.this_move = mtime;
+
+		Search::bestMove(Search::max_depth);
 	}
 	else if (com == "perft") {
 		strm >> std::skipws >> depth;
 		MoveGenerator::Analisis::perftDriver(depth);
 		return;
 	}
-
-	Search::bestMove(depth);
 }
 
 // parse given position and perform moves

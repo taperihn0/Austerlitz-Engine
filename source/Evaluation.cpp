@@ -3,6 +3,7 @@
 #include "Search.h"
 #include "MoveOrder.h"
 #include "Zobrist.h"
+#include "Timer.h"
 
 
 namespace Eval {
@@ -57,11 +58,15 @@ namespace Eval {
 	template int templEval<BLACK>();
 
 	int qSearch(int alpha, int beta, int ply) {
+		if (time_data.is_time and !(Search::search_results.nodes & 1024) and !time_data.checkTimeLeft()) {
+			time_data.stop = true;
+			return 0;
+		}
+
 		const int eval = evaluate();
 		Search::search_results.nodes++;
 
-		if (eval >= beta) 
-			return beta;
+		if (eval >= beta)  return beta;
 		alpha = std::max(alpha, eval);
 
 		// generate opponent capture moves
@@ -83,8 +88,8 @@ namespace Eval {
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			hash.key = hash_cpy;
 
-			if (score >= beta)
-				return beta;
+			if (time_data.stop) return alpha;
+			else if (score >= beta) return beta;
 			alpha = std::max(alpha, score);
 		}
 

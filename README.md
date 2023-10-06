@@ -11,3 +11,4 @@
 - *try to consider castle factor in static evaluation*
 - *try gradual widening on re-searches in aspiration window search*
 - *try extended futility pruning and other futility methods*
+- *improve basic time management system*

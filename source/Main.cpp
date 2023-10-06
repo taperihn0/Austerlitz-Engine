@@ -32,6 +32,8 @@ Zobrist hash;
 TranspositionTable tt;
 RepetitionTable rep_tt;
 
+Time time_data;
+
 int main(int argc, char* argv[]) {
 	InitState::clearButterfly();
 	InitState::initMAttacksTables();

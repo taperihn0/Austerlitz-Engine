@@ -71,7 +71,7 @@ inline bool HashEntry::isValid(int _score) noexcept {
 // list of keys of last positions
 class RepetitionTable {
 public:
-	static constexpr size_t tab_size = 600;
+	static constexpr size_t tab_size = 0x200;
 	RepetitionTable() = default;
 
 	bool isRepetition();
@@ -97,7 +97,7 @@ inline void RepetitionTable::clear() noexcept {
 
 
 inline bool RepetitionTable::isRepetition() {
-	for (int i = count - 1; i >= 0; i--)
+	for (int i = count - 4; i >= 0; i--)
 		if (tab[i] == hash.key) return true;
 	return false;
 }

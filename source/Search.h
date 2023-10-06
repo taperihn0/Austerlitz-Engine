@@ -26,9 +26,12 @@ namespace Search {
 	static constexpr int
 		low_bound = std::numeric_limits<int>::min() + 1000000,
 		high_bound = std::numeric_limits<int>::max() - 1000000,
+
 		draw_score = 0,
 		mate_score = -std::numeric_limits<int>::max() / 4,
-		mate_comp = mate_score + 1000;
+		mate_comp = mate_score + 1000,
+
+		max_depth = 128;
 
 	struct Results {
 		int score;
@@ -37,7 +40,7 @@ namespace Search {
 
 	extern Results search_results;
 
-	void bestMove(int depth);
+	void bestMove(const int depth);
 
 	// clear killer history
 	inline void clearKiller() {
