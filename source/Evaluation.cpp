@@ -58,9 +58,9 @@ namespace Eval {
 	template int templEval<BLACK>();
 
 	int qSearch(int alpha, int beta, int ply) {
-		if (time_data.is_time and !(Search::search_results.nodes & 1024) and !time_data.checkTimeLeft()) {
+		if (time_data.is_time and !(Search::search_results.nodes & Search::time_check_modulo) and !time_data.checkTimeLeft()) {
 			time_data.stop = true;
-			return 0;
+			return Search::time_stop_sign;
 		}
 
 		const int eval = evaluate();
@@ -88,7 +88,7 @@ namespace Eval {
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			hash.key = hash_cpy;
 
-			if (time_data.stop) return alpha;
+			if (time_data.stop) return Search::time_stop_sign;
 			else if (score >= beta) return beta;
 			alpha = std::max(alpha, score);
 		}

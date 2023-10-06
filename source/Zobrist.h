@@ -97,7 +97,7 @@ inline void RepetitionTable::clear() noexcept {
 
 
 inline bool RepetitionTable::isRepetition() {
-	for (int i = count - 4; i >= 0; i--)
+	for (int i = count - 1; i >= 0; i--)
 		if (tab[i] == hash.key) return true;
 	return false;
 }

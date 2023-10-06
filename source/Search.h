@@ -31,7 +31,10 @@ namespace Search {
 		mate_score = -std::numeric_limits<int>::max() / 4,
 		mate_comp = mate_score + 1000,
 
-		max_depth = 128;
+		max_depth = 128,
+		time_check_modulo = 2048,
+
+		time_stop_sign = low_bound + 10;
 
 	struct Results {
 		int score;

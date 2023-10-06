@@ -13,10 +13,10 @@ namespace Search {
 	template <bool AllowNullMove = true>
 	int alphaBeta(int alpha, int beta, int depth, int ply) {
 
-		// (nodes & 1024 == 0) is an alternative operation to (nodes % 1024 == 0)
-		if (time_data.is_time and !(search_results.nodes & 1024) and !time_data.checkTimeLeft()) {
+		// (nodes & check_modulo == 0) is an alternative operation to (nodes % check_modulo == 0)
+		if (time_data.is_time and !(search_results.nodes & time_check_modulo) and !time_data.checkTimeLeft()) {
 			time_data.stop = true;
-			return 0;
+			return time_stop_sign;
 		}
 
 		// do not use tt in root
@@ -29,10 +29,11 @@ namespace Search {
 			// init PV table lenght
 			PV::pv_len[ply] = 0;
 			const int qscore = Eval::qSearch(alpha, beta, ply);
-			tt.write(0, qscore, 
-				qscore == alpha ? HashEntry::Flag::HASH_ALPHA : 
-				qscore == beta ? HashEntry::Flag::HASH_BETA : 
-				HashEntry::Flag::HASH_EXACT, ply);
+			if (!time_data.stop)
+				tt.write(0, qscore, 
+					qscore == alpha ? HashEntry::Flag::HASH_ALPHA : 
+					qscore == beta ? HashEntry::Flag::HASH_BETA : 
+					HashEntry::Flag::HASH_EXACT, ply);
 			return qscore;
 		}
 		else if (ply and (rep_tt.isRepetition() or game_state.is50moveDraw()))
@@ -127,7 +128,7 @@ namespace Search {
 			rep_tt.count--;
 			hash.key = hash_cpy;
 
-			if (time_data.stop) return alpha;
+			if (time_data.stop) return time_stop_sign;
 
 			// register move appearance in butterfly board
 			to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
@@ -182,7 +183,8 @@ namespace Search {
 
 		int lbound = low_bound,
 			hbound = high_bound,
-			curr_dpt = 1;
+			curr_dpt = 1,
+			prev_score;
 
 		time_data.start = now();
 		
@@ -198,7 +200,10 @@ namespace Search {
 
 			// success - expand bounds for next search
 			lbound = search_results.score - window, hbound = search_results.score + window;
-		
+			
+			if (search_results.score == Search::time_stop_sign)
+				search_results.score = prev_score;
+
 			// (-) search result - opponent checkmating
 			if (search_results.score < mate_comp and search_results.score > mate_score)
 				OS << "info score mate " << (mate_score - search_results.score) / 2 - 1;
@@ -206,10 +211,10 @@ namespace Search {
 			else if (search_results.score > -mate_comp and search_results.score < -mate_score)
 				OS << "info score mate " << (-search_results.score - mate_score) / 2 + 1;
 			// no checkmate
-			else OS << "info score cp " << Search::search_results.score;
+			else OS << "info score cp " << search_results.score;
 
 			OS  << " depth " << curr_dpt++
-				<< " nodes " << Search::search_results.nodes
+				<< " nodes " << search_results.nodes
 				<< " time " << sinceStart_ms(time_data.start)
 				<< " pv ";
 
@@ -218,6 +223,7 @@ namespace Search {
 			OS << '\n';
 
 			if (time_data.stop) break;
+			prev_score = search_results.score;
 		}
 
 		OS << "bestmove ";

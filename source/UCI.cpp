@@ -66,7 +66,7 @@ void parseGo(std::istringstream& strm) {
 		time_data.inc = game_state.turn ? binc : winc;
 
 		// to change in the future: time for single move calculation
-		time_data.this_move = time_data.left / (42 - game_state.fullmove * 2) + (time_data.inc / 2);
+		time_data.this_move = time_data.left / (42 - (game_state.fullmove - 1) * 2) + (time_data.inc / 2);
 
 		if (time_data.this_move >= time_data.left)
 			time_data.this_move -= 500_ms;
