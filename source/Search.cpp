@@ -63,10 +63,13 @@ namespace Search {
 
 		// use fully-legal moves generator
 		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
+		const size_t mcount = move_list.size();
 
 		// no legal moves detected - checkmate or stealmate
-		if (!move_list.size())
+		if (!mcount)
 			return incheck ? mate_score + ply : draw_score;
+		else if (incheck and mcount == 1) // single-response extension
+			depth++;
 
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
@@ -77,7 +80,6 @@ namespace Search {
 		// move ordering
 		Order::sort(move_list, ply);
 
-		const size_t mcount = move_list.size();
 		for (int i = 0; i < mcount; i++) {
 			const auto& move = move_list[i];
 #if _SEARCH_DEBUG
