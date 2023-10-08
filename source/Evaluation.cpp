@@ -67,6 +67,9 @@ namespace Eval {
 		Search::search_results.nodes++;
 
 		if (eval >= beta) return beta;
+		else if (bitCount(BBs[nOccupied]) >= 16 and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
+			and eval + Eval::Value::QUEEN_VALUE < alpha)
+			return alpha;
 		alpha = std::max(alpha, eval);
 
 		// generate opponent capture moves

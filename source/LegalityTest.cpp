@@ -82,6 +82,12 @@ template U64 attackTo<BLACK, KING>(int);
 template U64 attackTo<WHITE>(int);
 template U64 attackTo<BLACK>(int);
 
+
+U64 attackTo(int sq, bool side) {
+	return side ? attackTo<BLACK>(sq) : attackTo<WHITE>(sq);
+}
+
+
 template <enumSide SIDE>
 U64 pinnedHorizonVertic(int own_king_sq) {
 	U64 own_side_occ = BBs[nWhite + SIDE],
@@ -100,6 +106,10 @@ U64 pinnedHorizonVertic(int own_king_sq) {
 	return pinned;
 }
 
+U64 pinnedHorizonVertic(int own_king_sq, bool side) {
+	return side ? pinnedHorizonVertic<BLACK>(own_king_sq) : pinnedHorizonVertic<WHITE>(own_king_sq);
+}
+
 template <enumSide SIDE>
 U64 pinnedDiagonal(int own_king_sq) {
 	U64 own_side_occ = BBs[nWhite + SIDE],
@@ -116,6 +126,10 @@ U64 pinnedDiagonal(int own_king_sq) {
 	}
 
 	return pinned;
+}
+
+U64 pinnedDiagonal(int own_king_sq, bool side) {
+	return side ? pinnedDiagonal<BLACK>(own_king_sq) : pinnedDiagonal<WHITE>(own_king_sq);
 }
 
 // return bitboard of pinned piece of given color

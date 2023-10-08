@@ -39,6 +39,8 @@ namespace Order {
 	// return value, also so called 'score' of given move
 	int moveScore(const MoveItem::iMove& move, int ply);
 
+	int see(int sq);
+
 	// sort given move list based on score of each move
 	void sort(MoveList& move_list, int ply);
 

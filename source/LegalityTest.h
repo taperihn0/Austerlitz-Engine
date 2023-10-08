@@ -75,6 +75,7 @@ inline bool isSquareAttacked(int sq, bool side) {
 
 template <enumSide PC_SIDE, enumPiece PC = ANY>
 U64 attackTo(int sq);
+U64 attackTo(int sq, bool side);
 
 
 template <enumSide SIDE>
@@ -83,10 +84,11 @@ U64 pinnedPiece(int own_king_sq);
 
 template <enumSide SIDE>
 U64 pinnedHorizonVertic(int own_king_sq);
+U64 pinnedHorizonVertic(int own_king_sq, bool side);
 
 template <enumSide SIDE>
 U64 pinnedDiagonal(int own_king_sq);
-
+U64 pinnedDiagonal(int own_king_sq, bool side);
 
 template <enumSide SIDE>
 U64 pinnersPiece(int own_king_sq);
