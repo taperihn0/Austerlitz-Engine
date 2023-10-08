@@ -2,7 +2,7 @@
 
 
 template <enumSide SIDE>
-MoveItem::iMove MoveItem::toMove(int target, int origin, char promo) {
+uint32_t MoveItem::toMove(int target, int origin, char promo) {
 	const bool is_pawn = bitU64(origin) & BBs[nWhitePawn + SIDE],
 		capture = bitU64(target) & BBs[nBlack - SIDE];
 
@@ -35,5 +35,23 @@ MoveItem::iMove MoveItem::toMove(int target, int origin, char promo) {
 }
 
 
-template MoveItem::iMove MoveItem::toMove<WHITE>(int, int, char);
-template MoveItem::iMove MoveItem::toMove<BLACK>(int, int, char);
+template uint32_t MoveItem::toMove<WHITE>(int, int, char);
+template uint32_t MoveItem::toMove<BLACK>(int, int, char);
+
+
+void MoveItem::iMove::constructMove(std::string move) {
+	int origin, target;
+	char promo = '\0';
+
+	origin = (move[1] - '1') * 8 + (move[0] - 'a');
+	target = (move[3] - '1') * 8 + (move[2] - 'a');
+
+	if (move.size() == 5) {
+		promo = move.back();
+	}
+
+	cmove = (game_state.turn ?
+		toMove<BLACK>(target, origin, promo) :
+		toMove<WHITE>(target, origin, promo)
+		);
+}

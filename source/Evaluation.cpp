@@ -66,7 +66,7 @@ namespace Eval {
 		const int eval = evaluate();
 		Search::search_results.nodes++;
 
-		if (eval >= beta)  return beta;
+		if (eval >= beta) return beta;
 		alpha = std::max(alpha, eval);
 
 		// generate opponent capture moves
@@ -80,17 +80,22 @@ namespace Eval {
 		Order::sort(capt_list, ply);
 
 		//for (const auto& capt : capt_list) {
-		for (int i = 0; i < capt_list.size(); i++) {
-			MovePerform::makeMove(capt_list[i]);
+		for (const auto& move : capt_list) {
+			MovePerform::makeMove(move);
 
 			score = -qSearch(-beta, -alpha, ply + 1);
 
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			hash.key = hash_cpy;
 
-			if (time_data.stop) return Search::time_stop_sign;
-			else if (score >= beta) return beta;
-			alpha = std::max(alpha, score);
+			if (time_data.stop) 
+				return Search::time_stop_sign;
+			else if (score > alpha) {
+				if (score >= beta) {
+					return beta;
+				}
+				alpha = score;
+			}
 		}
 
 		return alpha;

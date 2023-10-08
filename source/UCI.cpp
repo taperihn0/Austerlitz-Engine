@@ -7,28 +7,12 @@
 #include <iostream>
 #include <string>
 
-#define _CHECK_MOVE_LEGAL true
+#define _CHECK_MOVE_LEGAL defined(__DEBUG__)
+
 
 UCI::UCI() 
 	: os(&std::cout), is(&std::cin) {
 	std::ios_base::sync_with_stdio(false);
-}
-
-
-// construct a move based on a normal string notation
-MoveItem::iMove constructMove(std::string move) {
-	int origin, target;
-	char promo = '\0';
-
-	origin = (move[1] - '1') * 8 + (move[0] - 'a');
-	target = (move[3] - '1') * 8 + (move[2] - 'a');
-
-	if (move.size() == 5) {
-		promo = move.back();
-	}
-
-	return game_state.turn ? MoveItem::toMove<BLACK>(target, origin, promo)
-		: MoveItem::toMove<WHITE>(target, origin, promo);
 }
 
 // return introducing string
@@ -66,13 +50,13 @@ void parseGo(std::istringstream& strm) {
 		time_data.inc = game_state.turn ? binc : winc;
 
 		// to change in the future: time for single move calculation
-		time_data.this_move = time_data.left / (42 - (game_state.fullmove - 1) * 2) + (time_data.inc / 2);
+		time_data.this_move = (time_data.left / 42) + (time_data.inc / 2);
 
 		if (time_data.this_move >= time_data.left)
-			time_data.this_move -= 500_ms;
+			time_data.this_move = time_data.left / 12;
 
-		if (time_data.this_move < 50_ms)
-			time_data.this_move = 100_ms;
+		if (time_data.this_move < 15_ms)
+			time_data.this_move = 20_ms;
 
 		Search::bestMove(Search::max_depth);
 	}
@@ -95,7 +79,6 @@ void parseGo(std::istringstream& strm) {
 // parse given position and perform moves
 void UCI::parsePosition(std::istringstream& strm) {
 	std::string com, move;
-	MoveItem::iMove casted;
 
 	strm >> std::skipws >> com;
 
@@ -131,10 +114,12 @@ void UCI::parsePosition(std::istringstream& strm) {
 
 	rep_tt.clear();
 
+	MoveItem::iMove casted;
+
 	// scan given moves and perform them on real board
 	while (strm >> std::skipws >> move) {
 #if _CHECK_MOVE_LEGAL
-		casted = constructMove(move);
+		casted.constructMove(move);
 		bool illegal = true;
 
 		// check move validity
@@ -151,8 +136,9 @@ void UCI::parsePosition(std::istringstream& strm) {
 			OS << "illegal move '" << move << "'\n";
 			return;
 		}
-#elif
-		MovePerform::makeMove(move);
+#else
+		casted.constructMove(move);
+		MovePerform::makeMove(casted);
 		rep_tt.posRegister();
 #endif
 	}

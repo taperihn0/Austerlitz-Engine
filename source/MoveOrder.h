@@ -32,7 +32,7 @@ namespace Order {
 	using historyLookUp = std::array<std::array<int, 64>, 12>;
 	extern historyLookUp history_moves;
 
-	// butterfly board of format [piece][to]
+	// Butterfly board of format [piece][to]
 	using butterflyLookUp = std::array<std::array<int, 64>, 12>;
 	extern butterflyLookUp butterfly;
 
@@ -47,14 +47,13 @@ namespace Order {
 
 namespace InitState {
 
-	// fill butterfly table of 1s
+	// clear butterfly
 	inline void clearButterfly() {
-		for (auto& x : Order::butterfly) x.fill(1);
+		for (auto& x : Order::butterfly) x.fill(0);
 	}
 	
 	// clear history heuristic table
 	inline void clearHistory() {
 		for (auto& x : Order::history_moves) x.fill(0);
 	}
-
 }

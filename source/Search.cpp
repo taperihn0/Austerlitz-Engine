@@ -51,7 +51,7 @@ namespace Search {
 
 			rep_tt.posRegister();
 			MovePerform::makeNull();
-			
+
 			// set allow_null_move to false - prevent from double move passing, it makes no sense then
 			const int score = -alphaBeta<false>(-beta, -beta + 1, depth - 1 - R, ply + 1);
 
@@ -67,22 +67,6 @@ namespace Search {
 		// no legal moves detected - checkmate or stealmate
 		if (!move_list.size())
 			return incheck ? mate_score + ply : draw_score;
-		// reverse futility pruning - 
-		// perform when player A to move and then player B to move, before qsearch
-		else if (depth == 2 and !incheck) {
-			static constexpr int margin = Eval::Value::PAWN_VALUE;
-			bool no_capt = true;
-
-			for (const auto& m : move_list) {
-				if (m.getMask<MoveItem::iMask::CAPTURE_F>()) {
-					no_capt = false;
-					break;
-				}
-			}
-
-			if (no_capt and Eval::evaluate() - margin >= beta)
-				return beta;
-		}
 
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
@@ -93,11 +77,20 @@ namespace Search {
 		// move ordering
 		Order::sort(move_list, ply);
 
-		for (int i = 0; i < move_list.size(); i++) {
+		const size_t mcount = move_list.size();
+		for (int i = 0; i < mcount; i++) {
 			const auto& move = move_list[i];
 #if _SEARCH_DEBUG
 			move.print() << '\n';
 #endif
+			static constexpr int margin = Eval::Value::PAWN_VALUE;
+			if (i > 1 and mcount >= 8 and !move.getMask<MoveItem::iMask::CAPTURE_F>()
+				and depth == 1 and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
+				and beta < -mate_comp and alpha > mate_comp
+				and Eval::evaluate() + margin <= alpha) {
+				return alpha;
+			}
+
 			rep_tt.posRegister();
 			MovePerform::makeMove(move);
 
@@ -142,6 +135,7 @@ namespace Search {
 						// store killer move
 						Order::killer[1][ply] = Order::killer[0][ply];
 						Order::killer[0][ply] = move;
+
 						// store move as a history move
 						Order::history_moves[pc][to] += depth * depth;
 					}

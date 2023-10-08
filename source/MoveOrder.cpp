@@ -11,9 +11,8 @@ namespace Order {
 		// pv move detected
 		if (PV::pv_line[ply][0] == move)
 			return pv_score;
-
 		// distinguish between quiets and captures
-		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+		else if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 			const int att = move.getMask<MoveItem::iMask::PIECE>() >> 12;
 			int victim;
 			const bool side = move.getMask<MoveItem::iMask::SIDE_F>();;
@@ -31,7 +30,7 @@ namespace Order {
 
 			return MVV_LVA::lookup[att][victim] + 1000000;
 		}
-		
+
 		// killer moves score less than basic captures
 		if (move == killer[0][ply])
 			return 900000;
@@ -41,7 +40,7 @@ namespace Order {
 		// relative history move score
 		const int pc = move.getMask<MoveItem::iMask::PIECE>() >> 12;
 		static constexpr int scale = 13;
-		return (scale * history_moves[pc][target]) / butterfly[pc][target] + 1;
+		return (scale * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1;
 	}
 	
 	// hash table for move ordering

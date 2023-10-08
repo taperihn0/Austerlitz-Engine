@@ -85,6 +85,9 @@ namespace MoveItem {
 			return cmove;
 		}
 
+		// construct a move based on a normal string notation
+		void constructMove(std::string move);
+
 	private:
 		uint32_t cmove;
 	};
@@ -145,6 +148,6 @@ namespace MoveItem {
 
 	// 'cast' given data to a move of a iMove class, without any further encoding data, like en passant or castling flag
 	template <enumSide SIDE>
-	iMove toMove(int target, int origin, char promo);
+	uint32_t toMove(int target, int origin, char promo);
 
 } // namespace MoveItem
