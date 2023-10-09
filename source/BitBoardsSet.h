@@ -58,23 +58,31 @@ inline void castleRights::operator=(const castleRights& cr) {
 }
 
 inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
-	return (SIDE == WHITE) ? (PC == ROOK ? castleRights::cSide::wROOK : castleRights::cSide::wQUEEN)
-		: (PC == ROOK ? castleRights::cSide::bROOK : castleRights::cSide::bQUEEN);
+	return (SIDE == WHITE) ? 
+			(PC == ROOK ? castleRights::cSide::wROOK : castleRights::cSide::wQUEEN) : 
+		    (PC == ROOK ? castleRights::cSide::bROOK : castleRights::cSide::bQUEEN);
 }
 
 
 // game state variables
 struct gState {
 	static constexpr int max_move_rule = 50;
+	static constexpr int end_game_score = 2 * (1350 + 10000 /*Eval::Value::KING_VALUE*/ );
+	enum gPhase { OPENING, MIDGAME, ENDGAME };
 
 	inline bool is50moveDraw() noexcept {
 		return halfmove >= max_move_rule;
+	}
+
+	inline gPhase gamePhase() noexcept {
+		return material[0] + material[1] < end_game_score ? ENDGAME : MIDGAME;
 	}
 
 	int ep_sq;
 	enumSide turn;
 	castleRights castle;
 	int halfmove, fullmove;
+	std::array<int, 2> material;
 };
 
 extern gState game_state;

@@ -2,6 +2,7 @@
 
 #include "MoveItem.h"
 #include "MoveOrder.h"
+#include <limits>
 
 
 namespace PV {

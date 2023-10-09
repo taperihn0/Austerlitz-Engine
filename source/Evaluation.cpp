@@ -23,35 +23,29 @@ namespace Eval {
 
 	template <enumSide SIDE>
 	int templEval() {
-		int eval = 0, sq;
+		int pos_eval = 0;
 		U64 piece_bb;
 		enumPiece epiece;
 
-		// own material and position score
+		// own position score
 		for (auto piece = nWhitePawn + SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
 			epiece = toPieceType(piece);
 
-			while (piece_bb) {
-				sq = popLS1B(piece_bb);
-				eval +=
-					Value::piece_material[epiece] + Value::position_score[epiece][properSquare<SIDE>(sq)];
-			}
+			while (piece_bb) 
+				pos_eval += Value::position_score[epiece][properSquare<SIDE>(popLS1B(piece_bb))];
 		}
 
-		// opponent evaluation score
+		// opponent position score
 		for (auto piece = nBlackPawn - SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
 			epiece = toPieceType(piece);
 
-			while (piece_bb) {
-				sq = popLS1B(piece_bb);
-				eval -=
-					Value::piece_material[epiece] + Value::position_score[epiece][properSquare<!SIDE>(sq)];
-			}
+			while (piece_bb) 
+				pos_eval -= Value::position_score[epiece][properSquare<!SIDE>(popLS1B(piece_bb))];
 		}
 
-		return eval;
+		return pos_eval + game_state.material[SIDE] - game_state.material[!SIDE];
 	}
 
 	template int templEval<WHITE>();
@@ -67,7 +61,7 @@ namespace Eval {
 		Search::search_results.nodes++;
 
 		if (eval >= beta) return beta;
-		else if (bitCount(BBs[nOccupied]) >= 16 and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
+		else if (game_state.gamePhase() != game_state.ENDGAME and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
 			and eval + Eval::Value::QUEEN_VALUE < alpha)
 			return alpha;
 		alpha = std::max(alpha, eval);

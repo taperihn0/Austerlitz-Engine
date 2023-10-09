@@ -1,6 +1,7 @@
 #include "MoveGeneration.h"
 #include "Timer.h"
 #include "Zobrist.h"
+#include "Evaluation.h"
 #include <string>
 
 #define _PERFT_GENTYPE LEGAL
@@ -466,6 +467,7 @@ namespace MovePerform {
 			for (auto pc = nBlackPawn - side; pc <= nBlackQueen; pc += 2) {
 				if (getBit(BBs[pc], target)) {
 					hash.key ^= hash.piece_keys.get(pc, target);
+					game_state.material[game_state.turn] -= Eval::Value::piece_material[toPieceType(pc)];
 					popBit(BBs[pc], target);
 					break;
 				}
@@ -496,6 +498,7 @@ namespace MovePerform {
 			hash.key ^= hash.piece_keys.get(nWhitePawn + side, target);
 			hash.key ^= hash.piece_keys.get(nBlackPawn - side, ep_pawn);
 			game_state.halfmove = 0;
+			game_state.material[game_state.turn] -= Eval::Value::PAWN_VALUE;
 
 			moveBit(BBs[nWhitePawn + side], origin, target);
 			popBit(BBs[nBlackPawn - side], ep_pawn);
@@ -513,6 +516,7 @@ namespace MovePerform {
 			hash.key ^= hash.piece_keys.get(nWhitePawn + side, origin);
 			hash.key ^= hash.piece_keys.get(promo_pc, target);
 			game_state.halfmove = 0;
+			game_state.material[side] += Eval::Value::piece_material[toPieceType(promo_pc)] - Eval::Value::PAWN_VALUE;
 
 			setBit(BBs[promo_pc], target);
 			popBit(BBs[nWhitePawn + side], origin);

@@ -1,6 +1,7 @@
 #include "BitBoardsSet.h"
 #include "Zobrist.h"
 #include "Search.h"
+#include "Evaluation.h"
 
 
 BitBoardsSet::BitBoardsSet(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) {
@@ -14,6 +15,11 @@ BitBoardsSet::BitBoardsSet(const std::string& fen) {
 
 void BitBoardsSet::parseFEN(const std::string& fen) {
 	clear();
+	static constexpr std::array<size_t, 12> bbs_pc = {
+		nWhitePawn, nWhiteKnight, nWhiteBishop, nWhiteRook, nWhiteQueen, nWhiteKing, 
+		nBlackPawn, nBlackKnight, nBlackBishop, nBlackRook, nBlackQueen, nBlackKing
+	};
+	static constexpr std::string_view pc_str = "PNBRQKpnbrqk";
 	int x = 0, y = 7;
 
 	for (int i = 0; i < size(fen); i++) {
@@ -29,73 +35,17 @@ void BitBoardsSet::parseFEN(const std::string& fen) {
 		}
 
 		int in = y * 8 + x;
-		switch (c) {
-		case 'p':
-			setBit(bbs[nBlackPawn], in);
-			setBit(bbs[nBlack], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'n':
-			setBit(bbs[nBlackKnight], in);
-			setBit(bbs[nBlack], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'b':
-			setBit(bbs[nBlackBishop], in);
-			setBit(bbs[nBlack], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'r':
-			setBit(bbs[nBlackRook], in);
-			setBit(bbs[nBlack], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'q':
-			setBit(bbs[nBlackQueen], in);
-			setBit(bbs[nBlack], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'k':
-			setBit(bbs[nBlackKing], in);
-			setBit(bbs[nBlack], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'P':
-			setBit(bbs[nWhitePawn], in);
-			setBit(bbs[nWhite], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'N':
-			setBit(bbs[nWhiteKnight], in);
-			setBit(bbs[nWhite], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'B':
-			setBit(bbs[nWhiteBishop], in);
-			setBit(bbs[nWhite], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'R':
-			setBit(bbs[nWhiteRook], in);
-			setBit(bbs[nWhite], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'Q':
-			setBit(bbs[nWhiteQueen], in);
-			setBit(bbs[nWhite], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case 'K':
-			setBit(bbs[nWhiteKing], in);
-			setBit(bbs[nWhite], in);
-			setBit(bbs[nOccupied], in);
-			break;
-		case '/':
+		if (c == '/') {
 			y--, x = 0;
 			continue;
-		default: return;
 		}
 
+		const auto pc = pc_str.find_first_of(c);
+		const bool side = islower(c);
+		setBit(bbs[side ? nBlack :nWhite], in);
+		setBit(bbs[nOccupied], in);
+		setBit(bbs[bbs_pc[pc]], in);
+		game_state.material[side] += Eval::Value::piece_material[toPieceType(bbs_pc[pc])];
 		++x;
 	}
 

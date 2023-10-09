@@ -4,10 +4,15 @@
 #include "Search.h"
 #include "SearchBenchmark.h"
 #include "Zobrist.h"
+#include "Evaluation.h"
 #include <iostream>
 #include <string>
 
-#define _CHECK_MOVE_LEGAL defined(__DEBUG__)
+#if defined(__DEBUG__)
+#define _CHECK_MOVE_LEGAL true
+#else
+#define _CHECK_MOVE_LEGAL false
+#endif
 
 
 UCI::UCI() 
@@ -171,6 +176,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "benchmark") bench.start();
 #if defined(__DEBUG__)
 		else if (token == "hashkey") OS << hash.key << '\n';
+		else if (token == "eval")    OS << Eval::evaluate() << '\n';
 #endif
 	} while (line != "quit" and argc == 1);
 }

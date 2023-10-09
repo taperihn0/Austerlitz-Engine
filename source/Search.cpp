@@ -3,7 +3,6 @@
 #include "Evaluation.h"
 #include "Zobrist.h"
 #include "Timer.h"
-#include <limits>
 
 #define _SEARCH_DEBUG false
 
@@ -43,7 +42,7 @@ namespace Search {
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
 		// Null Move Pruning method
-		if (AllowNullMove and !incheck and depth >= 3) {
+		if (AllowNullMove and !incheck and depth >= 3 and game_state.gamePhase() != game_state.ENDGAME) {
 			static constexpr int R = 2;
 
 			const auto ep_cpy = game_state.ep_sq;
@@ -98,13 +97,13 @@ namespace Search {
 
 			// if pv is still left, save time by checking uninteresting moves using null window
 			// if such node fails low, it's a sign we are offered good move (score > alpha)
-			if (i) {
+			if (i > 1) {
 				if (
 					depth >= 3
 					and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
 					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)
 					and !move.getMask<MoveItem::iMask::CAPTURE_F>()
-					and move.getMask<MoveItem::iMask::PROMOTION>() != QUEEN
+					and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN
 					)
 					score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
 				else score = alpha + 1;
