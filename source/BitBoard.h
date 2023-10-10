@@ -119,7 +119,8 @@ namespace Constans {
 		a1h8_diagonal  = 0x8040201008040201,
 		h1_a8_diagonal = 0x0102040810204080,
 		lsquares       = 0x55AA55AA55AA55AA,
-		dsquares       = 0xAA55AA55AA55AA55;
+		dsquares       = 0xAA55AA55AA55AA55,
+		center		   = 0x0000001818000000;
 
 	constexpr std::array<U64, 8> r_by_index = {
 		r1_rank, r2_rank, r3_rank, r4_rank, r5_rank, r6_rank, r7_rank, r8_rank

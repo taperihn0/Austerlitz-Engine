@@ -21,6 +21,7 @@ void BitBoardsSet::parseFEN(const std::string& fen) {
 	};
 	static constexpr std::string_view pc_str = "PNBRQKpnbrqk";
 	int x = 0, y = 7;
+	game_state.material = { 0, 0 };
 
 	for (int i = 0; i < size(fen); i++) {
 		const char c = fen[i];

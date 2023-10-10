@@ -67,15 +67,19 @@ inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
 // game state variables
 struct gState {
 	static constexpr int max_move_rule = 50;
-	static constexpr int end_game_score = 2 * (1350 + 10000 /*Eval::Value::KING_VALUE*/ );
-	enum gPhase { OPENING, MIDGAME, ENDGAME };
+	static constexpr int end_game_score = 2 * (1350 + 10000);
+	static constexpr int middle_game_score = 25600;
+	enum gPhase { OPENING, MIDDLEGAME, ENDGAME };
 
 	inline bool is50moveDraw() noexcept {
 		return halfmove >= max_move_rule;
 	}
 
 	inline gPhase gamePhase() noexcept {
-		return material[0] + material[1] < end_game_score ? ENDGAME : MIDGAME;
+		const int total_mat = material[0] + material[1];
+		return total_mat < end_game_score ? ENDGAME :
+			fullmove > 10 or total_mat <= middle_game_score or !castle.raw() ? MIDDLEGAME :
+			OPENING;
 	}
 
 	int ep_sq;

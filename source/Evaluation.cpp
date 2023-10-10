@@ -22,13 +22,44 @@ namespace Eval {
 	}
 
 	template <enumSide SIDE>
+	int evalPawnStructure() {
+		U64 pawns = BBs[nWhitePawn + SIDE];
+		int sq, eval = 0;
+
+		while (pawns) {
+			sq = popLS1B(pawns);
+			eval += Value::position_score[PAWN][properSquare<SIDE>(sq)];
+
+			// if backward pawn...
+			if (!(LookUp::back_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) {
+				eval -= 7;
+
+				// if isolated pawn...
+				if (!(LookUp::n_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) 
+					// consider pawn location - center is dangerous for isolated pawn
+					eval -= 10 + 5 * static_cast<bool>(bitU64(sq) & Constans::center);
+			}
+
+			// if double pawn...
+			if (!(LookUp::sf_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) eval -= 10;
+			// if passed pawn...
+			else if (!((LookUp::nf_file.get(SIDE, sq) | LookUp::sf_file.get(SIDE, sq)) & BBs[nBlackPawn - SIDE])) 
+				eval += Value::passed_score[sq / 8];
+		}
+
+		return eval;
+	}
+
+	template <enumSide SIDE>
 	int templEval() {
-		int pos_eval = 0;
 		U64 piece_bb;
 		enumPiece epiece;
 
+		// process pawn structure
+		int pos_eval = evalPawnStructure<SIDE>() - evalPawnStructure<!SIDE>();
+
 		// own position score
-		for (auto piece = nWhitePawn + SIDE; piece <= nBlackKing; piece += 2) {
+		for (auto piece = nWhiteKnight + SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
 			epiece = toPieceType(piece);
 
@@ -37,7 +68,7 @@ namespace Eval {
 		}
 
 		// opponent position score
-		for (auto piece = nBlackPawn - SIDE; piece <= nBlackKing; piece += 2) {
+		for (auto piece = nBlackKnight - SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
 			epiece = toPieceType(piece);
 

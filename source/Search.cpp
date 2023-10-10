@@ -162,16 +162,20 @@ namespace Search {
 		return alpha;
 	}
 
-	// display best move according to search algorithm
-	void bestMove(const int depth) {
-		assert(depth > 0 && "Unvalid depth");
-
-		// cleaning
+	inline void clearHistory() {
 		search_results.nodes = 0;
 		Search::clearKiller();
 		InitState::clearButterfly();
 		PV::clear();
 		InitState::clearHistory();
+	}
+
+	// display best move according to search algorithm
+	void bestMove(const int depth) {
+		assert(depth > 0 && "Unvalid depth");
+
+		// cleaning
+		clearHistory();
 
 		// aspiration window reduction size
 		static constexpr int window = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
@@ -231,4 +235,4 @@ namespace Search {
 
 		OS << '\n';
 	}
-}
+} // namespace Search

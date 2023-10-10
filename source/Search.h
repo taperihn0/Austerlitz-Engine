@@ -51,4 +51,4 @@ namespace Search {
 		for (auto& x : Order::killer) x.fill(0);
 	}
 
-}
+} // namespace Search

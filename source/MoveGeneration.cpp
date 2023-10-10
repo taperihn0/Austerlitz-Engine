@@ -467,7 +467,7 @@ namespace MovePerform {
 			for (auto pc = nBlackPawn - side; pc <= nBlackQueen; pc += 2) {
 				if (getBit(BBs[pc], target)) {
 					hash.key ^= hash.piece_keys.get(pc, target);
-					game_state.material[game_state.turn] -= Eval::Value::piece_material[toPieceType(pc)];
+					game_state.material[!side] -= Eval::Value::piece_material[toPieceType(pc)];
 					popBit(BBs[pc], target);
 					break;
 				}
@@ -498,7 +498,7 @@ namespace MovePerform {
 			hash.key ^= hash.piece_keys.get(nWhitePawn + side, target);
 			hash.key ^= hash.piece_keys.get(nBlackPawn - side, ep_pawn);
 			game_state.halfmove = 0;
-			game_state.material[game_state.turn] -= Eval::Value::PAWN_VALUE;
+			game_state.material[!side] -= Eval::Value::PAWN_VALUE;
 
 			moveBit(BBs[nWhitePawn + side], origin, target);
 			popBit(BBs[nBlackPawn - side], ep_pawn);

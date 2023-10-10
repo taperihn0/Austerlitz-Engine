@@ -1,10 +1,37 @@
 #pragma once
 
 #include "BitBoardsSet.h"
+#include "StaticLookup.h"
+#include "LegalityTest.h"
 
 
 namespace Eval {
 	
+	namespace LookUp {
+		// backward pawn lookup table of masks
+		constexpr auto back_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr -> U64 {
+			const U64 same_bfile = inBetween(sq, (side ? 56 : 0) + sq % 8) | bitU64(sq);
+			return eastOne(same_bfile) | westOne(same_bfile);
+		});
+
+		// masks for isolated pawn (neighbour ranks)
+		constexpr auto n_file = cexpr::CexprArr<false, U64, 64>([](int sq) constexpr -> U64 {
+			const U64 same_wfile = Constans::f_by_index[sq % 8];
+			return eastOne(same_wfile) | westOne(same_wfile);
+		});
+
+		// same forward rank
+		constexpr auto sf_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr -> U64 {
+			return inBetween(sq, (side ? 0 : 56) + sq % 8);
+		});
+
+		// forward file masks for passed pawns
+		constexpr auto nf_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr -> U64 {
+			const U64 same_forward_rank = sf_file.get(side, sq);
+			return eastOne(same_forward_rank) | westOne(same_forward_rank);
+		});
+	}
+
 	// resources for evaluating a position
 	namespace Value {
 
@@ -102,7 +129,6 @@ namespace Eval {
 
 		// easily aggregated lookups
 		using aggregateScoreTab = std::array<posScoreTab, 6>;
-
 		constexpr aggregateScoreTab position_score = {
 			pawn_score,
 			knight_score,
@@ -111,6 +137,9 @@ namespace Eval {
 			queen_score,
 			king_score
 		};
+
+		using passedPawnTab = std::array<int, 7>;
+		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
 	};
 
 	// simple version of evaluation funcion
