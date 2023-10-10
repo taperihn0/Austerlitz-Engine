@@ -118,7 +118,6 @@ enum enumPiece_bbs : int {
 	nOccupied,
 };
 
-
 // custom operators returning proper type of index of std::array
 inline constexpr size_t operator-(enumPiece_bbs pc, enumSide s) noexcept {
 	return static_cast<size_t>(pc) - static_cast<size_t>(s);
@@ -128,7 +127,9 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) noexcept {
 	return static_cast<size_t>(pc) + static_cast<size_t>(s);
 }
 
+constexpr std::array<enumPiece, 12> _pc_cast = { PAWN, PAWN, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, KING, KING };
 inline constexpr enumPiece toPieceType(size_t pc) noexcept {
+	//return _pc_cast[pc];
 	return static_cast<enumPiece>(pc / 2);
 }
 

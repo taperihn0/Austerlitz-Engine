@@ -45,6 +45,9 @@ namespace Eval {
 			// if passed pawn...
 			else if (!((LookUp::nf_file.get(SIDE, sq) | LookUp::sf_file.get(SIDE, sq)) & BBs[nBlackPawn - SIDE])) 
 				eval += Value::passed_score[sq / 8];
+
+			// if defending...
+			if (PawnAttacks::anyAttackPawn<!SIDE>(bitU64(sq), BBs[nWhitePawn + SIDE])) eval += 3;
 		}
 
 		return eval;
@@ -53,30 +56,45 @@ namespace Eval {
 	template <enumSide SIDE>
 	int templEval() {
 		U64 piece_bb;
-		enumPiece epiece;
+		U64 own_lmvs = eU64, opp_lmvs = eU64;
+		int sq;
 
 		// process pawn structure
 		int pos_eval = evalPawnStructure<SIDE>() - evalPawnStructure<!SIDE>();
 
+		// compare pawn islands when endgame
+		if (game_state.gamePhase() == game_state.ENDGAME) {
+			const U64 fileset_own = ~nortFill(BBs[nWhitePawn + SIDE]) & Constans::r8_rank,
+				fileset_opp = ~nortFill(BBs[nBlackPawn - SIDE]) & Constans::r8_rank;
+			pos_eval += bitCount(islandsEastFile(fileset_own)) <= bitCount(islandsEastFile(fileset_opp)) ? 4 : -4;
+		}
+
 		// own position score
 		for (auto piece = nWhiteKnight + SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
-			epiece = toPieceType(piece);
 
-			while (piece_bb) 
-				pos_eval += Value::position_score[epiece][properSquare<SIDE>(popLS1B(piece_bb))];
+			while (piece_bb) {
+				sq = popLS1B(piece_bb);
+				pos_eval += Value::position_score[_pc_cast[piece]][properSquare<SIDE>(sq)];
+				own_lmvs |= attack(BBs[nOccupied], sq, _pc_cast[piece]);
+			}
 		}
 
 		// opponent position score
 		for (auto piece = nBlackKnight - SIDE; piece <= nBlackKing; piece += 2) {
 			piece_bb = BBs[piece];
-			epiece = toPieceType(piece);
 
-			while (piece_bb) 
-				pos_eval -= Value::position_score[epiece][properSquare<!SIDE>(popLS1B(piece_bb))];
+			while (piece_bb) {
+				sq = popLS1B(piece_bb);
+				pos_eval -= Value::position_score[_pc_cast[piece]][properSquare<!SIDE>(sq)];
+				opp_lmvs |= attack(BBs[nOccupied], sq, _pc_cast[piece]);
+			}
 		}
 
-		return pos_eval + game_state.material[SIDE] - game_state.material[!SIDE];
+		int eval = pos_eval + game_state.material[SIDE] - game_state.material[!SIDE];
+		// pieces mobility
+		eval += 2 * bitCount(own_lmvs & BBs[nEmpty]) / (bitCount(opp_lmvs & BBs[nEmpty]) + 1);
+		return eval;
 	}
 
 	template int templEval<WHITE>();

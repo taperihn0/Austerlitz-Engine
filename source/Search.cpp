@@ -17,14 +17,15 @@ namespace Search {
 			time_data.stop = true;
 			return time_stop_sign;
 		}
-
+		else if (ply and (rep_tt.isRepetition() or game_state.is50moveDraw()))
+			return draw_score;
+		
 		// do not use tt in root
 		static int tt_score;
 		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth, ply)))
 			return tt_score;
-
 		// break condition and quiescence search
-		if (depth <= 0) {
+		else if (depth <= 0) {
 			// init PV table lenght
 			PV::pv_len[ply] = 0;
 			const int qscore = Eval::qSearch(alpha, beta, ply);
@@ -35,8 +36,6 @@ namespace Search {
 					HashEntry::Flag::HASH_EXACT, ply);
 			return qscore;
 		}
-		else if (ply and (rep_tt.isRepetition() or game_state.is50moveDraw()))
-			return draw_score;
 
 		search_results.nodes++;
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);

@@ -340,7 +340,7 @@ inline U64 attack(U64 occ, int sq) noexcept {
 }
 
 template <>
-inline U64 attack<KING>(U64, int sq) {
+inline U64 attack<KING>(U64, int sq) noexcept {
     assert(sq >= 0 and sq < 64 && "Index overflow");
     return cking_attacks[sq];
 }
@@ -367,6 +367,23 @@ template <>
 inline U64 attack<QUEEN>(U64 occ, int sq) noexcept {
     assert(sq >= 0 and sq < 64 && "Index overflow");
     return attack<BISHOP>(occ, sq) | attack<ROOK>(occ, sq);
+}
+
+inline U64 attack(U64 occ, int sq, enumPiece pc) {
+    switch (pc) {
+    case KNIGHT:
+        return attack<KNIGHT>(occ, sq);
+    case BISHOP:
+        return attack<BISHOP>(occ, sq);
+    case ROOK:
+        return attack<ROOK>(occ, sq);
+    case QUEEN:
+        return attack<QUEEN>(occ, sq);
+    case KING:
+        return attack<KING>(occ, sq);
+    default: break;
+    }
+    return eU64;
 }
 
 

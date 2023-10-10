@@ -243,3 +243,21 @@ inline constexpr void moveBit(U64& bb, int origin, int target) noexcept {
 	setBit(bb, target);
 	popBit(bb, origin);
 }
+
+inline constexpr U64 soutFill(U64 bb) noexcept {
+	bb |= (bb << 8);
+	bb |= (bb << 16);
+	bb |= (bb << 32);
+	return bb;
+}
+
+inline constexpr U64 nortFill(U64 bb) noexcept {
+	bb |= (bb >> 8);
+	bb |= (bb >> 16);
+	bb |= (bb >> 32);
+	return bb;
+}
+
+inline constexpr U64 islandsEastFile(U64 fileset) noexcept {
+	return fileset ^ (fileset & (fileset >> 1));
+}
