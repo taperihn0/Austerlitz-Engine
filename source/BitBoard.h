@@ -100,27 +100,28 @@ namespace Constans {
 
 	// usefull constans for bits-oriented board
 	constexpr U64
-		a_file         = 0x0101010101010101,
-		h_file         = 0x8080808080808080,
-		not_a_file     = ~a_file,
-		not_h_file     = ~h_file,
-		not_ab_file    = 0xfcfcfcfcfcfcfcfc,
-		not_gh_file    = 0x3f3f3f3f3f3f3f3f,
-		r1_rank		   = 0x00000000000000FF,
-		r2_rank		   = 0x000000000000FF00,
-		r3_rank		   = 0x0000000000FF0000,
-		r4_rank		   = 0x00000000FF000000,
-		r5_rank		   = 0x000000FF00000000,
-		r6_rank		   = 0x0000FF0000000000,
-		r7_rank		   = 0x00FF000000000000,
-		r8_rank		   = 0xFF00000000000000,
-		not_r1_rank    = ~r1_rank,
-		not_r8_rank    = ~r8_rank,
-		a1h8_diagonal  = 0x8040201008040201,
+		a_file = 0x0101010101010101,
+		h_file = 0x8080808080808080,
+		not_a_file = ~a_file,
+		not_h_file = ~h_file,
+		not_ab_file = 0xfcfcfcfcfcfcfcfc,
+		not_gh_file = 0x3f3f3f3f3f3f3f3f,
+		r1_rank = 0x00000000000000FF,
+		r2_rank = 0x000000000000FF00,
+		r3_rank = 0x0000000000FF0000,
+		r4_rank = 0x00000000FF000000,
+		r5_rank = 0x000000FF00000000,
+		r6_rank = 0x0000FF0000000000,
+		r7_rank = 0x00FF000000000000,
+		r8_rank = 0xFF00000000000000,
+		not_r1_rank = ~r1_rank,
+		not_r8_rank = ~r8_rank,
+		a1h8_diagonal = 0x8040201008040201,
 		h1_a8_diagonal = 0x0102040810204080,
-		lsquares       = 0x55AA55AA55AA55AA,
-		dsquares       = 0xAA55AA55AA55AA55,
-		center		   = 0x0000001818000000;
+		lsquares = 0x55AA55AA55AA55AA,
+		dsquares = 0xAA55AA55AA55AA55,
+		center = 0x0000001818000000,
+		board_side[2] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000 };
 
 	constexpr std::array<U64, 8> r_by_index = {
 		r1_rank, r2_rank, r3_rank, r4_rank, r5_rank, r6_rank, r7_rank, r8_rank
@@ -245,17 +246,21 @@ inline constexpr void moveBit(U64& bb, int origin, int target) noexcept {
 }
 
 inline constexpr U64 soutFill(U64 bb) noexcept {
+	bb |= (bb >> 8);
+	bb |= (bb >> 16);
+	bb |= (bb >> 32);
+	return bb;
+}
+
+inline constexpr U64 nortFill(U64 bb) noexcept {
 	bb |= (bb << 8);
 	bb |= (bb << 16);
 	bb |= (bb << 32);
 	return bb;
 }
 
-inline constexpr U64 nortFill(U64 bb) noexcept {
-	bb |= (bb >> 8);
-	bb |= (bb >> 16);
-	bb |= (bb >> 32);
-	return bb;
+inline constexpr U64 fileFill(U64 bb) noexcept {
+	return nortFill(bb) | soutFill(bb);
 }
 
 inline constexpr U64 islandsEastFile(U64 fileset) noexcept {

@@ -22,7 +22,7 @@ namespace Eval {
 	}
 
 	template <enumSide SIDE>
-	int evalPawnStructure() {
+	int spawnScore() {
 		U64 pawns = BBs[nWhitePawn + SIDE];
 		int sq, eval = 0;
 
@@ -47,56 +47,132 @@ namespace Eval {
 				eval += Value::passed_score[sq / 8];
 
 			// if defending...
-			if (PawnAttacks::anyAttackPawn<!SIDE>(bitU64(sq), BBs[nWhitePawn + SIDE])) eval += 3;
+			if (PawnAttacks::anyAttackPawn<!SIDE>(bitU64(sq), BBs[nWhitePawn + SIDE])) eval += 4;
+		}
+
+		return eval;
+	}
+
+	// process pawn structure
+	template <enumSide SIDE>
+	int relativePawnScore() {
+		int p_eval = spawnScore<SIDE>() - spawnScore<!SIDE>();
+
+		// compare pawn islands when endgame
+		if (game_state.gamePhase() == game_state.ENDGAME) {
+			const U64 fileset_own = nortFill(BBs[nWhitePawn + SIDE]) & Constans::r8_rank,
+				fileset_opp = nortFill(BBs[nBlackPawn - SIDE]) & Constans::r8_rank;
+			p_eval += bitCount(islandsEastFile(fileset_own)) <= bitCount(islandsEastFile(fileset_opp)) ? 4 : -4;
+		}
+
+		return p_eval;
+	}
+
+	template <enumSide SIDE, enumPiece PC>
+	auto spcScore(int& c_sq) -> std::enable_if_t<PC == KNIGHT, int> {
+		int sq, eval = 0;
+		U64 k_msk = BBs[nWhiteKnight + SIDE], opp_contr, k_att, t_att = eU64;
+		const U64 opp_p_att = PawnAttacks::anyAttackPawn<!SIDE>(BBs[nBlackPawn - SIDE], UINT64_MAX);
+
+		while (k_msk) {
+			sq = popLS1B(k_msk);
+			eval += Value::position_score[KNIGHT][properSquare<SIDE>(sq)];
+
+			// penalty for squares controled by enemy pawns
+			t_att |= (k_att = attack<KNIGHT>(BBs[nOccupied], sq));
+			opp_contr = k_att & opp_p_att;
+			eval -= 2 * bitCount(opp_contr);
+
+			// outpos check
+			if (bitU64(sq) & 
+				(Constans::board_side[!SIDE] & PawnAttacks::anyAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX
+				& ~opp_p_att)))
+				eval += 15;
+		}
+
+		// mobility: undefended minor pieces and legal moves squares
+		eval -= 2 * bitCount(~t_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
+		c_sq += bitCount(t_att);
+		return eval;
+	}
+
+	template <enumSide SIDE, enumPiece PC>
+	auto spcScore(int& c_sq) -> std::enable_if_t<PC == BISHOP, int> {
+		int sq, eval = 0;
+		U64 b_msk = BBs[nWhiteBishop + SIDE], t_att = eU64;
+
+		// bishop pair bonus
+		eval += (bitCount(b_msk) == 2) * 50;
+
+		while (b_msk) {
+			sq = popLS1B(b_msk);
+			eval += Value::position_score[BISHOP][properSquare<SIDE>(sq)];
+			t_att |= attack<BISHOP>(BBs[nOccupied], sq);
+		}
+
+		eval -= 2 * bitCount(~t_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
+		c_sq += bitCount(t_att & BBs[nEmpty]);
+		return eval;
+	}
+
+	template <enumSide SIDE, enumPiece PC>
+	auto spcScore(int& c_sq) -> std::enable_if_t<PC == ROOK, int> {
+		int sq, eval = 0;
+		U64 r_msk = BBs[nWhiteRook + SIDE], r_att;
+		const U64 open_f = ~fileFill(BBs[nWhitePawn] | BBs[nBlackPawn]);
+
+		while (r_msk) {
+			sq = popLS1B(r_msk);
+			eval += Value::position_score[ROOK][properSquare<SIDE>(sq)];
+			r_att = attack<ROOK>(BBs[nOccupied], sq);
+			c_sq += bitCount(r_att & BBs[nEmpty]);
+
+			// open file and rook connection score
+			if (bitU64(sq) & open_f) eval += 10;
+			if (r_att & BBs[nWhiteRook + SIDE]) eval += 10;
+		}
+
+		return eval;
+	}
+
+	template <enumSide SIDE, enumPiece PC>
+	auto spcScore(int& c_sq) -> std::enable_if_t<PC == QUEEN, int> {
+		int sq, eval = 0;
+		U64 q_msk = BBs[nWhiteQueen + SIDE];
+
+		while (q_msk) {
+			sq = popLS1B(q_msk);
+			eval += Value::position_score[QUEEN][properSquare<SIDE>(sq)];
+			c_sq += bitCount(attack<QUEEN>(BBs[nOccupied], sq) & BBs[nEmpty]);
 		}
 
 		return eval;
 	}
 
 	template <enumSide SIDE>
-	int templEval() {
-		U64 piece_bb;
-		U64 own_lmvs = eU64, opp_lmvs = eU64;
-		int sq;
-
-		// process pawn structure
-		int pos_eval = evalPawnStructure<SIDE>() - evalPawnStructure<!SIDE>();
-
-		// compare pawn islands when endgame
-		if (game_state.gamePhase() == game_state.ENDGAME) {
-			const U64 fileset_own = ~nortFill(BBs[nWhitePawn + SIDE]) & Constans::r8_rank,
-				fileset_opp = ~nortFill(BBs[nBlackPawn - SIDE]) & Constans::r8_rank;
-			pos_eval += bitCount(islandsEastFile(fileset_own)) <= bitCount(islandsEastFile(fileset_opp)) ? 4 : -4;
-		}
-
-		// own position score
-		for (auto piece = nWhiteKnight + SIDE; piece <= nBlackKing; piece += 2) {
-			piece_bb = BBs[piece];
-
-			while (piece_bb) {
-				sq = popLS1B(piece_bb);
-				pos_eval += Value::position_score[_pc_cast[piece]][properSquare<SIDE>(sq)];
-				own_lmvs |= attack(BBs[nOccupied], sq, _pc_cast[piece]);
-			}
-		}
-
-		// opponent position score
-		for (auto piece = nBlackKnight - SIDE; piece <= nBlackKing; piece += 2) {
-			piece_bb = BBs[piece];
-
-			while (piece_bb) {
-				sq = popLS1B(piece_bb);
-				pos_eval -= Value::position_score[_pc_cast[piece]][properSquare<!SIDE>(sq)];
-				opp_lmvs |= attack(BBs[nOccupied], sq, _pc_cast[piece]);
-			}
-		}
-
-		int eval = pos_eval + game_state.material[SIDE] - game_state.material[!SIDE];
-		// pieces mobility
-		eval += 2 * bitCount(own_lmvs & BBs[nEmpty]) / (bitCount(opp_lmvs & BBs[nEmpty]) + 1);
+	int relativeKingScore(int& c_sq1, int& c_sq2) {
+		int sq1, sq2,
+		eval = Value::position_score[KING][properSquare<SIDE>(sq1 = getLS1BIndex(BBs[nWhiteKing + SIDE]))]
+			- Value::position_score[KING][properSquare<!SIDE>(sq2 = getLS1BIndex(BBs[nBlackKing - SIDE]))];
+		c_sq1 += bitCount(attack<KING>(BBs[nOccupied], sq1));
+		c_sq2 += bitCount(attack<KING>(BBs[nOccupied], sq2));
 		return eval;
 	}
 
+	template <enumSide SIDE>
+	int templEval() {
+		int eval = 0, c_sq1 = 0, c_sq2 = 0;
+
+		eval += relativePawnScore<SIDE>();
+		eval += relativeKingScore<SIDE>(c_sq1, c_sq2);
+		eval += spcScore<SIDE, KNIGHT>(c_sq1) - spcScore<!SIDE, KNIGHT>(c_sq2);
+		eval += spcScore<SIDE, BISHOP>(c_sq1) - spcScore<!SIDE, BISHOP>(c_sq2);
+		eval += spcScore<SIDE, ROOK>(c_sq1)   - spcScore<!SIDE, ROOK>(c_sq2);
+		eval += spcScore<SIDE, QUEEN>(c_sq1)  - spcScore<!SIDE, QUEEN>(c_sq2);
+
+		return game_state.material[SIDE] - game_state.material[!SIDE] + eval + 2 * (c_sq1 / (c_sq2 + 1));
+	}
+	
 	template int templEval<WHITE>();
 	template int templEval<BLACK>();
 
