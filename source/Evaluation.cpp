@@ -4,13 +4,13 @@
 #include "MoveOrder.h"
 #include "Zobrist.h"
 #include "Timer.h"
+#include <future>
 
 
 namespace Eval {
 
 	static struct commonEvalData {
 		std::array<int, 2> k_sq;
-		gState::gPhase phase;
 	} common_data;
 
 	template <enumSide SIDE>
@@ -72,12 +72,12 @@ namespace Eval {
 	}
 
 	// process pawn structure
-	template <enumSide SIDE>
+	template <enumSide SIDE, gState::gPhase Phase>
 	int relativePawnScore() {
 		int p_eval = spawnScore<SIDE>() - spawnScore<!SIDE>();
 
 		// compare pawn islands when endgame
-		if (common_data.phase == game_state.ENDGAME) {
+		if (Phase == game_state.ENDGAME) {
 			const U64 fileset_own = nortFill(BBs[nWhitePawn + SIDE]) & Constans::r8_rank,
 				fileset_opp = nortFill(BBs[nBlackPawn - SIDE]) & Constans::r8_rank;
 			p_eval += bitCount(islandsEastFile(fileset_own)) <= bitCount(islandsEastFile(fileset_opp)) ? 4 : -4;
@@ -177,11 +177,11 @@ namespace Eval {
 		return eval;
 	}
 
-	template <enumSide SIDE>
+	template <enumSide SIDE, gState::gPhase Phase>
 	int kingScore() {
 		int eval = 0;
 
-		if (common_data.phase == gState::MIDDLEGAME or common_data.phase == gState::OPENING) {
+		if constexpr (Phase != gState::ENDGAME) {
 			eval = Value::position_score[KING][properSquare<SIDE>(common_data.k_sq[SIDE])];
 
 			// pawn shield score
@@ -199,12 +199,11 @@ namespace Eval {
 		return eval;
 	}
 
-	template <enumSide SIDE>
+	template <enumSide SIDE, gState::gPhase Phase>
 	int templEval() {
 		int eval = 0, c_sq1 = 0, c_sq2 = 0;
 		common_data.k_sq[SIDE] = getLS1BIndex(BBs[nWhiteKing + SIDE]);
 		common_data.k_sq[!SIDE] = getLS1BIndex(BBs[nBlackKing - SIDE]);
-		common_data.phase = game_state.gamePhase();
 
 		const U64 my_pin = pinnedDiagonal<SIDE>(common_data.k_sq[SIDE]) | pinnedHorizonVertic<SIDE>(common_data.k_sq[SIDE]),
 			opp_pin = pinnedDiagonal<!SIDE>(common_data.k_sq[!SIDE]) | pinnedHorizonVertic<!SIDE>(common_data.k_sq[!SIDE]);
@@ -212,8 +211,8 @@ namespace Eval {
 		// pin piece penalty
 		eval -= 2 * (bitCount(BBs[nWhite + SIDE] & my_pin) - bitCount(BBs[nBlack - SIDE] & opp_pin));
 
-		eval += relativePawnScore<SIDE>();
-		eval += kingScore<SIDE>() - kingScore<!SIDE>();
+		eval += relativePawnScore<SIDE, Phase>();
+		eval += kingScore<SIDE, Phase>() - kingScore<!SIDE, Phase>();
 		eval += spcScore<SIDE, KNIGHT>(c_sq1) - spcScore<!SIDE, KNIGHT>(c_sq2);
 		eval += spcScore<SIDE, BISHOP>(c_sq1) - spcScore<!SIDE, BISHOP>(c_sq2);
 		eval += spcScore<SIDE, ROOK>(c_sq1)   - spcScore<!SIDE, ROOK>(c_sq2);
@@ -221,9 +220,21 @@ namespace Eval {
 
 		return game_state.material[SIDE] - game_state.material[!SIDE] + eval + 2 * (c_sq1 / (c_sq2 + 1));
 	}
-	
-	template int templEval<WHITE>();
-	template int templEval<BLACK>();
+
+	// main evaluation system
+	int evaluate() {
+		if (game_state.gamePhase() == gState::OPENING)
+			return game_state.turn == WHITE ? templEval<WHITE, gState::OPENING>() : templEval<BLACK, gState::OPENING>();
+		
+		// score interpolation
+		static constexpr int double_k_val = 2 * Value::KING_VALUE;
+		auto mid_eval = game_state.turn == WHITE ? templEval<WHITE, gState::MIDDLEGAME> : templEval<BLACK, gState::MIDDLEGAME>;
+		auto end_eval = game_state.turn == WHITE ? templEval<WHITE, gState::ENDGAME>    : templEval<BLACK, gState::ENDGAME>;
+
+		const int phase = ((8150 - (game_state.material[0] + game_state.material[1] - double_k_val)) * 256 + 4075) / 8150;
+		std::future<int> mid_sc = std::async(mid_eval), end_sc = std::async(end_eval);
+		return ((mid_sc.get() * (256 - phase)) + (end_sc.get() * phase)) / 256;
+	}
 
 	int qSearch(int alpha, int beta, int ply) {
 		if (time_data.is_time and !(Search::search_results.nodes & Search::time_check_modulo) and !time_data.checkTimeLeft()) {

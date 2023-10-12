@@ -162,15 +162,9 @@ namespace Eval {
 	inline int simple_evaluation() {
 		return Value::PAWN_VALUE * (BBs.count(nWhitePawn + game_state.turn) - BBs.count(nBlackPawn - game_state.turn));
 	}
-	
-	template <enumSide SIDE>
-	int templEval();
 
 	// main evaluation system
-	inline int evaluate() {
-		// setting template parameter so then I won't have to
-		return game_state.turn == WHITE ? templEval<WHITE>() : templEval<BLACK>();
-	}
+	int evaluate();
 
 	// quiescence search - protect from dangerous consequences of horizon effect
 	int qSearch(int alpha, int beta, int Ply);
