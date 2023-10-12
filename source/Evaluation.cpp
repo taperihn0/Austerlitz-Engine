@@ -7,7 +7,24 @@
 
 
 namespace Eval {
-	
+
+	static struct commonEvalData {
+		std::array<int, 2> k_sq;
+		gState::gPhase phase;
+	} common_data;
+
+	template <enumSide SIDE>
+	inline constexpr U64 pshield(U64 bb) {
+		int shift;
+
+		if constexpr (SIDE) shift = Compass::nort;
+		else shift = Compass::sout;
+
+		bb |= (genShift(bb, shift));
+		bb |= (genShift(bb, shift));
+		return bb;
+	}
+
 	template <enumSide SIDE>
 	int properSquare(int square);
 
@@ -25,6 +42,7 @@ namespace Eval {
 	int spawnScore() {
 		U64 pawns = BBs[nWhitePawn + SIDE];
 		int sq, eval = 0;
+		const U64 p_att = PawnAttacks::anyAttackPawn<!SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX);
 
 		while (pawns) {
 			sq = popLS1B(pawns);
@@ -47,7 +65,7 @@ namespace Eval {
 				eval += Value::passed_score[sq / 8];
 
 			// if defending...
-			if (PawnAttacks::anyAttackPawn<!SIDE>(bitU64(sq), BBs[nWhitePawn + SIDE])) eval += 4;
+			if (bitU64(sq) & p_att) eval += 4;
 		}
 
 		return eval;
@@ -59,7 +77,7 @@ namespace Eval {
 		int p_eval = spawnScore<SIDE>() - spawnScore<!SIDE>();
 
 		// compare pawn islands when endgame
-		if (game_state.gamePhase() == game_state.ENDGAME) {
+		if (common_data.phase == game_state.ENDGAME) {
 			const U64 fileset_own = nortFill(BBs[nWhitePawn + SIDE]) & Constans::r8_rank,
 				fileset_opp = nortFill(BBs[nBlackPawn - SIDE]) & Constans::r8_rank;
 			p_eval += bitCount(islandsEastFile(fileset_own)) <= bitCount(islandsEastFile(fileset_opp)) ? 4 : -4;
@@ -108,6 +126,9 @@ namespace Eval {
 			sq = popLS1B(b_msk);
 			eval += Value::position_score[BISHOP][properSquare<SIDE>(sq)];
 			t_att |= attack<BISHOP>(BBs[nOccupied], sq);
+
+			// king tropism score
+			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
 		}
 
 		eval -= 2 * bitCount(~t_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
@@ -127,9 +148,13 @@ namespace Eval {
 			r_att = attack<ROOK>(BBs[nOccupied], sq);
 			c_sq += bitCount(r_att & BBs[nEmpty]);
 
-			// open file and rook connection score
+			// king tropism score
+			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
+
+			// open file score
 			if (bitU64(sq) & open_f) eval += 10;
-			if (r_att & BBs[nWhiteRook + SIDE]) eval += 10;
+			// queen/rook on the same file
+			if (Constans::f_by_index[sq % 8] & (BBs[nBlackQueen - SIDE] | BBs[nWhiteRook + SIDE])) eval += 10;
 		}
 
 		return eval;
@@ -144,27 +169,51 @@ namespace Eval {
 			sq = popLS1B(q_msk);
 			eval += Value::position_score[QUEEN][properSquare<SIDE>(sq)];
 			c_sq += bitCount(attack<QUEEN>(BBs[nOccupied], sq) & BBs[nEmpty]);
+
+			// king tropism score
+			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
 		}
 
 		return eval;
 	}
 
 	template <enumSide SIDE>
-	int relativeKingScore(int& c_sq1, int& c_sq2) {
-		int sq1, sq2,
-		eval = Value::position_score[KING][properSquare<SIDE>(sq1 = getLS1BIndex(BBs[nWhiteKing + SIDE]))]
-			- Value::position_score[KING][properSquare<!SIDE>(sq2 = getLS1BIndex(BBs[nBlackKing - SIDE]))];
-		c_sq1 += bitCount(attack<KING>(BBs[nOccupied], sq1));
-		c_sq2 += bitCount(attack<KING>(BBs[nOccupied], sq2));
+	int kingScore() {
+		int eval = 0;
+
+		if (common_data.phase == gState::MIDDLEGAME or common_data.phase == gState::OPENING) {
+			eval = Value::position_score[KING][properSquare<SIDE>(common_data.k_sq[SIDE])];
+
+			// pawn shield score
+			eval -= 3 * bitCount(attack<KING>(BBs[nOccupied], common_data.k_sq[SIDE])
+				& ~pshield<SIDE>(BBs[nWhitePawn + SIDE]));
+
+			// check castling possibility
+			if ((bitU64(common_data.k_sq[SIDE]) & Constans::king_center[SIDE])
+				and !game_state.castle.checkLegalCastle<SIDE & QUEEN>() and !game_state.castle.checkLegalCastle<SIDE & ROOK>())
+				eval -= 15;
+		}
+		else
+			eval = Value::late_king_score[properSquare<SIDE>(common_data.k_sq[SIDE])];
+
 		return eval;
 	}
 
 	template <enumSide SIDE>
 	int templEval() {
 		int eval = 0, c_sq1 = 0, c_sq2 = 0;
+		common_data.k_sq[SIDE] = getLS1BIndex(BBs[nWhiteKing + SIDE]);
+		common_data.k_sq[!SIDE] = getLS1BIndex(BBs[nBlackKing - SIDE]);
+		common_data.phase = game_state.gamePhase();
+
+		const U64 my_pin = pinnedDiagonal<SIDE>(common_data.k_sq[SIDE]) | pinnedHorizonVertic<SIDE>(common_data.k_sq[SIDE]),
+			opp_pin = pinnedDiagonal<!SIDE>(common_data.k_sq[!SIDE]) | pinnedHorizonVertic<!SIDE>(common_data.k_sq[!SIDE]);
+
+		// pin piece penalty
+		eval -= 2 * (bitCount(BBs[nWhite + SIDE] & my_pin) - bitCount(BBs[nBlack - SIDE] & opp_pin));
 
 		eval += relativePawnScore<SIDE>();
-		eval += relativeKingScore<SIDE>(c_sq1, c_sq2);
+		eval += kingScore<SIDE>() - kingScore<!SIDE>();
 		eval += spcScore<SIDE, KNIGHT>(c_sq1) - spcScore<!SIDE, KNIGHT>(c_sq2);
 		eval += spcScore<SIDE, BISHOP>(c_sq1) - spcScore<!SIDE, BISHOP>(c_sq2);
 		eval += spcScore<SIDE, ROOK>(c_sq1)   - spcScore<!SIDE, ROOK>(c_sq2);

@@ -121,7 +121,8 @@ namespace Constans {
 		lsquares = 0x55AA55AA55AA55AA,
 		dsquares = 0xAA55AA55AA55AA55,
 		center = 0x0000001818000000,
-		board_side[2] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000 };
+		board_side[2] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000 },
+		king_center[2] = { 0x0000000000001C1C, 0x1C1C000000000000 };
 
 	constexpr std::array<U64, 8> r_by_index = {
 		r1_rank, r2_rank, r3_rank, r4_rank, r5_rank, r6_rank, r7_rank, r8_rank
@@ -261,6 +262,13 @@ inline constexpr U64 nortFill(U64 bb) noexcept {
 
 inline constexpr U64 fileFill(U64 bb) noexcept {
 	return nortFill(bb) | soutFill(bb);
+}
+
+template <enumSide SIDE>
+inline constexpr U64 rearspan(U64 bb) noexcept {
+	if constexpr (SIDE)
+		return nortFill(bb);
+	return soutFill(bb);
 }
 
 inline constexpr U64 islandsEastFile(U64 fileset) noexcept {

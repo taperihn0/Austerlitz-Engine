@@ -127,6 +127,17 @@ namespace Eval {
 			 20, 30, 10,  0,  0, 10, 30, 20
 		};
 
+		constexpr posScoreTab late_king_score = {
+			-74, -35, -18, -18, -11,  15,   4, -17,
+			-12,  17,  14,  17,  17,  38,  23,  11,
+			10,  17,  23,  15,  20,  45,  44,  13,
+			-8,  22,  24,  27,  26,  33,  26,   3,
+			-18,  -4,  21,  24,  27,  23,   9, -11,
+			-19,  -3,  11,  21,  23,  16,   7,  -9,
+			-27, -11,   4,  13,  14,   4,  -5, -17,
+			-53, -34, -21, -11, -28, -14, -24, -43
+		};
+
 		// easily aggregated lookups
 		using aggregateScoreTab = std::array<posScoreTab, 6>;
 		constexpr aggregateScoreTab position_score = {
@@ -137,6 +148,11 @@ namespace Eval {
 			queen_score,
 			king_score
 		};
+		
+		constexpr auto distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
+			const int d = cexpr::abs(i % 8 - j % 8) + cexpr::abs(i / 8 - j / 8);
+			return 14 - d;
+		});
 
 		using passedPawnTab = std::array<int, 7>;
 		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };

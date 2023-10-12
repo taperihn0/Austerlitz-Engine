@@ -40,5 +40,4 @@ int main(int argc, char* argv[]) {
 	InitState::initMAttacksTables();
 	tt.clear();
 	UCI_o.goLoop(argc, argv);
-	//printBitBoard(Eval::LookUp::n_file.get(a4));
 }
