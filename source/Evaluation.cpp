@@ -4,7 +4,6 @@
 #include "MoveOrder.h"
 #include "Zobrist.h"
 #include "Timer.h"
-#include <future>
 
 
 namespace Eval {
@@ -202,9 +201,6 @@ namespace Eval {
 	template <enumSide SIDE, gState::gPhase Phase>
 	int templEval() {
 		int eval = 0, c_sq1 = 0, c_sq2 = 0;
-		common_data.k_sq[SIDE] = getLS1BIndex(BBs[nWhiteKing + SIDE]);
-		common_data.k_sq[!SIDE] = getLS1BIndex(BBs[nBlackKing - SIDE]);
-
 		const U64 my_pin = pinnedDiagonal<SIDE>(common_data.k_sq[SIDE]) | pinnedHorizonVertic<SIDE>(common_data.k_sq[SIDE]),
 			opp_pin = pinnedDiagonal<!SIDE>(common_data.k_sq[!SIDE]) | pinnedHorizonVertic<!SIDE>(common_data.k_sq[!SIDE]);
 
@@ -219,21 +215,26 @@ namespace Eval {
 		eval += spcScore<SIDE, QUEEN>(c_sq1)  - spcScore<!SIDE, QUEEN>(c_sq2);
 
 		return game_state.material[SIDE] - game_state.material[!SIDE] + eval + 2 * (c_sq1 / (c_sq2 + 1));
+	} 
+
+	template <gState::gPhase Phase>
+	inline int sideEval(enumSide side) {
+		return game_state.turn == WHITE ? templEval<WHITE, Phase>() : templEval<BLACK, Phase>();
 	}
 
 	// main evaluation system
 	int evaluate() {
+		common_data.k_sq[game_state.turn] = getLS1BIndex(BBs[nWhiteKing + game_state.turn]);
+		common_data.k_sq[!game_state.turn] = getLS1BIndex(BBs[nBlackKing - game_state.turn]);
+
 		if (game_state.gamePhase() == gState::OPENING)
-			return game_state.turn == WHITE ? templEval<WHITE, gState::OPENING>() : templEval<BLACK, gState::OPENING>();
-		
+			return sideEval<gState::OPENING>(game_state.turn);
+
 		// score interpolation
 		static constexpr int double_k_val = 2 * Value::KING_VALUE;
-		auto mid_eval = game_state.turn == WHITE ? templEval<WHITE, gState::MIDDLEGAME> : templEval<BLACK, gState::MIDDLEGAME>;
-		auto end_eval = game_state.turn == WHITE ? templEval<WHITE, gState::ENDGAME>    : templEval<BLACK, gState::ENDGAME>;
-
 		const int phase = ((8150 - (game_state.material[0] + game_state.material[1] - double_k_val)) * 256 + 4075) / 8150;
-		std::future<int> mid_sc = std::async(mid_eval), end_sc = std::async(end_eval);
-		return ((mid_sc.get() * (256 - phase)) + (end_sc.get() * phase)) / 256;
+
+		return ((sideEval<gState::MIDDLEGAME>(game_state.turn) * (256 - phase)) + (sideEval<gState::ENDGAME>(game_state.turn) * phase)) / 256;
 	}
 
 	int qSearch(int alpha, int beta, int ply) {
