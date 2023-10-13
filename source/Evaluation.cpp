@@ -10,6 +10,7 @@ namespace Eval {
 
 	static struct commonEvalData {
 		std::array<int, 2> k_sq;
+		int pawn_count;
 	} common_data;
 
 	template <enumSide SIDE>
@@ -37,7 +38,7 @@ namespace Eval {
 		return square;
 	}
 
-	template <enumSide SIDE>
+	template <enumSide SIDE, gState::gPhase Phase>
 	int spawnScore() {
 		U64 pawns = BBs[nWhitePawn + SIDE];
 		int sq, eval = 0;
@@ -45,7 +46,7 @@ namespace Eval {
 
 		while (pawns) {
 			sq = popLS1B(pawns);
-			eval += Value::position_score[PAWN][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][PAWN][properSquare<SIDE>(sq)];
 
 			// if backward pawn...
 			if (!(LookUp::back_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) {
@@ -73,7 +74,7 @@ namespace Eval {
 	// process pawn structure
 	template <enumSide SIDE, gState::gPhase Phase>
 	int relativePawnScore() {
-		int p_eval = spawnScore<SIDE>() - spawnScore<!SIDE>();
+		int p_eval = spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
 
 		// compare pawn islands when endgame
 		if (Phase == game_state.ENDGAME) {
@@ -85,7 +86,7 @@ namespace Eval {
 		return p_eval;
 	}
 
-	template <enumSide SIDE, enumPiece PC>
+	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == KNIGHT, int> {
 		int sq, eval = 0;
 		U64 k_msk = BBs[nWhiteKnight + SIDE], opp_contr, k_att, t_att = eU64;
@@ -93,7 +94,7 @@ namespace Eval {
 
 		while (k_msk) {
 			sq = popLS1B(k_msk);
-			eval += Value::position_score[KNIGHT][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][KNIGHT][properSquare<SIDE>(sq)];
 
 			// penalty for squares controled by enemy pawns
 			t_att |= (k_att = attack<KNIGHT>(BBs[nOccupied], sq));
@@ -105,6 +106,8 @@ namespace Eval {
 				(Constans::board_side[!SIDE] & PawnAttacks::anyAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX
 				& ~opp_p_att)))
 				eval += 15;
+
+			eval += common_data.pawn_count;
 		}
 
 		// mobility: undefended minor pieces and legal moves squares
@@ -113,7 +116,7 @@ namespace Eval {
 		return eval;
 	}
 
-	template <enumSide SIDE, enumPiece PC>
+	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == BISHOP, int> {
 		int sq, eval = 0;
 		U64 b_msk = BBs[nWhiteBishop + SIDE], t_att = eU64;
@@ -123,11 +126,12 @@ namespace Eval {
 
 		while (b_msk) {
 			sq = popLS1B(b_msk);
-			eval += Value::position_score[BISHOP][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][BISHOP][properSquare<SIDE>(sq)];
 			t_att |= attack<BISHOP>(BBs[nOccupied], sq);
 
 			// king tropism score
 			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
+			eval -= common_data.pawn_count;
 		}
 
 		eval -= 2 * bitCount(~t_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
@@ -135,7 +139,7 @@ namespace Eval {
 		return eval;
 	}
 
-	template <enumSide SIDE, enumPiece PC>
+	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == ROOK, int> {
 		int sq, eval = 0;
 		U64 r_msk = BBs[nWhiteRook + SIDE], r_att;
@@ -143,7 +147,7 @@ namespace Eval {
 
 		while (r_msk) {
 			sq = popLS1B(r_msk);
-			eval += Value::position_score[ROOK][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][ROOK][properSquare<SIDE>(sq)];
 			r_att = attack<ROOK>(BBs[nOccupied], sq);
 			c_sq += bitCount(r_att & BBs[nEmpty]);
 
@@ -154,23 +158,28 @@ namespace Eval {
 			if (bitU64(sq) & open_f) eval += 10;
 			// queen/rook on the same file
 			if (Constans::f_by_index[sq % 8] & (BBs[nBlackQueen - SIDE] | BBs[nWhiteRook + SIDE])) eval += 10;
+
+			eval -= common_data.pawn_count;
 		}
 
 		return eval;
 	}
 
-	template <enumSide SIDE, enumPiece PC>
+	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == QUEEN, int> {
 		int sq, eval = 0;
 		U64 q_msk = BBs[nWhiteQueen + SIDE];
 
 		while (q_msk) {
 			sq = popLS1B(q_msk);
-			eval += Value::position_score[QUEEN][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][QUEEN][properSquare<SIDE>(sq)];
 			c_sq += bitCount(attack<QUEEN>(BBs[nOccupied], sq) & BBs[nEmpty]);
 
 			// king tropism score
 			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
+
+			if constexpr (Phase == gState::OPENING)
+				eval += Value::queen_ban_dev[sq];
 		}
 
 		return eval;
@@ -181,7 +190,7 @@ namespace Eval {
 		int eval = 0;
 
 		if constexpr (Phase != gState::ENDGAME) {
-			eval = Value::position_score[KING][properSquare<SIDE>(common_data.k_sq[SIDE])];
+			eval = Value::king_score[properSquare<SIDE>(common_data.k_sq[SIDE])];
 
 			// pawn shield score
 			eval -= 3 * bitCount(attack<KING>(BBs[nOccupied], common_data.k_sq[SIDE])
@@ -209,10 +218,10 @@ namespace Eval {
 
 		eval += relativePawnScore<SIDE, Phase>();
 		eval += kingScore<SIDE, Phase>() - kingScore<!SIDE, Phase>();
-		eval += spcScore<SIDE, KNIGHT>(c_sq1) - spcScore<!SIDE, KNIGHT>(c_sq2);
-		eval += spcScore<SIDE, BISHOP>(c_sq1) - spcScore<!SIDE, BISHOP>(c_sq2);
-		eval += spcScore<SIDE, ROOK>(c_sq1)   - spcScore<!SIDE, ROOK>(c_sq2);
-		eval += spcScore<SIDE, QUEEN>(c_sq1)  - spcScore<!SIDE, QUEEN>(c_sq2);
+		eval += spcScore<SIDE, KNIGHT, Phase>(c_sq1) - spcScore<!SIDE, KNIGHT, Phase>(c_sq2);
+		eval += spcScore<SIDE, BISHOP, Phase>(c_sq1) - spcScore<!SIDE, BISHOP, Phase>(c_sq2);
+		eval += spcScore<SIDE, ROOK, Phase>(c_sq1)   -spcScore<!SIDE, ROOK, Phase>(c_sq2);
+		eval += spcScore<SIDE, QUEEN, Phase>(c_sq1)  - spcScore<!SIDE, QUEEN, Phase>(c_sq2);
 
 		return game_state.material[SIDE] - game_state.material[!SIDE] + eval + 2 * (c_sq1 / (c_sq2 + 1));
 	} 
@@ -226,6 +235,7 @@ namespace Eval {
 	int evaluate() {
 		common_data.k_sq[game_state.turn] = getLS1BIndex(BBs[nWhiteKing + game_state.turn]);
 		common_data.k_sq[!game_state.turn] = getLS1BIndex(BBs[nBlackKing - game_state.turn]);
+		common_data.pawn_count = bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
 
 		if (game_state.gamePhase() == gState::OPENING)
 			return sideEval<gState::OPENING>(game_state.turn);

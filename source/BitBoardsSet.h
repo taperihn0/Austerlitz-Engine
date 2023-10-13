@@ -71,7 +71,7 @@ struct gState {
 		end_game_score = 2 * (1350 + 10000),
 		middle_game_score = 25600;
 
-	enum gPhase { OPENING, MIDDLEGAME, ENDGAME };
+	enum gPhase { MIDDLEGAME = 0, ENDGAME, OPENING };
 
 	inline bool is50moveDraw() noexcept {
 		return halfmove >= max_move_rule;
@@ -80,8 +80,7 @@ struct gState {
 	inline gPhase gamePhase() noexcept {
 		const int total_mat = material[0] + material[1];
 		return total_mat < end_game_score ? ENDGAME :
-			fullmove > 10 or total_mat <= middle_game_score or !castle.raw() ? MIDDLEGAME :
-			OPENING;
+			fullmove > 10 or total_mat <= middle_game_score or !castle.raw() ? MIDDLEGAME : OPENING;
 	}
 
 	int ep_sq;

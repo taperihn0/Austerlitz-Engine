@@ -122,7 +122,8 @@ namespace Constans {
 		dsquares = 0xAA55AA55AA55AA55,
 		center = 0x0000001818000000,
 		board_side[2] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000 },
-		king_center[2] = { 0x0000000000001C1C, 0x1C1C000000000000 };
+		king_center[2] = { 0x0000000000001C1C, 0x1C1C000000000000 },
+		ban_dev_sq[2] = { 0xFFFFFFFFFFFFFF00, 0x00FFFFFFFFFFFFFF };
 
 	constexpr std::array<U64, 8> r_by_index = {
 		r1_rank, r2_rank, r3_rank, r4_rank, r5_rank, r6_rank, r7_rank, r8_rank
