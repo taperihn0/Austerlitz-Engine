@@ -142,6 +142,12 @@ namespace {
 				| PawnAttacks::westAttackPawn<SIDE>(pawns, opp_occ);
 		}
 
+		template <enumSide SIDE>
+		inline U64 bothAttackPawn(U64 pawns, U64 opp) {
+			return PawnAttacks::eastAttackPawn<SIDE>(pawns, opp)
+				& PawnAttacks::westAttackPawn<SIDE>(pawns, opp);
+		}
+
 		template <>
 		inline U64 eastAttackPawn<WHITE>(U64 pawns, U64 opp_occ) {
 			return noEaOne(pawns) & opp_occ;

@@ -40,6 +40,6 @@ int main(int argc, char* argv[]) {
 	InitState::clearButterfly();
 	InitState::initMAttacksTables();
 	tt.clear();
-	//sp_eval_tt.clear();
+	sp_eval_tt.clear();
 	UCI_o.goLoop(argc, argv);
 }

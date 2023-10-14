@@ -275,3 +275,13 @@ inline constexpr U64 rearspan(U64 bb) noexcept {
 inline constexpr U64 islandsEastFile(U64 fileset) noexcept {
 	return fileset ^ (fileset & (fileset >> 1));
 }
+
+namespace islandCountLookUp {
+	auto lookup = cexpr::CexprArr<false, int, 256>([](U64 i) {
+		return bitCount(i);
+	});
+}
+
+inline constexpr int islandCount(U64 bb) {
+	return islandCountLookUp::lookup.get(static_cast<int>(bb));
+}

@@ -86,7 +86,7 @@ void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag,
 }
 
 
-int PawnEvalTable::read(int alpha, int beta) {
+int PawnEvalTable::read() {
 	const auto& entry = htab[hash.key % hash_size];
 
 	// unmatching zobrist key (key collision)

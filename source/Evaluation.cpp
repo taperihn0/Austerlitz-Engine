@@ -26,16 +26,15 @@ namespace Eval {
 	}
 
 	template <enumSide SIDE>
-	int properSquare(int square);
-
-	template <>
-	inline int properSquare<WHITE>(int square) {
+	int properSquare(int square) {
+		if constexpr (SIDE) return square;
 		return mirrored_square[square];
 	}
 
-	template <>
-	inline int properSquare<BLACK>(int square) {
-		return square;
+	template <enumSide SIDE>
+	int flipRank(int sq) {
+		if constexpr (SIDE) return 7 - (sq / 8);
+		return sq / 8;
 	}
 
 	template <enumSide SIDE, gState::gPhase Phase>
@@ -62,39 +61,37 @@ namespace Eval {
 			if (!(LookUp::sf_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) eval -= 10;
 			// if passed pawn...
 			else if (!((LookUp::nf_file.get(SIDE, sq) | LookUp::sf_file.get(SIDE, sq)) & BBs[nBlackPawn - SIDE])) 
-				eval += Value::passed_score[sq / 8];
+				eval += Value::passed_score[flipRank<SIDE>(sq)];
 
 			// if defending...
 			if (bitU64(sq) & p_att) eval += 4;
 		}
 
+		// candidate pawns
+		static constexpr auto pawn_shift = std::make_tuple(nortOne, soutOne);
+		const U64
+			att = PawnAttacks::bothAttackPawn<!SIDE>(BBs[nBlackPawn - SIDE], BBs[nWhitePawn + SIDE] | std::get<SIDE>(pawn_shift)(BBs[nWhitePawn + SIDE])),
+			helper = PawnAttacks::bothAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], BBs[nWhitePawn + SIDE] | std::get<SIDE>(pawn_shift)(BBs[nWhitePawn + SIDE]));
+		eval += 5 * bitCount(helper & ~att);
 		return eval;
 	}
 
 	// process pawn structure
 	template <enumSide SIDE, gState::gPhase Phase>
 	int relativePawnScore() {
+		
+		static int tt_score;
+		if (HashEntry::isValid(tt_score = sp_eval_tt.read()))
+			return tt_score;
+		
 		int p_eval = spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
 
-		/*
-		static int tt_score;
-		if (HashEntry::isValid(tt_score = sp_eval_tt.read(alpha, beta))) {
-			if constexpr (Phase != gState::ENDGAME) return tt_score;
-			else p_eval = tt_score;
-		}
-		else {
-			p_eval = spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
-			sp_eval_tt.write(p_eval);
-		}
-		*/
+		// pawn islands
+		const U64 fileset_own = soutFill(BBs[nWhitePawn + SIDE]) & Constans::r1_rank,
+			fileset_opp = soutFill(BBs[nBlackPawn - SIDE]) & Constans::r1_rank;
+		p_eval += islandCount(fileset_own) <= islandCount(fileset_opp) ? 4 : -4;
 
-		// compare pawn islands when endgame
-		if constexpr (Phase == gState::ENDGAME) {
-			const U64 fileset_own = nortFill(BBs[nWhitePawn + SIDE]) & Constans::r8_rank,
-				fileset_opp = nortFill(BBs[nBlackPawn - SIDE]) & Constans::r8_rank;
-			p_eval += bitCount(islandsEastFile(fileset_own)) <= bitCount(islandsEastFile(fileset_opp)) ? 4 : -4;
-		}
-
+		sp_eval_tt.write(p_eval);
 		return p_eval;
 	}
 
@@ -155,7 +152,7 @@ namespace Eval {
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == ROOK, int> {
 		int sq, eval = 0;
 		U64 r_msk = BBs[nWhiteRook + SIDE], r_att;
-		const U64 open_f = ~fileFill(BBs[nWhitePawn] | BBs[nBlackPawn]);
+		const U64 open_f = ~fileFill(BBs[nWhitePawn + SIDE]);
 
 		while (r_msk) {
 			sq = popLS1B(r_msk);
@@ -231,7 +228,7 @@ namespace Eval {
 		const int material_sc = game_state.material[SIDE] - game_state.material[!SIDE];
 
 		if constexpr (Phase == gState::OPENING) {
-			static constexpr int lazy_margin_op = 295;
+			static constexpr int lazy_margin_op = 415; //400 355 340 325 295
 
 			if (material_sc - lazy_margin_op >= beta)
 				return beta;
@@ -239,11 +236,13 @@ namespace Eval {
 				return alpha;
 		}
 		else if constexpr (Phase == gState::ENDGAME) {
-			static constexpr int lazy_margin_ed = 275;
+			static constexpr int lazy_margin_ed = 390; //370 320 310 290 275
 			
-			if (((common_data.mid_score * (256 - common_data.phase)) + ((material_sc - lazy_margin_ed) * common_data.phase)) / 256 >= beta)
+			if (((common_data.mid_score * (256 - common_data.phase)) 
+				+ ((material_sc - lazy_margin_ed) * common_data.phase)) / 256 >= beta)
 				return beta;
-			else if (((common_data.mid_score * (256 - common_data.phase)) + ((material_sc + lazy_margin_ed) * common_data.phase)) / 256 <= alpha)
+			else if (((common_data.mid_score * (256 - common_data.phase)) 
+				+ ((material_sc + lazy_margin_ed) * common_data.phase)) / 256 <= alpha)
 				return alpha;
 		}
 

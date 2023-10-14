@@ -116,7 +116,7 @@ public:
 	static constexpr PawnEvalEntry empty_entry = { 0, HashEntry::no_score };
 	PawnEvalTable() = default;
 
-	int read(int alpha, int beta);
+	int read();
 	void write(int g_score);
 
 	inline void clear() {
