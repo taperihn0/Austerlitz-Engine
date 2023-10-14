@@ -87,7 +87,7 @@ namespace Search {
 			if (i > 1 and mcount >= 8 and !move.getMask<MoveItem::iMask::CAPTURE_F>()
 				and depth == 1 and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
 				and beta < -mate_comp and alpha > mate_comp
-				and Eval::evaluate() + margin <= alpha) {
+				and Eval::evaluate(alpha - margin, INT_MAX) <= alpha) {
 				return alpha;
 			}
 

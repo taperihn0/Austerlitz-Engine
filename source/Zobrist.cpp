@@ -46,12 +46,12 @@ void Zobrist::generateKey() {
 }
 
 
-int TranspositionTable::read(int alpha, int beta, int _depth, int ply) {
+int TranspositionTable::read(int alpha, int beta, int g_depth, int ply) {
 	const auto& entry = htab[hash.key % hash_size];
 
 	// unmatching zobrist key (key collision) or unproper depth of an entry
-	if (entry.zobrist != hash.key or entry.depth < _depth)
-		return no_score;
+	if (entry.zobrist != hash.key or entry.depth < g_depth)
+		return HashEntry::no_score;
 
 	// 'extract' relative checkmate path from current node
 	const int res =
@@ -62,26 +62,42 @@ int TranspositionTable::read(int alpha, int beta, int _depth, int ply) {
 	case HashEntry::Flag::HASH_EXACT:
 		return res;
 	case HashEntry::Flag::HASH_ALPHA:
-		return (res <= alpha) ? res : no_score;
+		return (res <= alpha) ? res : HashEntry::no_score;
 	case HashEntry::Flag::HASH_BETA:
-		return (res >= beta) ? res : no_score;
+		return (res >= beta) ? res : HashEntry::no_score;
 	default: break;
 	}
 
-	return no_score;
+	return HashEntry::no_score;
 }
 
 
-void TranspositionTable::write(int _depth, int _score, HashEntry::Flag _flag, int ply) {
+void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply) {
 	auto& entry = htab[hash.key % hash_size];
 	entry.zobrist = hash.key;
 
 	// set original path to checkmate
-	if (_score < Search::mate_comp) _score -= ply;
-	else if (_score > -Search::mate_comp) _score += ply;
+	if (g_score < Search::mate_comp) g_score -= ply;
+	else if (g_score > -Search::mate_comp) g_score += ply;
 
-	entry.score = _score;
-	entry.flag = _flag;
-	entry.depth = _depth;
+	entry.score = g_score;
+	entry.flag = g_flag;
+	entry.depth = g_depth;
 }
 
+
+int PawnEvalTable::read(int alpha, int beta) {
+	const auto& entry = htab[hash.key % hash_size];
+
+	// unmatching zobrist key (key collision)
+	if (entry.zobrist != hash.key)
+		return HashEntry::no_score;
+	return entry.eval;
+}
+
+
+void PawnEvalTable::write(int g_score) {
+	auto& entry = htab[hash.key % hash_size];
+	entry.zobrist = hash.key;
+	entry.eval = g_score;
+}

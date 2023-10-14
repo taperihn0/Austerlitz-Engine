@@ -32,6 +32,7 @@ PV::linePV PV::pv_line;
 Zobrist hash;
 TranspositionTable tt;
 RepetitionTable rep_tt;
+PawnEvalTable sp_eval_tt;
 
 Time time_data;
 
@@ -39,5 +40,6 @@ int main(int argc, char* argv[]) {
 	InitState::clearButterfly();
 	InitState::initMAttacksTables();
 	tt.clear();
+	//sp_eval_tt.clear();
 	UCI_o.goLoop(argc, argv);
 }

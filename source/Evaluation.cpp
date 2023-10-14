@@ -10,7 +10,7 @@ namespace Eval {
 
 	static struct commonEvalData {
 		std::array<int, 2> k_sq;
-		int pawn_count;
+		int pawn_count, phase, mid_score;
 	} common_data;
 
 	template <enumSide SIDE>
@@ -76,8 +76,20 @@ namespace Eval {
 	int relativePawnScore() {
 		int p_eval = spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
 
+		/*
+		static int tt_score;
+		if (HashEntry::isValid(tt_score = sp_eval_tt.read(alpha, beta))) {
+			if constexpr (Phase != gState::ENDGAME) return tt_score;
+			else p_eval = tt_score;
+		}
+		else {
+			p_eval = spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
+			sp_eval_tt.write(p_eval);
+		}
+		*/
+
 		// compare pawn islands when endgame
-		if (Phase == game_state.ENDGAME) {
+		if constexpr (Phase == gState::ENDGAME) {
 			const U64 fileset_own = nortFill(BBs[nWhitePawn + SIDE]) & Constans::r8_rank,
 				fileset_opp = nortFill(BBs[nBlackPawn - SIDE]) & Constans::r8_rank;
 			p_eval += bitCount(islandsEastFile(fileset_own)) <= bitCount(islandsEastFile(fileset_opp)) ? 4 : -4;
@@ -208,7 +220,33 @@ namespace Eval {
 	}
 
 	template <enumSide SIDE, gState::gPhase Phase>
-	int templEval() {
+	int templEval(int alpha, int beta) {
+		
+		/* 
+			lazy evaluation :
+		     lower margin  - slower eval, but increased accuracy;
+		     higher margin - faster eval, but reduced accuracy;
+		*/
+
+		const int material_sc = game_state.material[SIDE] - game_state.material[!SIDE];
+
+		if constexpr (Phase == gState::OPENING) {
+			static constexpr int lazy_margin_op = 295;
+
+			if (material_sc - lazy_margin_op >= beta)
+				return beta;
+			else if (material_sc + lazy_margin_op <= alpha)
+				return alpha;
+		}
+		else if constexpr (Phase == gState::ENDGAME) {
+			static constexpr int lazy_margin_ed = 275;
+			
+			if (((common_data.mid_score * (256 - common_data.phase)) + ((material_sc - lazy_margin_ed) * common_data.phase)) / 256 >= beta)
+				return beta;
+			else if (((common_data.mid_score * (256 - common_data.phase)) + ((material_sc + lazy_margin_ed) * common_data.phase)) / 256 <= alpha)
+				return alpha;
+		}
+
 		int eval = 0, c_sq1 = 0, c_sq2 = 0;
 		const U64 my_pin = pinnedDiagonal<SIDE>(common_data.k_sq[SIDE]) | pinnedHorizonVertic<SIDE>(common_data.k_sq[SIDE]),
 			opp_pin = pinnedDiagonal<!SIDE>(common_data.k_sq[!SIDE]) | pinnedHorizonVertic<!SIDE>(common_data.k_sq[!SIDE]);
@@ -220,31 +258,36 @@ namespace Eval {
 		eval += kingScore<SIDE, Phase>() - kingScore<!SIDE, Phase>();
 		eval += spcScore<SIDE, KNIGHT, Phase>(c_sq1) - spcScore<!SIDE, KNIGHT, Phase>(c_sq2);
 		eval += spcScore<SIDE, BISHOP, Phase>(c_sq1) - spcScore<!SIDE, BISHOP, Phase>(c_sq2);
-		eval += spcScore<SIDE, ROOK, Phase>(c_sq1)   -spcScore<!SIDE, ROOK, Phase>(c_sq2);
+		eval += spcScore<SIDE, ROOK, Phase>(c_sq1)   - spcScore<!SIDE, ROOK, Phase>(c_sq2);
 		eval += spcScore<SIDE, QUEEN, Phase>(c_sq1)  - spcScore<!SIDE, QUEEN, Phase>(c_sq2);
 
-		return game_state.material[SIDE] - game_state.material[!SIDE] + eval + 2 * (c_sq1 / (c_sq2 + 1));
+		return material_sc + eval + 2 * (c_sq1 / (c_sq2 + 1));
 	} 
 
 	template <gState::gPhase Phase>
-	inline int sideEval(enumSide side) {
-		return game_state.turn == WHITE ? templEval<WHITE, Phase>() : templEval<BLACK, Phase>();
+	inline int sideEval(enumSide side, int alpha, int beta) {
+		return game_state.turn == WHITE ? templEval<WHITE, Phase>(alpha, beta) : templEval<BLACK, Phase>(alpha, beta);
 	}
 
 	// main evaluation system
-	int evaluate() {
+	int evaluate(int alpha, int beta) {
 		common_data.k_sq[game_state.turn] = getLS1BIndex(BBs[nWhiteKing + game_state.turn]);
 		common_data.k_sq[!game_state.turn] = getLS1BIndex(BBs[nBlackKing - game_state.turn]);
 		common_data.pawn_count = bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
 
 		if (game_state.gamePhase() == gState::OPENING)
-			return sideEval<gState::OPENING>(game_state.turn);
+			return sideEval<gState::OPENING>(game_state.turn, alpha, beta);
 
 		// score interpolation
 		static constexpr int double_k_val = 2 * Value::KING_VALUE;
-		const int phase = ((8150 - (game_state.material[0] + game_state.material[1] - double_k_val)) * 256 + 4075) / 8150;
+		common_data.phase = ((8150 - (game_state.material[0] + game_state.material[1] - double_k_val)) * 256 + 4075) / 8150;
 
-		return ((sideEval<gState::MIDDLEGAME>(game_state.turn) * (256 - phase)) + (sideEval<gState::ENDGAME>(game_state.turn) * phase)) / 256;
+		common_data.mid_score = sideEval<gState::MIDDLEGAME>(game_state.turn, alpha, beta);
+		const int end_score = sideEval<gState::ENDGAME>(game_state.turn, alpha, beta);
+
+		if (end_score >= beta) return beta;
+		else if (end_score <= alpha) return alpha;
+		return ((common_data.mid_score * (256 - common_data.phase)) + (end_score * common_data.phase)) / 256;
 	}
 
 	int qSearch(int alpha, int beta, int ply) {
@@ -253,12 +296,12 @@ namespace Eval {
 			return Search::time_stop_sign;
 		}
 
-		const int eval = evaluate();
+		const int eval = evaluate(INT_MIN, beta);
 		Search::search_results.nodes++;
 
 		if (eval >= beta) return beta;
 		else if (game_state.gamePhase() != game_state.ENDGAME and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
-			and eval + Eval::Value::QUEEN_VALUE < alpha)
+			and eval + Eval::Value::QUEEN_VALUE <= alpha)
 			return alpha;
 		alpha = std::max(alpha, eval);
 
@@ -272,7 +315,6 @@ namespace Eval {
 		// capture ordering
 		Order::sort(capt_list, ply);
 
-		//for (const auto& capt : capt_list) {
 		for (const auto& move : capt_list) {
 			MovePerform::makeMove(move);
 

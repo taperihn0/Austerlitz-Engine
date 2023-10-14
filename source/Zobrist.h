@@ -2,7 +2,7 @@
 
 #include "BitBoard.h"
 #include "GeneratingMagics.h"
-#include "functional"
+#include "BitBoardsSet.h"
 
 
 struct Zobrist {
@@ -24,8 +24,10 @@ struct Zobrist {
 // forward declaration
 extern Zobrist hash;
 
+
 // single entry in hash table structure
 struct HashEntry {
+	static constexpr int no_score = std::numeric_limits<int>::min();
 
 	// hashing flags
 	enum class Flag {
@@ -34,7 +36,7 @@ struct HashEntry {
 		HASH_BETA
 	};
 
-	static inline bool isValid(int _score) noexcept;
+	static inline bool isValid(int g_score) noexcept;
 
 	U64 zobrist;
 	int depth;
@@ -47,26 +49,26 @@ struct HashEntry {
 class TranspositionTable {
 public:
 	static constexpr size_t hash_size = 0x400000;
-	static constexpr int no_score = std::numeric_limits<int>::min();
-	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, no_score };
+	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, HashEntry::no_score };
 	TranspositionTable() = default;
 
-	int read(int alpha, int beta, int _depth, int ply);
-	void write(int _depth, int _score, HashEntry::Flag _flag, int ply);
-	void clear();
+	int read(int alpha, int beta, int g_depth, int ply);
+	void write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply);
+
+	inline void clear() {
+		std::fill(htab.data(), htab.data() + htab.size(), empty_entry);
+	}
+
 private:
 	std::array<HashEntry, hash_size> htab;
 };
 
 extern TranspositionTable tt;
 
-inline void TranspositionTable::clear() {
-	std::memset(htab.data(), no_score, sizeof(HashEntry) * hash_size);
+inline bool HashEntry::isValid(int g_score) noexcept {
+	return g_score != no_score;
 }
 
-inline bool HashEntry::isValid(int _score) noexcept {
-	return _score != TranspositionTable::no_score;
-}
 
 // list of keys of last positions
 class RepetitionTable {
@@ -76,7 +78,10 @@ public:
 
 	bool isRepetition();
 	void posRegister() noexcept;
-	void clear() noexcept;
+
+	inline void clear() noexcept {
+		count = 0;
+	}
 
 	int count;
 private:
@@ -91,13 +96,35 @@ inline void RepetitionTable::posRegister() noexcept {
 }
 
 
-inline void RepetitionTable::clear() noexcept {
-	count = 0;
-}
-
-
 inline bool RepetitionTable::isRepetition() {
 	for (int i = count - 1; i >= 0; i--)
 		if (tab[i] == hash.key) return true;
 	return false;
 }
+
+
+struct PawnEvalEntry {
+	U64 zobrist;
+	int eval;
+};
+
+
+// pawn structure evaluation Zobrish hashing table
+class PawnEvalTable {
+public:
+	static constexpr size_t hash_size = 0x2000;
+	static constexpr PawnEvalEntry empty_entry = { 0, HashEntry::no_score };
+	PawnEvalTable() = default;
+
+	int read(int alpha, int beta);
+	void write(int g_score);
+
+	inline void clear() {
+		std::fill(htab.data(), htab.data() + htab.size(), empty_entry);
+	}
+
+private:
+	std::array<PawnEvalEntry, hash_size> htab;
+};
+
+extern PawnEvalTable sp_eval_tt;
