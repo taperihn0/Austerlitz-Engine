@@ -15,9 +15,8 @@ Zobrist::Zobrist()
 : piece_keys(randomU64wrap_2), 
   castle_keys(randomU64wrap_1), 
   enpassant_keys(randomU64wrap_1), 
-  side_key(randomU64()) {
-	generateKey();
-}
+  side_key(randomU64()),
+  key() {}
 
 
 void Zobrist::generateKey() {
@@ -83,21 +82,4 @@ void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag,
 	entry.score = g_score;
 	entry.flag = g_flag;
 	entry.depth = g_depth;
-}
-
-
-int PawnEvalTable::read() {
-	const auto& entry = htab[hash.key % hash_size];
-
-	// unmatching zobrist key (key collision)
-	if (entry.zobrist != hash.key)
-		return HashEntry::no_score;
-	return entry.eval;
-}
-
-
-void PawnEvalTable::write(int g_score) {
-	auto& entry = htab[hash.key % hash_size];
-	entry.zobrist = hash.key;
-	entry.eval = g_score;
 }

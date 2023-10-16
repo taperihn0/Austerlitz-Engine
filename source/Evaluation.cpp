@@ -26,7 +26,7 @@ namespace Eval {
 	}
 
 	template <enumSide SIDE>
-	int properSquare(int square) {
+	int flipSquare(int square) {
 		if constexpr (SIDE) return square;
 		return mirrored_square[square];
 	}
@@ -41,58 +41,74 @@ namespace Eval {
 	int spawnScore() {
 		U64 pawns = BBs[nWhitePawn + SIDE];
 		int sq, eval = 0;
-		const U64 p_att = PawnAttacks::anyAttackPawn<!SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX);
+		const U64 p_att = PawnAttacks::anyAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX);
+		static constexpr auto pawn_shift = std::make_tuple(nortOne, soutOne);
+			
+		// pawn islands
+		const U64 fileset = soutFill(BBs[nWhitePawn + SIDE]) & Constans::r1_rank;
+		eval -= 3 * islandCount(fileset);
 
 		while (pawns) {
 			sq = popLS1B(pawns);
-			eval += Value::position_score[Phase][PAWN][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][PAWN][flipSquare<SIDE>(sq)];
 
 			// if backward pawn...
-			if (!(LookUp::back_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) {
+			if (!(LookUp::back_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE]))
 				eval -= 7;
 
-				// if isolated pawn...
-				if (!(LookUp::n_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) 
-					// consider pawn location - center is dangerous for isolated pawn
-					eval -= 10 + 5 * static_cast<bool>(bitU64(sq) & Constans::center);
-			}
-
 			// if double pawn...
-			if (!(LookUp::sf_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) eval -= 10;
+			if (!(LookUp::sf_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) 
+				eval -= 10;
 			// if passed pawn...
-			else if (!((LookUp::nf_file.get(SIDE, sq) | LookUp::sf_file.get(SIDE, sq)) & BBs[nBlackPawn - SIDE])) 
+			else if (!((LookUp::nf_file.get(SIDE, sq) | LookUp::sf_file.get(SIDE, sq)) & BBs[nBlackPawn - SIDE]))
 				eval += Value::passed_score[flipRank<SIDE>(sq)];
 
-			// if defending...
-			if (bitU64(sq) & p_att) eval += 4;
+			// if protected...
+			if (bitU64(sq) & p_att or std::get<SIDE>(pawn_shift)(bitU64(sq)) & p_att) 
+				eval += 6;
+
+			if constexpr (Phase != gState::ENDGAME)
+				eval += static_cast<int>(0.5 * Value::distance_score.get(sq, common_data.k_sq[!SIDE]));
 		}
 
 		// candidate pawns
-		static constexpr auto pawn_shift = std::make_tuple(nortOne, soutOne);
 		const U64
-			att = PawnAttacks::bothAttackPawn<!SIDE>(BBs[nBlackPawn - SIDE], BBs[nWhitePawn + SIDE] | std::get<SIDE>(pawn_shift)(BBs[nWhitePawn + SIDE])),
-			helper = PawnAttacks::bothAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], BBs[nWhitePawn + SIDE] | std::get<SIDE>(pawn_shift)(BBs[nWhitePawn + SIDE]));
+			att = PawnAttacks::bothAttackPawn<!SIDE>(BBs[nBlackPawn - SIDE], BBs[nWhitePawn + SIDE] 
+				| std::get<SIDE>(pawn_shift)(BBs[nWhitePawn + SIDE])),
+			helper = PawnAttacks::bothAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], BBs[nWhitePawn + SIDE] 
+				| std::get<SIDE>(pawn_shift)(BBs[nWhitePawn + SIDE]));
 		eval += 5 * bitCount(helper & ~att);
+
+		// isolanis and half-isolanis
+		eval -= 8 * bitCount(isolanis(BBs[nWhitePawn + SIDE]))
+			+ 2 * bitCount(halfIsolanis(BBs[nWhitePawn + SIDE]));
+
+		// pawn shield
+		if constexpr (Phase != gState::ENDGAME) {
+			const U64 pshield = std::get<SIDE>(pawn_shift)(
+				BBs[nWhiteKing + SIDE] | eastOne(BBs[nWhiteKing + SIDE]) | westOne(BBs[nWhiteKing + SIDE])
+				) & BBs[nWhitePawn + SIDE],
+				pshield_front = std::get<SIDE>(pawn_shift)(pshield) & BBs[nWhitePawn + SIDE];
+			const int pshield_count = bitCount(pshield);
+
+			if (pshield_count == 3) eval += 12;
+			else if (pshield_count == 2 and ((pshield << 1) & (pshield >> 1)) == pshield_front) eval += 8;
+			else {
+				// penalty for open file near the king
+				const U64 open_f = ~fileFill(BBs[nWhitePawn + SIDE]);
+				eval -= 3 * bitCount(open_f & ~pshield);
+			}
+		}
+
+		// overly advanced pawns
+		eval -= 5 * bitCount(overlyAdvancedPawns<SIDE>(BBs[nWhitePawn + SIDE], BBs[nBlackPawn - SIDE]));
 		return eval;
 	}
 
 	// process pawn structure
 	template <enumSide SIDE, gState::gPhase Phase>
 	int relativePawnScore() {
-		
-		static int tt_score;
-		if (HashEntry::isValid(tt_score = sp_eval_tt.read()))
-			return tt_score;
-		
-		int p_eval = spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
-
-		// pawn islands
-		const U64 fileset_own = soutFill(BBs[nWhitePawn + SIDE]) & Constans::r1_rank,
-			fileset_opp = soutFill(BBs[nBlackPawn - SIDE]) & Constans::r1_rank;
-		p_eval += islandCount(fileset_own) <= islandCount(fileset_opp) ? 4 : -4;
-
-		sp_eval_tt.write(p_eval);
-		return p_eval;
+		return spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
 	}
 
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
@@ -103,7 +119,7 @@ namespace Eval {
 
 		while (k_msk) {
 			sq = popLS1B(k_msk);
-			eval += Value::position_score[Phase][KNIGHT][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][KNIGHT][flipSquare<SIDE>(sq)];
 
 			// penalty for squares controled by enemy pawns
 			t_att |= (k_att = attack<KNIGHT>(BBs[nOccupied], sq));
@@ -135,7 +151,7 @@ namespace Eval {
 
 		while (b_msk) {
 			sq = popLS1B(b_msk);
-			eval += Value::position_score[Phase][BISHOP][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][BISHOP][flipSquare<SIDE>(sq)];
 			t_att |= attack<BISHOP>(BBs[nOccupied], sq);
 
 			// king tropism score
@@ -156,7 +172,7 @@ namespace Eval {
 
 		while (r_msk) {
 			sq = popLS1B(r_msk);
-			eval += Value::position_score[Phase][ROOK][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][ROOK][flipSquare<SIDE>(sq)];
 			r_att = attack<ROOK>(BBs[nOccupied], sq);
 			c_sq += bitCount(r_att & BBs[nEmpty]);
 
@@ -181,7 +197,7 @@ namespace Eval {
 
 		while (q_msk) {
 			sq = popLS1B(q_msk);
-			eval += Value::position_score[Phase][QUEEN][properSquare<SIDE>(sq)];
+			eval += Value::position_score[Phase][QUEEN][flipSquare<SIDE>(sq)];
 			c_sq += bitCount(attack<QUEEN>(BBs[nOccupied], sq) & BBs[nEmpty]);
 
 			// king tropism score
@@ -199,11 +215,7 @@ namespace Eval {
 		int eval = 0;
 
 		if constexpr (Phase != gState::ENDGAME) {
-			eval = Value::king_score[properSquare<SIDE>(common_data.k_sq[SIDE])];
-
-			// pawn shield score
-			eval -= 3 * bitCount(attack<KING>(BBs[nOccupied], common_data.k_sq[SIDE])
-				& ~pshield<SIDE>(BBs[nWhitePawn + SIDE]));
+			eval = Value::king_score[flipSquare<SIDE>(common_data.k_sq[SIDE])];
 
 			// check castling possibility
 			if ((bitU64(common_data.k_sq[SIDE]) & Constans::king_center[SIDE])
@@ -211,24 +223,17 @@ namespace Eval {
 				eval -= 15;
 		}
 		else
-			eval = Value::late_king_score[properSquare<SIDE>(common_data.k_sq[SIDE])];
+			eval = Value::late_king_score[flipSquare<SIDE>(common_data.k_sq[SIDE])];
 
 		return eval;
 	}
 
 	template <enumSide SIDE, gState::gPhase Phase>
 	int templEval(int alpha, int beta) {
-		
-		/* 
-			lazy evaluation :
-		     lower margin  - slower eval, but increased accuracy;
-		     higher margin - faster eval, but reduced accuracy;
-		*/
-
 		const int material_sc = game_state.material[SIDE] - game_state.material[!SIDE];
 
 		if constexpr (Phase == gState::OPENING) {
-			static constexpr int lazy_margin_op = 415; //400 355 340 325 295
+			static constexpr int lazy_margin_op = 240;
 
 			if (material_sc - lazy_margin_op >= beta)
 				return beta;
@@ -236,7 +241,7 @@ namespace Eval {
 				return alpha;
 		}
 		else if constexpr (Phase == gState::ENDGAME) {
-			static constexpr int lazy_margin_ed = 390; //370 320 310 290 275
+			static constexpr int lazy_margin_ed = 230;
 			
 			if (((common_data.mid_score * (256 - common_data.phase)) 
 				+ ((material_sc - lazy_margin_ed) * common_data.phase)) / 256 >= beta)
@@ -247,7 +252,8 @@ namespace Eval {
 		}
 
 		int eval = 0, c_sq1 = 0, c_sq2 = 0;
-		const U64 my_pin = pinnedDiagonal<SIDE>(common_data.k_sq[SIDE]) | pinnedHorizonVertic<SIDE>(common_data.k_sq[SIDE]),
+		const U64 
+			my_pin = pinnedDiagonal<SIDE>(common_data.k_sq[SIDE]) | pinnedHorizonVertic<SIDE>(common_data.k_sq[SIDE]),
 			opp_pin = pinnedDiagonal<!SIDE>(common_data.k_sq[!SIDE]) | pinnedHorizonVertic<!SIDE>(common_data.k_sq[!SIDE]);
 
 		// pin piece penalty
@@ -275,7 +281,7 @@ namespace Eval {
 		common_data.pawn_count = bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
 
 		if (game_state.gamePhase() == gState::OPENING)
-			return sideEval<gState::OPENING>(game_state.turn, alpha, beta);
+			return sideEval<gState::MIDDLEGAME>(game_state.turn, alpha, beta);
 
 		// score interpolation
 		static constexpr int double_k_val = 2 * Value::KING_VALUE;

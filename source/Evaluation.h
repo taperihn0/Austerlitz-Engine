@@ -237,7 +237,7 @@ namespace Eval {
 	};
 
 	// simple version of evaluation funcion
-	inline int simple_evaluation() {
+	inline int simpleEvaluation() {
 		return Value::PAWN_VALUE * (BBs.count(nWhitePawn + game_state.turn) - BBs.count(nBlackPawn - game_state.turn));
 	}
 

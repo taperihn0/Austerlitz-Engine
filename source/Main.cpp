@@ -9,6 +9,8 @@
 #include "Evaluation.h"
 
 // global variables storing universal piece data
+Zobrist hash;
+
 BitBoardsSet BBs(BitBoardsSet::start_pos);
 
 CSinglePieceAttacks<PAWN> cpawn_attacks;
@@ -29,10 +31,8 @@ SearchBenchmark bench;
 PV::lenghtPV PV::pv_len;
 PV::linePV PV::pv_line;
 
-Zobrist hash;
 TranspositionTable tt;
 RepetitionTable rep_tt;
-PawnEvalTable sp_eval_tt;
 
 Time time_data;
 
@@ -40,6 +40,5 @@ int main(int argc, char* argv[]) {
 	InitState::clearButterfly();
 	InitState::initMAttacksTables();
 	tt.clear();
-	sp_eval_tt.clear();
 	UCI_o.goLoop(argc, argv);
 }

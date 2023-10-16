@@ -467,6 +467,7 @@ namespace MovePerform {
 			for (auto pc = nBlackPawn - side; pc <= nBlackQueen; pc += 2) {
 				if (getBit(BBs[pc], target)) {
 					hash.key ^= hash.piece_keys.get(pc, target);
+
 					game_state.material[!side] -= Eval::Value::piece_material[toPieceType(pc)];
 					popBit(BBs[pc], target);
 					break;
@@ -483,6 +484,7 @@ namespace MovePerform {
 
 		// update player to turn and en passant state in Zobrist key
 		hash.key ^= hash.side_key;
+
 		if (game_state.ep_sq != -1)
 			hash.key ^= hash.enpassant_keys.get(game_state.ep_sq);
 
@@ -596,8 +598,10 @@ namespace MovePerform {
 	void makeNull() {
 		game_state.turn = !game_state.turn;
 		hash.key ^= hash.side_key;
+
 		if (game_state.ep_sq != -1)
 			hash.key ^= hash.enpassant_keys.get(game_state.ep_sq);
+
 		game_state.ep_sq = -1;
 		game_state.halfmove++;
 	}

@@ -17,13 +17,12 @@ struct Zobrist {
 	cexpr::CexprArr<false, U64, 64> enpassant_keys;
 	U64 side_key;
 
-	// raw Zobrist key
+	// raw Zobrist keys
 	U64 key;
 };
 
 // forward declaration
 extern Zobrist hash;
-
 
 // single entry in hash table structure
 struct HashEntry {
@@ -104,27 +103,6 @@ inline bool RepetitionTable::isRepetition() {
 
 
 struct PawnEvalEntry {
-	U64 zobrist;
+	U64 pawnkey;
 	int eval;
 };
-
-
-// pawn structure evaluation Zobrish hashing table
-class PawnEvalTable {
-public:
-	static constexpr size_t hash_size = 0x2000;
-	static constexpr PawnEvalEntry empty_entry = { 0, HashEntry::no_score };
-	PawnEvalTable() = default;
-
-	int read();
-	void write(int g_score);
-
-	inline void clear() {
-		std::fill(htab.data(), htab.data() + htab.size(), empty_entry);
-	}
-
-private:
-	std::array<PawnEvalEntry, hash_size> htab;
-};
-
-extern PawnEvalTable sp_eval_tt;

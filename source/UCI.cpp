@@ -175,7 +175,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "go") parseGo(strm);
 		else if (token == "benchmark") bench.start();
 #if defined(__DEBUG__)
-		else if (token == "hashkey") OS << hash.key << '\n';
+		else if (token == "hashkey") OS << hash.key << ' ' << hash.pawn_key << '\n';
 		else if (token == "eval")    OS << game_state.material[0] - game_state.material[1] << '\n';
 #endif
 	} while (line != "quit" and argc == 1);

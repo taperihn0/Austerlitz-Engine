@@ -277,8 +277,17 @@ inline constexpr U64 islandsEastFile(U64 fileset) noexcept {
 }
 
 namespace islandCountLookUp {
-	auto lookup = cexpr::CexprArr<false, int, 256>([](U64 i) {
-		return bitCount(i);
+	auto lookup = cexpr::CexprArr<false, int, 256>([](U64 bb) {
+		int isl_count = 0, i = 0;
+
+		while (i < 8) {
+			if (getBit(bb, i)) {
+				while (getBit(bb, i++));
+				isl_count++;
+			} else i++;
+		}
+
+		return isl_count;
 	});
 }
 
