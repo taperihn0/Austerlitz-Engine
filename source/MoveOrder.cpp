@@ -81,20 +81,22 @@ namespace Order {
 		return (scale * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1;
 	}
 
-	// hash table for move ordering
-	static constexpr int move_coords = static_cast<int>(MoveItem::iMask::COORDS);
-	static std::array<int, move_coords> m_score_hash;
-
 	void sort(MoveList& move_list, int ply) {
-		m_score_hash.fill(0);
-
 		std::sort(move_list.begin(), move_list.end(), [ply](const MoveItem::iMove& a, const MoveItem::iMove& b) {
-			if (!m_score_hash[a.raw() & move_coords]) 
-				m_score_hash[a.raw() & move_coords] = moveScore(a, ply);
-			if (!m_score_hash[b.raw() & move_coords]) 
-				m_score_hash[b.raw() & move_coords] = moveScore(b, ply);
-			return m_score_hash[a.raw() & move_coords] > m_score_hash[b.raw() & move_coords];
+			return moveScore(a, ply) > moveScore(b, ply);
 		});
+	}
+
+	void pickBest(MoveList& move_list, int s, int ply) {
+		static MoveItem::iMove tmp;
+
+		for (int i = s + 1; i < move_list.size(); i++) {
+			if (moveScore(move_list[i], ply) > moveScore(move_list[s], ply)) {
+				tmp = move_list[i];
+				move_list[i] = move_list[s];
+				move_list[s] = tmp;
+			}
+		}
 	}
 
 } // namespace Order

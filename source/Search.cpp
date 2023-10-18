@@ -4,7 +4,6 @@
 #include "Zobrist.h"
 #include "Timer.h"
 
-#define _SEARCH_DEBUG false
 
 namespace Search {
 
@@ -75,19 +74,18 @@ namespace Search {
 		static int score, to, pc;
 		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
 
-		// move ordering
-		Order::sort(move_list, ply);
-
 		for (int i = 0; i < mcount; i++) {
+
+			// move ordering
+			Order::pickBest(move_list, i, ply);
 			const auto& move = move_list[i];
-#if _SEARCH_DEBUG
-			move.print() << '\n';
-#endif
+
+			// futility pruning
 			static constexpr int margin = Eval::Value::PAWN_VALUE;
 			if (i > 1 and mcount >= 8 and !move.getMask<MoveItem::iMask::CAPTURE_F>()
 				and depth == 1 and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
 				and beta < -mate_comp and alpha > mate_comp
-				and Eval::evaluate(alpha - margin, INT_MAX) <= alpha) {
+				and Eval::evaluate(alpha - margin, Search::high_bound) <= alpha - margin) {
 				return alpha;
 			}
 
@@ -97,6 +95,7 @@ namespace Search {
 			// if pv is still left, save time by checking uninteresting moves using null window
 			// if such node fails low, it's a sign we are offered good move (score > alpha)
 			if (i > 1) {
+				// late move reduction
 				if (
 					depth >= 3
 					and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
@@ -107,6 +106,7 @@ namespace Search {
 					score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
 				else score = alpha + 1;
 
+				// null window search
 				if (score > alpha) {
 					score = -alphaBeta(-alpha - 1, -alpha, depth - 1, ply + 1);
 
@@ -234,4 +234,5 @@ namespace Search {
 
 		OS << '\n';
 	}
+
 } // namespace Search

@@ -44,6 +44,9 @@ namespace Order {
 	// sort given move list based on score of each move
 	void sort(MoveList& move_list, int ply);
 
+	// swap best move so it's on the i'th place
+	void pickBest(MoveList& move_list, int i, int ply);
+
 } // namespace Order
 
 

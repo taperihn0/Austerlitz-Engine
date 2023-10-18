@@ -195,19 +195,28 @@ namespace Eval {
 
 		// queen early development penalty 
 		constexpr posScoreTab queen_ban_dev = {
-			-15, -15, -15, -15, -15, -15, -15, -15,
-			-15, -15, -15, -15, -15, -15, -15, -15,
-			-25, -25, -25, -25, -25, -25, -25, -25,
-			-20, -10, -21, -22, -22, -20, -10, -18,
-			-10, -10, -10, -17, -17, -10, -10, -10,
-			-10, -10,  -9,  -7,  -7,  -8, -10, -10,
-			  0,   0, -7,   4,   7,   -5,   0,   0,
-			  0,   0,   0,   0,   0,   0,   0,   0
+			-45, -45, -45, -20, -45, -45, -45, -45,
+			-45, -45, -45, -45, -45, -45, -45, -45,
+			-35, -35, -35, -35, -35, -35, -35, -35,
+			-30, -20, -31, -32, -32, -30, -20, -28,
+			-20, -20, -20, -27, -27, -20, -20, -20,
+			-20, -20, -19, -17, -17, -18, -20, -20,
+			  0,   0, -13, -8,  -10, -13,   0,   0,
+			  0,   0,   0,  0,    0,   0,   0,   0
 		};
 
 		// easily aggregated lookups
-		using aggregateScoreTab = std::array<std::array<posScoreTab, 6>, 2>;
+		using aggregateScoreTab = std::array<std::array<posScoreTab, 6>, 3>;
 		constexpr aggregateScoreTab position_score = {{
+			{
+				pawn_score,
+				knight_score,
+				bishop_score,
+				rook_score,
+				queen_score,
+				king_score
+			},
+
 			{
 				pawn_score,
 				knight_score,
@@ -232,8 +241,21 @@ namespace Eval {
 			return 14 - d;
 		});
 
+		constexpr auto diag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
+			const int sc_i = (i % 8) + (i / 8), sc_j = (j % 8) - (j / 8);
+			return 14 - cexpr::abs(sc_i - sc_j);
+		});
+
+		constexpr auto adiag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
+			const int sc_i = 7 - (i % 8) + (i / 8), sc_j = 7 - (j % 8) + (j / 8);
+			return 14 - cexpr::abs(sc_i - sc_j);
+		});
+
 		using passedPawnTab = std::array<int, 7>;
 		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
+
+		constexpr std::array<int, 10> attack_count_weight = { 0, 50, 75, 88, 94, 97, 99, 99, 99, 99 };
+		constexpr std::array<int, 10> attacker_weight = { 0, 0, 20, 20, 20, 20, 40, 40, 80, 80 };
 	};
 
 	// simple version of evaluation funcion

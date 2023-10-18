@@ -71,7 +71,7 @@ struct gState {
 		end_game_score = 2 * (1350 + 10000),
 		middle_game_score = 25600;
 
-	enum gPhase { MIDDLEGAME = 0, ENDGAME, OPENING };
+	enum gPhase { OPENING = 0, MIDDLEGAME, ENDGAME };
 
 	inline bool is50moveDraw() noexcept {
 		return halfmove >= max_move_rule;
