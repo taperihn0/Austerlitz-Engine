@@ -9,8 +9,9 @@
 namespace Eval {
 
 	static struct commonEvalData {
-		std::array<int, 2> k_sq;
+		std::array<int, 2> k_sq, att_count, att_value;
 		int pawn_count, phase, mid_score;
+		std::array<U64, 2> k_zone;
 	} common_data;
 
 	template <enumSide SIDE>
@@ -54,10 +55,10 @@ namespace Eval {
 
 	template <enumSide SIDE, gState::gPhase Phase>
 	int spawnScore() {
+		static constexpr auto pawn_shift = std::make_tuple(nortOne, soutOne);
 		U64 pawns = BBs[nWhitePawn + SIDE];
 		int sq, eval = 0;
 		const U64 p_att = PawnAttacks::anyAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX);
-		static constexpr auto pawn_shift = std::make_tuple(nortOne, soutOne);
 
 		// pawn islands
 		const U64 fileset = soutFill(BBs[nWhitePawn + SIDE]) & Constans::r1_rank;
@@ -123,8 +124,8 @@ namespace Eval {
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == KNIGHT, int> {
 		int sq, eval = 0;
-		U64 k_msk = BBs[nWhiteKnight + SIDE], opp_contr, k_att, t_att = eU64;
 		const U64 opp_p_att = PawnAttacks::anyAttackPawn<!SIDE>(BBs[nBlackPawn - SIDE], UINT64_MAX);
+		U64 k_msk = BBs[nWhiteKnight + SIDE], opp_contr, k_att, t_att = eU64;
 
 		while (k_msk) {
 			sq = popLS1B(k_msk);
@@ -134,6 +135,12 @@ namespace Eval {
 			t_att |= (k_att = attack<KNIGHT>(BBs[nOccupied], sq));
 			opp_contr = k_att & opp_p_att;
 			eval -= 2 * bitCount(opp_contr);
+
+			if (k_att & Value::ext_king_zone.get(common_data.k_sq[!SIDE])) {
+				common_data.att_count[SIDE]++;
+				common_data.att_value[SIDE] += Value::attacker_weight[KNIGHT]
+					* bitCount(k_att & common_data.k_zone[!SIDE]);
+			}
 
 			// outpos check
 			if (bitU64(sq) &
@@ -153,7 +160,7 @@ namespace Eval {
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == BISHOP, int> {
 		int sq, eval = 0;
-		U64 b_msk = BBs[nWhiteBishop + SIDE], t_att = eU64;
+		U64 b_msk = BBs[nWhiteBishop + SIDE], b_att, t_att = eU64;
 
 		// bishop pair bonus
 		eval += (bitCount(b_msk) == 2) * 50;
@@ -161,10 +168,21 @@ namespace Eval {
 		while (b_msk) {
 			sq = popLS1B(b_msk);
 			eval += Value::position_score[Phase][BISHOP][flipSquare<SIDE>(sq)];
-			t_att |= attack<BISHOP>(BBs[nOccupied], sq);
+			b_att = attack<BISHOP>(BBs[nOccupied], sq);
+			t_att |= b_att;
+
+			if (b_att & common_data.k_zone[!SIDE]) {
+				common_data.att_count[SIDE]++;
+				common_data.att_value[SIDE] += Value::attacker_weight[BISHOP]
+					* bitCount(b_att & common_data.k_zone[!SIDE]);
+			}
 
 			// king tropism score
-			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
+			eval += std::max(
+						Value::adiag_score.get(sq, common_data.k_sq[!SIDE]),
+						Value::diag_score.get(sq, common_data.k_sq[!SIDE])
+					);
+
 			eval -= common_data.pawn_count;
 		}
 
@@ -185,6 +203,12 @@ namespace Eval {
 			r_att = attack<ROOK>(BBs[nOccupied], sq);
 			c_sq += bitCount(r_att & BBs[nEmpty]);
 
+			if (r_att & common_data.k_zone[!SIDE]) {
+				common_data.att_count[SIDE]++;
+				common_data.att_value[SIDE] += Value::attacker_weight[ROOK]
+					* bitCount(r_att & common_data.k_zone[!SIDE]);
+			}
+
 			// king tropism score
 			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
 
@@ -192,6 +216,8 @@ namespace Eval {
 			if (bitU64(sq) & open_f) eval += 10;
 			// queen/rook on the same file
 			if (Constans::f_by_index[sq % 8] & (BBs[nBlackQueen - SIDE] | BBs[nWhiteRook + SIDE])) eval += 10;
+			// looking at king zone
+			//if (Constans::f_by_index[sq % 8] & common_data.k_zone[!SIDE]) eval += 7;
 
 			eval -= common_data.pawn_count;
 		}
@@ -202,15 +228,26 @@ namespace Eval {
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == QUEEN, int> {
 		int sq, eval = 0;
-		U64 q_msk = BBs[nWhiteQueen + SIDE];
+		U64 q_msk = BBs[nWhiteQueen + SIDE], q_att;
 
 		while (q_msk) {
 			sq = popLS1B(q_msk);
 			eval += Value::position_score[Phase][QUEEN][flipSquare<SIDE>(sq)];
-			c_sq += bitCount(attack<QUEEN>(BBs[nOccupied], sq) & BBs[nEmpty]);
+			q_att = attack<QUEEN>(BBs[nOccupied], sq);
+			c_sq += bitCount(q_att & BBs[nEmpty]);
+
+			if (q_att & common_data.k_zone[!SIDE]) {
+				common_data.att_count[SIDE]++;
+				common_data.att_value[SIDE] += Value::attacker_weight[QUEEN]
+					* bitCount(q_att & common_data.k_zone[!SIDE]);
+			}
 
 			// king tropism score
-			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
+			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]) 
+				+ std::max(
+					Value::adiag_score.get(sq, common_data.k_sq[!SIDE]),
+					Value::diag_score.get(sq, common_data.k_sq[!SIDE])
+				);
 
 			if constexpr (Phase == gState::OPENING)
 				eval += Value::queen_ban_dev[sq];
@@ -223,10 +260,8 @@ namespace Eval {
 	int kingScore() {
 		int eval = 0;
 
-		const U64 pin = pinnedDiagonal<SIDE>(common_data.k_sq[SIDE]) | pinnedHorizonVertic<SIDE>(common_data.k_sq[SIDE]) & BBs[nWhite + SIDE];
-
-		// pin piece penalty
-		eval -= 2 * bitCount(pin);
+		// king zone control
+		eval += common_data.att_value[SIDE] * Value::attack_count_weight[common_data.att_count[SIDE]] / 100;
 
 		if constexpr (Phase != gState::ENDGAME) {
 			eval = Value::king_score[flipSquare<SIDE>(common_data.k_sq[SIDE])];
@@ -247,7 +282,7 @@ namespace Eval {
 		const int material_sc = game_state.material[SIDE] - game_state.material[!SIDE];
 
 		if constexpr (Phase == gState::OPENING) {
-			static constexpr int lazy_margin_op = 255;
+			static constexpr int lazy_margin_op = 265; //265 255
 
 			if (material_sc - lazy_margin_op >= beta)
 				return beta;
@@ -255,7 +290,7 @@ namespace Eval {
 				return alpha;
 		}
 		else if constexpr (Phase == gState::ENDGAME) {
-			static constexpr int lazy_margin_ed = 240;
+			static constexpr int lazy_margin_ed = 255; //255 240
 
 			if (((common_data.mid_score * (256 - common_data.phase))
 				+ ((material_sc - lazy_margin_ed) * common_data.phase)) / 256 >= beta)
@@ -287,6 +322,9 @@ namespace Eval {
 		common_data.k_sq[game_state.turn] = getLS1BIndex(BBs[nWhiteKing + game_state.turn]);
 		common_data.k_sq[!game_state.turn] = getLS1BIndex(BBs[nBlackKing - game_state.turn]);
 		common_data.pawn_count = bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
+		common_data.att_count = { 0, 0 }, common_data.att_value = { 0, 0 };
+		common_data.k_zone[WHITE] = attack<KING>(UINT64_MAX, common_data.k_sq[WHITE]);
+		common_data.k_zone[BLACK] = attack<KING>(UINT64_MAX, common_data.k_sq[BLACK]);
 
 		if (game_state.gamePhase() == gState::OPENING)
 			return sideEval<gState::OPENING>(game_state.turn, alpha, beta);

@@ -8,7 +8,7 @@
 namespace {
 
 	// mask of avaible attacks for pawn on sq square
-	U64 sqMaskPawnAttacks(enumSide side, int sq) {
+	constexpr U64 sqMaskPawnAttacks(enumSide side, int sq) {
 		U64 piece = eU64;
 		setBit(piece, sq);
 
@@ -24,7 +24,7 @@ namespace {
 	}
 
 	// ... for pawn on sq square
-	U64 sqMaskKnightAttacks(enumSide, int sq) {
+	constexpr U64 sqMaskKnightAttacks(enumSide, int sq) {
 		U64 piece = eU64;
 		setBit(piece, sq);
 
@@ -35,7 +35,7 @@ namespace {
 	}
 
 	// ... for king on sq square
-	U64 sqMaskKingAttacks(enumSide, int sq) {
+	constexpr U64 sqMaskKingAttacks(enumSide, int sq) {
 		U64 piece = eU64;
 		setBit(piece, sq);
 
@@ -60,7 +60,7 @@ private:
 public:
 	CSinglePieceAttacks();
 
-	accessRType operator[](size_t side);
+	constexpr accessRType operator[](size_t side);
 private:
 	template <enumSide sT>
 	void Init();
@@ -102,7 +102,7 @@ CSinglePieceAttacks<pT>::CSinglePieceAttacks() {
 
 // return given table of attacks for single pT piece type on sq square
 template <enumPiece pT>
-inline typename CSinglePieceAttacks<pT>::accessRType CSinglePieceAttacks<pT>::operator[](size_t side) {
+inline constexpr typename CSinglePieceAttacks<pT>::accessRType CSinglePieceAttacks<pT>::operator[](size_t side) {
 	return arrAttacks[side];
 }
 

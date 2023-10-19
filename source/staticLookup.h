@@ -43,7 +43,6 @@ namespace {
 					arr[i] = init(i);
 			}
 
-
 			dataTable arr[S1];
 		};
 

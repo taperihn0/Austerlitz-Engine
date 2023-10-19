@@ -255,8 +255,13 @@ namespace Eval {
 		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
 
 		constexpr std::array<int, 10> attack_count_weight = { 0, 50, 75, 88, 94, 97, 99, 99, 99, 99 };
-		constexpr std::array<int, 10> attacker_weight = { 0, 0, 20, 20, 20, 20, 40, 40, 80, 80 };
-	};
+		constexpr std::array<int, 5> attacker_weight = { 0, 20, 20, 40, 80 };
+
+		constexpr auto ext_king_zone = cexpr::CexprArr<false, U64, 64>([](int i) {
+			return sqMaskKingAttacks(WHITE, i) | sqMaskKnightAttacks(WHITE, i);
+		});
+
+	} // namespace Value
 
 	// simple version of evaluation funcion
 	inline int simpleEvaluation() {
