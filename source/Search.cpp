@@ -65,8 +65,13 @@ namespace Search {
 		// no legal moves detected - checkmate or stealmate
 		if (!mcount)
 			return incheck ? mate_score + ply : draw_score;
-		else if (incheck and mcount == 1) // single-response extension
+		// single-response extension
+		else if (incheck and mcount == 1) { 
 			depth++;
+
+			if (time_data.this_move > 300_ms and time_data.this_move < time_data.left / 11)
+				time_data.this_move += 150_ms;
+		}
 
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
@@ -221,6 +226,9 @@ namespace Search {
 			OS << '\n';
 
 			if (time_data.stop) break;
+			else if (time_data.is_time
+				and 5 * sinceStart_ms(time_data.start) / 2 > time_data.this_move)
+				break;
 			prev_score = search_results.score;
 		}
 

@@ -9,4 +9,4 @@
 - *experiment with null move pruning*
 - *try gradual widening on re-searches in aspiration window search*
 - *try extended futility pruning and other futility methods*
-- *improve basic time management system*
+- *adjust lazy margin based on game phase*

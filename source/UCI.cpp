@@ -54,14 +54,14 @@ void parseGo(std::istringstream& strm) {
 		time_data.left = game_state.turn ? btime : wtime;
 		time_data.inc = game_state.turn ? binc : winc;
 
-		// to change in the future: time for single move calculation
+		// time for single move
 		time_data.this_move = (time_data.left / 42) + (time_data.inc / 2);
 
 		if (time_data.this_move >= time_data.left)
 			time_data.this_move = time_data.left / 12;
 
-		if (time_data.this_move < 15_ms)
-			time_data.this_move = 20_ms;
+		if (time_data.this_move < 0_ms)
+			time_data.this_move = 5_ms;
 
 		Search::bestMove(Search::max_depth);
 	}
