@@ -273,6 +273,13 @@ inline constexpr U64 rearspan(U64 bb) noexcept {
 	return soutFill(bb);
 }
 
+template <enumSide SIDE>
+inline constexpr U64 frontspan(U64 bb) noexcept {
+	if constexpr (SIDE)
+		return soutFill(bb);
+	return nortFill(bb);
+}
+
 inline constexpr U64 islandsEastFile(U64 fileset) noexcept {
 	return fileset ^ (fileset & (fileset >> 1));
 }

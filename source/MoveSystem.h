@@ -203,4 +203,8 @@ namespace {
 		return unfree & (nortFill(unfree_att) ^ unfree_att);
 	}
 
+	int knightDistance(int i, int j) {
+
+	}
+
 } // namespace

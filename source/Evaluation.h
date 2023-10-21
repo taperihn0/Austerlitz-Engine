@@ -272,6 +272,18 @@ namespace Eval {
 			0,   0,   0,   0,   0,   0,  0,  0,
 		};
 
+		constexpr auto knight_distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
+			int c = 0;
+			U64 k_att_fill = bbMaskKnightAttacks(bitU64(i));
+
+			while (!(bitU64(j) & k_att_fill)) {
+				k_att_fill = bbMaskKnightAttacks(k_att_fill);
+				c++;
+			}
+
+			return 3 - c;
+		});
+
 	} // namespace Value
 
 	// simple version of evaluation funcion

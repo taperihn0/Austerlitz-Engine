@@ -23,7 +23,7 @@ namespace {
 		return eU64;
 	}
 
-	// ... for pawn on sq square
+	// ... for knight on sq square
 	constexpr U64 sqMaskKnightAttacks(enumSide, int sq) {
 		U64 piece = eU64;
 		setBit(piece, sq);
@@ -32,6 +32,12 @@ namespace {
 		return noNoEa(piece) | noEaEa(piece) | soEaEa(piece)
 			| soSoEa(piece) | noNoWe(piece) | noWeWe(piece)
 			| soWeWe(piece) | soSoWe(piece);
+	}
+
+	constexpr U64 bbMaskKnightAttacks(U64 bb) {
+		return noNoEa(bb) | noEaEa(bb) | soEaEa(bb)
+			| soSoEa(bb) | noNoWe(bb) | noWeWe(bb)
+			| soWeWe(bb) | soSoWe(bb);
 	}
 
 	// ... for king on sq square
