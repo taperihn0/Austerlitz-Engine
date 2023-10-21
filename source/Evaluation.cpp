@@ -134,7 +134,8 @@ namespace Eval {
 			// penalty for squares controled by enemy pawns
 			t_att |= (k_att = attack<KNIGHT>(BBs[nOccupied], sq));
 			opp_contr = k_att & opp_p_att;
-			eval -= 2 * bitCount(opp_contr);
+			//eval -= 2 * bitCount(opp_contr);
+			eval -= 20 * bitCount(opp_contr) / bitCount(k_att);
 
 			if (k_att & Value::ext_king_zone.get(common_data.k_sq[!SIDE])) {
 				common_data.att_count[SIDE]++;
@@ -146,7 +147,7 @@ namespace Eval {
 			if (bitU64(sq) &
 				(Constans::board_side[!SIDE] & PawnAttacks::anyAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX
 					& ~opp_p_att)))
-				eval += 15;
+				eval += Value::outpos_score[sq];
 
 			eval += common_data.pawn_count;
 		}

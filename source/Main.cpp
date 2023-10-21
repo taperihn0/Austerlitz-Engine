@@ -41,5 +41,4 @@ int main(int argc, char* argv[]) {
 	InitState::initMAttacksTables();
 	tt.clear();
 	UCI_o.goLoop(argc, argv);
-	//printBitBoard(Eval::Value::king_zone.get(d2));
 }

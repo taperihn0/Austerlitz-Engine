@@ -195,14 +195,14 @@ namespace Eval {
 
 		// queen early development penalty 
 		constexpr posScoreTab queen_ban_dev = {
-			-45, -45, -45, -20, -45, -45, -45, -45,
-			-45, -45, -45, -45, -45, -45, -45, -45,
-			-35, -35, -35, -35, -35, -35, -35, -35,
-			-30, -20, -31, -32, -32, -30, -20, -28,
-			-20, -20, -20, -27, -27, -20, -20, -20,
-			-20, -20, -19, -17, -17, -18, -20, -20,
-			  0,   0, -13, -8,  -10, -13,   0,   0,
-			  0,   0,   0,  0,    0,   0,   0,   0
+			-23, -23, -23,  -7, -23, -23, -23, -23,
+			-23, -23, -23, -23, -23, -23, -23, -23,
+			-19, -21, -21, -21, -21, -21, -21, -19,
+			-18, -18, -20, -20, -20, -20, -18, -17,
+			-18, -18, -18, -18, -18, -18, -18, -18,
+			-18, -18, -23, -13, -13, -18, -18, -18,
+			  0,   0,  -4,  -4,  -4,  -4,   0,   0,
+			  0,   0,   0,   0,   0,   0,   0,   0
 		};
 
 		// easily aggregated lookups
@@ -261,6 +261,17 @@ namespace Eval {
 			return sqMaskKingAttacks(WHITE, i) | sqMaskKnightAttacks(WHITE, i);
 		});
 
+		constexpr posScoreTab outpos_score = {
+			0,   0,   0,   0,   3,   0,  0,  0,
+			0,   0,  13,  10,   9,  13,  2,  0,
+			0,  14,  15,  16,  16,  15, 14,  5,
+			1,   7,  14,  17,  17,  14,  7,  4,
+			0,   2,   4,   9,   9,   4,  2,  1,
+			0,   0,   1,   1,   1,   1,  0,  0,
+			0,   0,   0,   0,   0,   0,  0,  0,
+			0,   0,   0,   0,   0,   0,  0,  0,
+		};
+
 	} // namespace Value
 
 	// simple version of evaluation funcion
@@ -274,4 +285,4 @@ namespace Eval {
 	// quiescence search - protect from dangerous consequences of horizon effect
 	int qSearch(int alpha, int beta, int Ply);
 
-}
+} // namespace Eval

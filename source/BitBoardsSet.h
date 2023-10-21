@@ -68,8 +68,8 @@ inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
 struct gState {
 	static constexpr int max_move_rule = 50,
 		start_game_score = 28150,
-		end_game_score = 2 * (1350 + 10000),
-		middle_game_score = 25600;
+		end_game_score = 23300,
+		middle_game_score = 26450;
 
 	enum gPhase { OPENING = 0, MIDDLEGAME, ENDGAME };
 
