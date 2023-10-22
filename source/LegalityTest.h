@@ -75,6 +75,7 @@ inline bool isSquareAttacked(int sq, bool side) {
 template <enumSide PC_SIDE, enumPiece PC = ANY>
 U64 attackTo(int sq);
 U64 attackTo(int sq, bool side);
+U64 attackTo(int sq, bool side, U64 occ);
 
 
 template <enumSide SIDE>

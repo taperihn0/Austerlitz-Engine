@@ -393,13 +393,17 @@ namespace Eval {
 		const auto bbs_cpy = BBs;
 		const auto gstate_cpy = game_state;
 		const auto hash_cpy = hash.key;
-		int score;
+		int score, see_score;
 
 		for (int i = 0; i < capt_list.size(); i++) {
 
 			// capture ordering
-			Order::pickBest(capt_list, i, ply);
+			see_score = Order::pickBestSEE(capt_list, i);
 			const auto& move = capt_list[i];
+
+			// bad captures pruning
+			if (i >= 1 and see_score < 0) 
+				return alpha;
 
 			MovePerform::makeMove(move);
 

@@ -176,7 +176,13 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "benchmark") bench.start();
 #if defined(__DEBUG__)
 		else if (token == "hashkey") OS << hash.key << '\n';
-		else if (token == "eval")    OS << game_state.material[0] - game_state.material[1] << '\n';
+		else if (token == "eval")    OS << Eval::evaluate(Search::low_bound, Search::high_bound) << '\n';
+		else if (token == "see") { 
+			std::string sq_str;
+			strm >> std::skipws >> sq_str;
+			int sq = (sq_str[1] - '1') * 8 + (sq_str[0] - 'a');
+			OS << Order::see(sq) << '\n';
+		}
 #endif
 	} while (line != "quit" and argc == 1);
 }

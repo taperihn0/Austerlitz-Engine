@@ -6,51 +6,60 @@
 
 namespace Order {
 	
-	inline size_t leastValuableAtt(U64 att) {
-		for (auto pc = nWhitePawn + game_state.turn; pc <= nBlackKing; pc += 2)
+	inline size_t leastValuableAtt(U64 att, bool side) {
+		for (auto pc = nWhitePawn + side; pc <= nBlackKing; pc += 2)
 			if (att & BBs[pc]) return pc;
 
 		return nEmpty;
 	}
 
-	int see(int sq) {
-		const U64 
-			npin_att_d = pinnedDiagonal(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn) ^ (
-				attack<BISHOP>(BBs[nOccupied], sq)
-				& pinnedDiagonal(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
-			),
-			npin_att_hv = 
-			pinnedHorizonVertic(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn) ^ (
-				attack<ROOK>(BBs[nOccupied], sq) 
-				& pinnedHorizonVertic(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
-			);
-
-		const U64 att = attackTo(sq, !game_state.turn) & ~(npin_att_d | npin_att_hv);
-		const auto lpc = leastValuableAtt(att);
-
-		if (lpc == nEmpty)
-			return 0;
-
-		int cap_val, res = 0;
-		const auto bbs_cpy = BBs;
-		const auto gstate_cpy = game_state;
-		const auto hash_cpy = hash.key;
+	int getCaptured(int sq) {
+		int cap_val = 0;
 
 		for (auto pc = nBlackPawn - game_state.turn; pc <= nBlackKing; pc += 2) {
 			if (bitU64(sq) & BBs[pc])
 				cap_val = Eval::Value::piece_material[toPieceType(pc)];
 		}
 
-		MovePerform::makeMove(MoveItem::encode<MoveItem::encodeType::CAPTURE>(
-			getLS1BIndex(att & BBs[lpc]), sq, toPieceType(lpc), game_state.turn
-		));
+		return cap_val;
+	}
 
-		res = cap_val - see(sq);
+	// TODO: pin aware SEE algorithm
+	int see(int sq) {
+		std::array<int, 32> gain;
+		bool side = game_state.turn;
+		std::array<U64, 2> attackers;
+		U64 processed = eU64;
 
-		MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
-		hash.key = hash_cpy;
+		attackers[side] = attackTo(sq, !side);
 
-		return res;
+		int i = 0;
+		gain[i] = getCaptured(sq);
+
+		auto weakest_att = leastValuableAtt(attackers[side], side);
+		processed = bitU64(getLS1BIndex(BBs[weakest_att]));
+		attackers[side] ^= processed;
+
+		side = !side;
+		attackers[side] = attackTo(sq, !side, BBs[nOccupied] ^ processed);
+
+		while (attackers[side]) {
+			i++;
+			gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(weakest_att)];
+
+			auto weakest_att = leastValuableAtt(attackers[side], side);
+			processed |= bitU64(getLS1BIndex(BBs[weakest_att] & ~processed));
+
+			side = !side;
+			attackers[side] = attackTo(sq, !side, BBs[nOccupied] ^ processed) & ~processed;
+		}
+
+		while (i >= 1) {
+			gain[i - 1] = -std::max(-gain[i - 1], gain[i]);
+			i--;
+		}
+
+		return gain[0];
 	}
 
 	int moveScore(const MoveItem::iMove& move, int ply) {
@@ -115,20 +124,21 @@ namespace Order {
 
 	int pickBestSEE(MoveList& capt_list, int s) {
 		static MoveItem::iMove tmp;
-		int s_score = see(capt_list[s].getMask<MoveItem::iMask::TARGET>() >> 6), target;
+		int cmp_score = 
+			see(capt_list[s].getMask<MoveItem::iMask::TARGET>() >> 6), i_score;
 
 		for (int i = s + 1; i < capt_list.size(); i++) {
-			target = capt_list[i].getMask<MoveItem::iMask::TARGET>() >> 6;
+			i_score = see(capt_list[i].getMask<MoveItem::iMask::TARGET>() >> 6);
 
-			if (see(target) > s_score) {
+			if (i_score > cmp_score) {
+				cmp_score = i_score;
 				tmp = capt_list[i];
 				capt_list[i] = capt_list[s];
 				capt_list[s] = tmp;
-				s_score = see(target);
 			}
 		}
 
-		return s_score;
+		return cmp_score;
 	}
 
 } // namespace Order

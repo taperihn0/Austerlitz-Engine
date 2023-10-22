@@ -64,7 +64,7 @@ template bool isSquareAttacked<BLACK>(int);
 // if PC is KING, we don't have to check opposite king attacks
 template <enumSide PC_SIDE, enumPiece PC>
 U64 attackTo(int sq) {
-	U64 queen = BBs[nBlackQueen - PC_SIDE],
+	const U64 queen = BBs[nBlackQueen - PC_SIDE],
 		rookQueen = BBs[nBlackRook - PC_SIDE] | queen,
 		bishopQueen = BBs[nBlackBishop - PC_SIDE] | queen,
 		occ = BBs[nOccupied];
@@ -77,6 +77,7 @@ U64 attackTo(int sq) {
 		| (rookQueen & attack<ROOK>(occ, sq));
 }
 
+
 template U64 attackTo<WHITE, KING>(int);
 template U64 attackTo<BLACK, KING>(int);
 template U64 attackTo<WHITE>(int);
@@ -87,6 +88,13 @@ U64 attackTo(int sq, bool side) {
 	return side ? attackTo<BLACK>(sq) : attackTo<WHITE>(sq);
 }
 
+U64 attackTo(int sq, bool side, U64 occ) {
+	const U64 tmp = BBs[nOccupied];
+	BBs[nOccupied] = occ;
+	const U64 res = attackTo(sq, side);
+	BBs[nOccupied] = tmp;
+	return res;
+}
 
 template <enumSide SIDE>
 U64 pinnedHorizonVertic(int own_king_sq) {
