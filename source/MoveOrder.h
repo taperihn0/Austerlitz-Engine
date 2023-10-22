@@ -45,7 +45,9 @@ namespace Order {
 	void sort(MoveList& move_list, int ply);
 
 	// swap best move so it's on the i'th place
-	void pickBest(MoveList& move_list, int i, int ply);
+	void pickBest(MoveList& move_list, int s, int ply);
+
+	int pickBestSEE(MoveList& capt_list, int s);
 
 } // namespace Order
 

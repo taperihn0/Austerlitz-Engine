@@ -130,8 +130,8 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) noexcept {
 
 constexpr std::array<enumPiece, 12> _pc_cast = { PAWN, PAWN, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, KING, KING };
 inline constexpr enumPiece toPieceType(size_t pc) noexcept {
-	//return _pc_cast[pc];
-	return static_cast<enumPiece>(pc / 2);
+	return _pc_cast[pc];
+	//return static_cast<enumPiece>(pc / 2);
 }
 
 // handy functions helping getting proper piece index in bitboards set

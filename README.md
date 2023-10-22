@@ -2,11 +2,12 @@
 
 ### TODO in the future:
 
+- *countermove heuristic*
 - *smarter MVV/LVA lookup table values*
 - *mate killers*
 - *replace by depth scheme in main tt*
 - *smarter depth reduction and more accurate conditions defining late moves*
-- *experiment with null move pruning*
-- *try gradual widening on re-searches in aspiration window search*
-- *try extended futility pruning and other futility methods*
-- *adjust lazy margin based on game phase*
+- *smarter phase checking in null move pruning*
+- *apply gradual widening on re-searches in aspiration window search*
+- *apply extended futility pruning or razoring*
+- *wise endgame evaluation*

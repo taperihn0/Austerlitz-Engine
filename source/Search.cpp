@@ -40,7 +40,7 @@ namespace Search {
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
 		// Null Move Pruning method
-		if (AllowNullMove and !incheck and depth >= 3 and game_state.gamePhase() != game_state.ENDGAME) {
+		if (AllowNullMove and !incheck and depth >= 3 and game_state.gamePhase() != gState::ENDGAME) {
 			static constexpr int R = 2;
 
 			const auto ep_cpy = game_state.ep_sq;
@@ -205,9 +205,6 @@ namespace Search {
 			// success - expand bounds for next search
 			lbound = search_results.score - window, hbound = search_results.score + window;
 			
-			//if (search_results.score == Search::time_stop_sign)
-			//	search_results.score = prev_score;
-
 			// (-) search result - opponent checkmating
 			if (search_results.score < mate_comp and search_results.score > mate_score)
 				OS << "info score mate " << (mate_score - search_results.score) / 2 - 1;
@@ -230,7 +227,6 @@ namespace Search {
 			else if (time_data.is_time
 				and 5 * sinceStart_ms(time_data.start) / 2 > time_data.this_move)
 				break;
-			//prev_score = search_results.score;
 		}
 
 		OS << "bestmove ";

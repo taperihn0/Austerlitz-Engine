@@ -7,9 +7,6 @@
 namespace Order {
 	
 	inline size_t leastValuableAtt(U64 att) {
-		if (att == eU64) 
-			return nEmpty;
-
 		for (auto pc = nWhitePawn + game_state.turn; pc <= nBlackKing; pc += 2)
 			if (att & BBs[pc]) return pc;
 
@@ -29,27 +26,29 @@ namespace Order {
 			);
 
 		const U64 att = attackTo(sq, !game_state.turn) & ~(npin_att_d | npin_att_hv);
-
 		const auto lpc = leastValuableAtt(att);
-		int cap_val = 0, res = 0;
 
-		if (lpc != nEmpty) {
-			const auto bbs_cpy = BBs;
-			const auto gstate_cpy = game_state;
-			const auto hash_cpy = hash.key;
+		if (lpc == nEmpty)
+			return 0;
 
-			for (auto pc = nBlackPawn - game_state.turn; pc <= nBlackKing; pc += 2)
-				if (bitU64(sq) & BBs[pc]) cap_val = Eval::Value::piece_material[toPieceType(pc)];
+		int cap_val, res = 0;
+		const auto bbs_cpy = BBs;
+		const auto gstate_cpy = game_state;
+		const auto hash_cpy = hash.key;
 
-			MovePerform::makeMove(MoveItem::encode<MoveItem::encodeType::CAPTURE>(
-				getLS1BIndex(att & BBs[lpc]), sq, toPieceType(lpc), game_state.turn
-			));
-
-			res = cap_val - see(sq);
-
-			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
-			hash.key = hash_cpy;
+		for (auto pc = nBlackPawn - game_state.turn; pc <= nBlackKing; pc += 2) {
+			if (bitU64(sq) & BBs[pc])
+				cap_val = Eval::Value::piece_material[toPieceType(pc)];
 		}
+
+		MovePerform::makeMove(MoveItem::encode<MoveItem::encodeType::CAPTURE>(
+			getLS1BIndex(att & BBs[lpc]), sq, toPieceType(lpc), game_state.turn
+		));
+
+		res = cap_val - see(sq);
+
+		MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
+		hash.key = hash_cpy;
 
 		return res;
 	}
@@ -100,14 +99,36 @@ namespace Order {
 
 	void pickBest(MoveList& move_list, int s, int ply) {
 		static MoveItem::iMove tmp;
+		int cmp_score = moveScore(move_list[s], ply), i_score;
 
 		for (int i = s + 1; i < move_list.size(); i++) {
-			if (moveScore(move_list[i], ply) > moveScore(move_list[s], ply)) {
+			i_score = moveScore(move_list[i], ply);
+
+			if (i_score > cmp_score) {
+				cmp_score = i_score;
 				tmp = move_list[i];
 				move_list[i] = move_list[s];
 				move_list[s] = tmp;
 			}
 		}
+	}
+
+	int pickBestSEE(MoveList& capt_list, int s) {
+		static MoveItem::iMove tmp;
+		int s_score = see(capt_list[s].getMask<MoveItem::iMask::TARGET>() >> 6), target;
+
+		for (int i = s + 1; i < capt_list.size(); i++) {
+			target = capt_list[i].getMask<MoveItem::iMask::TARGET>() >> 6;
+
+			if (see(target) > s_score) {
+				tmp = capt_list[i];
+				capt_list[i] = capt_list[s];
+				capt_list[s] = tmp;
+				s_score = see(target);
+			}
+		}
+
+		return s_score;
 	}
 
 } // namespace Order
