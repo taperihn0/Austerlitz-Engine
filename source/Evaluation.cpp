@@ -382,7 +382,7 @@ namespace Eval {
 		Search::search_results.nodes++;
 
 		if (eval >= beta) return beta;
-		else if (game_state.gamePhase() != game_state.ENDGAME
+		else if (game_state.gamePhase() != gState::ENDGAME
 			and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
 			and eval + Eval::Value::QUEEN_VALUE <= alpha)
 			return alpha;

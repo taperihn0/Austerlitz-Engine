@@ -7,17 +7,28 @@
 namespace Order {
 	
 	inline size_t leastValuableAtt(U64 att) {
+		if (att == eU64) 
+			return nEmpty;
+
 		for (auto pc = nWhitePawn + game_state.turn; pc <= nBlackKing; pc += 2)
 			if (att & BBs[pc]) return pc;
+
 		return nEmpty;
 	}
 
 	int see(int sq) {
-		const U64 att = attackTo(sq, !game_state.turn)
-			& ~( // exclude pinned pieces
-				pinnedDiagonal(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
-				| pinnedHorizonVertic(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
-				);
+		const U64 
+			npin_att_d = pinnedDiagonal(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn) ^ (
+				attack<BISHOP>(BBs[nOccupied], sq)
+				& pinnedDiagonal(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
+			),
+			npin_att_hv = 
+			pinnedHorizonVertic(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn) ^ (
+				attack<ROOK>(BBs[nOccupied], sq) 
+				& pinnedHorizonVertic(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
+			);
+
+		const U64 att = attackTo(sq, !game_state.turn) & ~(npin_att_d | npin_att_hv);
 
 		const auto lpc = leastValuableAtt(att);
 		int cap_val = 0, res = 0;

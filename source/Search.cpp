@@ -69,7 +69,8 @@ namespace Search {
 		else if (incheck and mcount == 1) { 
 			depth++;
 
-			if (time_data.this_move > 300_ms and time_data.this_move < time_data.left / 11)
+			if (time_data.is_time and time_data.this_move > 300_ms
+				and time_data.this_move < time_data.left / 11)
 				time_data.this_move += 150_ms;
 		}
 
@@ -186,8 +187,8 @@ namespace Search {
 
 		int lbound = low_bound,
 			hbound = high_bound,
-			curr_dpt = 1,
-			prev_score;
+			curr_dpt = 1;
+			//prev_score;
 
 		time_data.start = now();
 		
@@ -204,8 +205,8 @@ namespace Search {
 			// success - expand bounds for next search
 			lbound = search_results.score - window, hbound = search_results.score + window;
 			
-			if (search_results.score == Search::time_stop_sign)
-				search_results.score = prev_score;
+			//if (search_results.score == Search::time_stop_sign)
+			//	search_results.score = prev_score;
 
 			// (-) search result - opponent checkmating
 			if (search_results.score < mate_comp and search_results.score > mate_score)
@@ -229,7 +230,7 @@ namespace Search {
 			else if (time_data.is_time
 				and 5 * sinceStart_ms(time_data.start) / 2 > time_data.this_move)
 				break;
-			prev_score = search_results.score;
+			//prev_score = search_results.score;
 		}
 
 		OS << "bestmove ";
