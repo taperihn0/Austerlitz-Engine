@@ -8,6 +8,7 @@
 namespace Eval {
 	
 	namespace LookUp {
+
 		// backward pawn lookup table of masks
 		constexpr auto back_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr -> U64 {
 			const U64 same_bfile = inBetween(sq, (side ? 56 : 0) + sq % 8) | bitU64(sq);
@@ -56,6 +57,12 @@ namespace Eval {
 
 		constexpr std::array<int, 12> piece_material = {
 			PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE,
+		};
+
+		enum {
+			PASSER_WEIGHT = 6,
+			BACKWARD_WEIGHT = 3,
+			OTHER_WEIGHT = 2
 		};
 
 		// single lookup table for score of each square for evary single piece
