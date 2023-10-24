@@ -74,10 +74,11 @@ namespace Search {
 				time_data.this_move += 150_ms;
 		}
 
-		const auto bbs_cpy = BBs;
-		const auto gstate_cpy = game_state;
-		const auto hash_cpy = hash.key;
-		static int score, to, pc;
+		const MoveItem::iMove my_prev = prev_move;
+		const BitBoardsSet bbs_cpy = BBs;
+		const gState gstate_cpy = game_state;
+		const U64 hash_cpy = hash.key;
+		int score, to, pc, prev_to = my_prev.getMask<MoveItem::iMask::TARGET>() >> 6, prev_pc;
 		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
 
 		for (int i = 0; i < mcount; i++) {
@@ -93,10 +94,16 @@ namespace Search {
 				and beta < -mate_comp and alpha > mate_comp
 				and Eval::evaluate(alpha - margin, Search::high_bound) <= alpha - margin) {
 				return alpha;
+			} // recapture extra time
+			else if (ply and prev_to == (move.getMask<MoveItem::iMask::TARGET>() >> 6)
+				and time_data.is_time and time_data.this_move > 300_ms
+				and time_data.this_move < time_data.left / 10) {
+				time_data.this_move += 100_ms;
 			}
 
 			rep_tt.posRegister();
 			MovePerform::makeMove(move);
+			prev_move = move;
 
 			// if pv is still left, save time by checking uninteresting moves using null window
 			// if such node fails low, it's a sign we are offered good move (score > alpha)
@@ -126,6 +133,7 @@ namespace Search {
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			rep_tt.count--;
 			hash.key = hash_cpy;
+			prev_move = my_prev;
 
 			if (time_data.stop) return time_stop_sign;
 
@@ -144,6 +152,11 @@ namespace Search {
 
 						// store move as a history move
 						Order::history_moves[pc][to] += depth * depth;
+
+						prev_pc = my_prev.getMask<MoveItem::iMask::PIECE>() >> 12;
+
+						// store countermove
+						Order::countermove[prev_pc][prev_to] = move.raw();
 					}
 
 					tt.write(depth, beta, HashEntry::Flag::HASH_BETA, ply);
@@ -194,6 +207,7 @@ namespace Search {
 		
 		// aspiration window search
 		while (curr_dpt <= depth) {
+			prev_move = 0;
 			search_results.score = alphaBeta<false>(lbound, hbound, curr_dpt, 0);
 
 			// fail

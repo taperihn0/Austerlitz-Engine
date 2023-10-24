@@ -36,6 +36,9 @@ namespace Order {
 	using butterflyLookUp = std::array<std::array<int, 64>, 12>;
 	extern butterflyLookUp butterfly;
 
+	// butterfly-based countermove lookup
+	extern butterflyLookUp countermove;
+
 	// return value, also so called 'score' of given move
 	int moveScore(const MoveItem::iMove& move, int ply);
 
@@ -57,6 +60,7 @@ namespace InitState {
 	// clear butterfly
 	inline void clearButterfly() {
 		for (auto& x : Order::butterfly) x.fill(0);
+		for (auto& x : Order::countermove) x.fill(0);
 	}
 	
 	// clear history heuristic table

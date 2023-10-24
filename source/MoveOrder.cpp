@@ -92,12 +92,17 @@ namespace Order {
 		if (move == killer[0][ply])
 			return 900000;
 		else if (move == killer[1][ply])
-			return 800000;
+			return 895000;
 
 		// relative history move score
-		const int pc = move.getMask<MoveItem::iMask::PIECE>() >> 12;
+		const int 
+			prev_to = Search::prev_move.getMask<MoveItem::iMask::TARGET>() >> 6,
+			prev_pc = Search::prev_move.getMask<MoveItem::iMask::PIECE>() >> 12,
+			pc = move.getMask<MoveItem::iMask::PIECE>() >> 12,
+			counter_bonus = (ply and Order::countermove[prev_pc][prev_to] == move.raw()) * (4 + ply);
+
 		static constexpr int scale = 13;
-		return (scale * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1;
+		return (scale * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1 + counter_bonus;
 	}
 
 	void sort(MoveList& move_list, int ply) {

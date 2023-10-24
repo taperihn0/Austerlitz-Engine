@@ -23,13 +23,14 @@ gState game_state;
 Search::Results Search::search_results;
 Order::killerLookUp Order::killer;
 Order::historyLookUp Order::history_moves;
-Order::butterflyLookUp Order::butterfly;
+Order::butterflyLookUp Order::butterfly, Order::countermove;
 
 UCI UCI_o;
 SearchBenchmark bench;
 
 PV::lenghtPV PV::pv_len;
 PV::linePV PV::pv_line;
+MoveItem::iMove Search::prev_move;
 
 TranspositionTable tt;
 RepetitionTable rep_tt;
@@ -37,7 +38,6 @@ RepetitionTable rep_tt;
 Time time_data;
 
 int main(int argc, char* argv[]) {
-	InitState::clearButterfly();
 	InitState::initMAttacksTables();
 	tt.clear();
 	UCI_o.goLoop(argc, argv);

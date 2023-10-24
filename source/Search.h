@@ -6,6 +6,7 @@
 
 
 namespace PV {
+
 	// Principal Variation database tables
 	using lenghtPV = std::array<int, Order::max_Ply>;
 	extern lenghtPV pv_len;
@@ -18,7 +19,8 @@ namespace PV {
 		pv_len.fill(0);
 		for (auto& x : PV::pv_line) x.fill(0);
 	}
-};
+
+} // namespace PV 
 
 
 namespace Search {
@@ -41,6 +43,8 @@ namespace Search {
 		int score;
 		unsigned long long nodes;
 	};
+
+	extern MoveItem::iMove prev_move;
 
 	extern Results search_results;
 

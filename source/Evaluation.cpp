@@ -9,10 +9,26 @@
 namespace Eval {
 
 	static struct commonEvalData {
-		std::array<int, 2> k_sq, att_count, att_value;
+		std::array<int, 2> k_sq, att_count, att_value, s_pawn_count;
 		int pawn_count, phase, mid_score;
 		std::array<U64, 2> k_zone, tarrasch_passed_msk;
 		std::array<std::array<U64, 5>, 2> pt_att;
+
+		void fill() {
+			k_sq[game_state.turn] = getLS1BIndex(BBs[nWhiteKing + game_state.turn]);
+			k_sq[!game_state.turn] = getLS1BIndex(BBs[nBlackKing - game_state.turn]);
+			s_pawn_count[game_state.turn] = bitCount(BBs[nWhitePawn + game_state.turn]);
+			s_pawn_count[!game_state.turn] = bitCount(BBs[nBlackPawn - game_state.turn]);
+			pawn_count = s_pawn_count[game_state.turn] + s_pawn_count[!game_state.turn];
+			att_count = { 0, 0 }, att_value = { 0, 0 };
+			k_zone[WHITE] = attack<KING>(UINT64_MAX, k_sq[WHITE]);
+			k_zone[BLACK] = attack<KING>(UINT64_MAX, k_sq[BLACK]);
+		}
+
+		inline void tarrashClear() noexcept {
+			tarrasch_passed_msk = { eU64, eU64 };
+		}
+
 	} common_data;
 
 	template <enumSide SIDE>
@@ -38,6 +54,11 @@ namespace Eval {
 		}
 
 		return eval;
+	}
+
+	template <enumSide SIDE>
+	inline int noPawnsPenalty() noexcept {
+		return (!common_data.s_pawn_count[SIDE]) * (-40);
 	}
 
 	// simple castle checking
@@ -338,6 +359,10 @@ namespace Eval {
 		// consider connectivity (double connected squares)
 		eval += connectivity<SIDE>() - connectivity<!SIDE>();
 
+		// no pawns in endgame penalty
+		//if constexpr (Phase == gState::ENDGAME)
+		//	eval += noPawnsPenalty<SIDE>() - noPawnsPenalty<!SIDE>();
+
 		return material_sc + eval + 2 * (c_sq1 / (c_sq2 + 1));
 	}
 
@@ -348,17 +373,12 @@ namespace Eval {
 
 	// main evaluation system
 	int evaluate(int alpha, int beta) {
-		common_data.k_sq[game_state.turn] = getLS1BIndex(BBs[nWhiteKing + game_state.turn]);
-		common_data.k_sq[!game_state.turn] = getLS1BIndex(BBs[nBlackKing - game_state.turn]);
-		common_data.pawn_count = bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
-		common_data.att_count = { 0, 0 }, common_data.att_value = { 0, 0 };
-		common_data.k_zone[WHITE] = attack<KING>(UINT64_MAX, common_data.k_sq[WHITE]);
-		common_data.k_zone[BLACK] = attack<KING>(UINT64_MAX, common_data.k_sq[BLACK]);
+		common_data.fill();
 
 		if (game_state.gamePhase() == gState::OPENING)
 			return sideEval<gState::OPENING>(game_state.turn, alpha, beta);
 
-		common_data.tarrasch_passed_msk = { eU64, eU64 };
+		common_data.tarrashClear();
 
 		// score interpolation
 		static constexpr int double_k_val = 2 * Value::KING_VALUE;
@@ -390,9 +410,9 @@ namespace Eval {
 
 		// generate opponent capture moves
 		auto capt_list = MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>();
-		const auto bbs_cpy = BBs;
-		const auto gstate_cpy = game_state;
-		const auto hash_cpy = hash.key;
+		const BitBoardsSet bbs_cpy = BBs;
+		const gState gstate_cpy = game_state;
+		const U64 hash_cpy = hash.key;
 		int score, see_score;
 
 		for (int i = 0; i < capt_list.size(); i++) {
