@@ -59,6 +59,16 @@ template bool isSquareAttacked<WHITE>(int);
 template bool isSquareAttacked<BLACK>(int);
 
 
+bool isBySliderAttacked(int sq, bool side, U64 occ) {
+	U64 queen = BBs[nBlackQueen - side],
+		rookQueen = (BBs[nBlackRook - side] | queen) & occ,
+		bishopQueen = (BBs[nBlackBishop - side] | queen) & occ;
+
+	if (bishopQueen & attack<BISHOP>(occ, sq)) return true;
+	return (rookQueen & attack<ROOK>(occ, sq));
+}
+
+
 // return bitboard of black attackers, if pc_side is white,
 // else return white attackers, if pc_side is black
 // if PC is KING, we don't have to check opposite king attacks

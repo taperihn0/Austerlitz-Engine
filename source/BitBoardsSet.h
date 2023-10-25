@@ -66,21 +66,28 @@ inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
 
 // game state variables
 struct gState {
-	static constexpr int max_move_rule = 50,
-		start_game_score = 28150,
-		end_game_score = 23300,
-		middle_game_score = 26450;
+	enum gPhase { 
+		OPENING = 0, MIDDLEGAME, ENDGAME 
+	};
 
-	enum gPhase { OPENING = 0, MIDDLEGAME, ENDGAME };
+	enum Constans {
+		START_SCORE = 28150,
+		ENDPHASE_SCORE = 23300,
+		MIDDLEPHASE_SCORE = 26450,
+		
+		MAX_MOVE_RULE = 50
+	};
 
 	inline bool is50moveDraw() noexcept {
-		return halfmove >= max_move_rule;
+		return halfmove >= MAX_MOVE_RULE;
 	}
 
 	inline gPhase gamePhase() noexcept {
-		const int total_mat = material[0] + material[1];
-		return total_mat < end_game_score ? ENDGAME :
-			fullmove > 10 or total_mat <= middle_game_score or !castle.raw() ? MIDDLEGAME : OPENING;
+		const int total_material = material[0] + material[1];
+
+		return total_material < ENDPHASE_SCORE ? ENDGAME :
+			fullmove > 10 or total_material <= MIDDLEPHASE_SCORE or !castle.raw() ? MIDDLEGAME :
+			OPENING;
 	}
 
 	int ep_sq;
@@ -128,7 +135,9 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) noexcept {
 	return static_cast<size_t>(pc) + static_cast<size_t>(s);
 }
 
-constexpr std::array<enumPiece, 12> _pc_cast = { PAWN, PAWN, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, KING, KING };
+constexpr std::array<enumPiece, 12> _pc_cast = { 
+	PAWN, PAWN, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, KING, KING 
+};
 inline constexpr enumPiece toPieceType(size_t pc) noexcept {
 	return _pc_cast[pc];
 	//return static_cast<enumPiece>(pc / 2);

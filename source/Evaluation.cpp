@@ -9,20 +9,19 @@
 namespace Eval {
 
 	static struct commonEvalData {
-		std::array<int, 2> k_sq, att_count, att_value, s_pawn_count;
-		int pawn_count, phase, mid_score;
-		std::array<U64, 2> k_zone, tarrasch_passed_msk;
-		std::array<std::array<U64, 5>, 2> pt_att;
 
 		void fill() {
-			k_sq[game_state.turn] = getLS1BIndex(BBs[nWhiteKing + game_state.turn]);
-			k_sq[!game_state.turn] = getLS1BIndex(BBs[nBlackKing - game_state.turn]);
-			s_pawn_count[game_state.turn] = bitCount(BBs[nWhitePawn + game_state.turn]);
-			s_pawn_count[!game_state.turn] = bitCount(BBs[nBlackPawn - game_state.turn]);
-			pawn_count = s_pawn_count[game_state.turn] + s_pawn_count[!game_state.turn];
+			k_sq[WHITE] = getLS1BIndex(BBs[nWhiteKing]);
+			k_sq[BLACK] = getLS1BIndex(BBs[nBlackKing]);
+
+			s_pawn_count[WHITE] = bitCount(BBs[nWhitePawn]);
+			s_pawn_count[BLACK] = bitCount(BBs[nBlackPawn]);
+
+			pawn_count = s_pawn_count[WHITE] + s_pawn_count[BLACK];
 			att_count = { 0, 0 }, att_value = { 0, 0 };
-			k_zone[WHITE] = attack<KING>(UINT64_MAX, k_sq[WHITE]);
-			k_zone[BLACK] = attack<KING>(UINT64_MAX, k_sq[BLACK]);
+
+			k_zone[WHITE] = attack<KING>(MAX_U64, k_sq[WHITE]);
+			k_zone[BLACK] = attack<KING>(MAX_U64, k_sq[BLACK]);
 		}
 
 		inline void tarrashClear() noexcept {
@@ -30,17 +29,26 @@ namespace Eval {
 		}
 
 		inline void kingTropClear() {
-			common_data.passed_count = 0;
-			common_data.backward_count = 0;
-			common_data.t_passed_dist = { 0, 0 };
-			common_data.t_backw_dist = { 0, 0 };
-			common_data.t_o_dist = { 0, 0 };
+			passed_count = 0;
+			backward_count = 0;
+			t_passed_dist = { 0, 0 };
+			t_backw_dist = { 0, 0 };
+			t_o_dist = { 0, 0 };
 		}
 
-		int passed_count, backward_count;
-		std::array<int, 2> t_passed_dist, t_backw_dist, t_o_dist;
+		template <typename T>
+		using bothSideLookUp = std::array<T, 2>;
 
-	} common_data;
+		int passed_count, backward_count, pawn_count;
+		bothSideLookUp<int>
+			t_passed_dist, t_backw_dist, t_o_dist, s_pawn_count,
+			k_sq, att_count, att_value;
+
+		int phase, mid_score;
+		bothSideLookUp<U64> k_zone, tarrasch_passed_msk;
+		bothSideLookUp<std::array<U64, 5>> pt_att;
+
+	} eval_lookup;
 
 	template <enumSide SIDE>
 	U64 pshield(U64 bb) {
@@ -56,12 +64,12 @@ namespace Eval {
 
 	template <enumSide SIDE>
 	int connectivity() {
-		U64 conn = common_data.pt_att[SIDE][PAWN];
+		U64 conn = eval_lookup.pt_att[SIDE][PAWN];
 		int eval = 0;
 
 		for (int pc = KNIGHT; pc <= QUEEN; pc++) {
-			eval += 3 * bitCount(conn & common_data.pt_att[SIDE][pc]);
-			conn |= common_data.pt_att[SIDE][pc];
+			eval += 3 * bitCount(conn & eval_lookup.pt_att[SIDE][pc]);
+			conn |= eval_lookup.pt_att[SIDE][pc];
 		}
 
 		return eval;
@@ -69,24 +77,24 @@ namespace Eval {
 
 	template <enumSide SIDE>
 	inline int noPawnsPenalty() noexcept {
-		return (!common_data.s_pawn_count[SIDE]) * (-30);
+		return (!eval_lookup.s_pawn_count[SIDE]) * (-30);
 	}
 
 	template <enumSide SIDE>
 	inline int kingPawnTropism() {
 		static constexpr int scale = 16;
-		const int other_count = common_data.pawn_count 
-			- common_data.passed_count 
-			- common_data.backward_count;
+		const int other_count = eval_lookup.pawn_count 
+			- eval_lookup.passed_count 
+			- eval_lookup.backward_count;
 
 		return scale * (
-			common_data.t_passed_dist[SIDE] * Value::PASSER_WEIGHT
-			+ common_data.t_backw_dist[SIDE] * Value::BACKWARD_WEIGHT
-			+ common_data.t_o_dist[SIDE] * Value::OTHER_WEIGHT
+			eval_lookup.t_passed_dist[SIDE] * Value::PASSER_WEIGHT
+			+ eval_lookup.t_backw_dist[SIDE] * Value::BACKWARD_WEIGHT
+			+ eval_lookup.t_o_dist[SIDE] * Value::OTHER_WEIGHT
 			)
 		/ (
-			common_data.passed_count * Value::PASSER_WEIGHT 
-			+ common_data.backward_count * Value::BACKWARD_WEIGHT 
+			eval_lookup.passed_count * Value::PASSER_WEIGHT 
+			+ eval_lookup.backward_count * Value::BACKWARD_WEIGHT 
 			+ other_count * Value::OTHER_WEIGHT + 1
 			);
 	} 
@@ -124,7 +132,7 @@ namespace Eval {
 		U64 pawns = BBs[nWhitePawn + SIDE], passed = eU64;
 		int sq, eval = 0;
 		const U64 p_att = PawnAttacks::anyAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX);
-		common_data.pt_att[SIDE][PAWN] = p_att;
+		eval_lookup.pt_att[SIDE][PAWN] = p_att;
 
 		// pawn islands
 		const U64 fileset = soutFill(BBs[nWhitePawn + SIDE]) & Constans::r1_rank;
@@ -140,9 +148,9 @@ namespace Eval {
 			// if backward pawn...
 			if (!(LookUp::back_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) {
 				if constexpr (Phase == gState::ENDGAME) {
-					common_data.t_backw_dist[SIDE] += Value::distance_score.get(sq, common_data.k_sq[SIDE]);
-					common_data.t_backw_dist[!SIDE] += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
-					common_data.backward_count++;
+					eval_lookup.t_backw_dist[SIDE] += Value::distance_score.get(sq, eval_lookup.k_sq[SIDE]);
+					eval_lookup.t_backw_dist[!SIDE] += Value::distance_score.get(sq, eval_lookup.k_sq[!SIDE]);
+					eval_lookup.backward_count++;
 					dist_updated = true;
 				}
 
@@ -156,9 +164,9 @@ namespace Eval {
 			else if (!((LookUp::nf_file.get(SIDE, sq) | LookUp::sf_file.get(SIDE, sq)) & BBs[nBlackPawn - SIDE])) {
 				if constexpr (Phase == gState::ENDGAME) {
 					passed |= bitU64(sq);
-					common_data.t_passed_dist[SIDE] += Value::distance_score.get(sq, common_data.k_sq[SIDE]);
-					common_data.t_passed_dist[!SIDE] += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
-					common_data.passed_count++;
+					eval_lookup.t_passed_dist[SIDE] += Value::distance_score.get(sq, eval_lookup.k_sq[SIDE]);
+					eval_lookup.t_passed_dist[!SIDE] += Value::distance_score.get(sq, eval_lookup.k_sq[!SIDE]);
+					eval_lookup.passed_count++;
 					dist_updated = true;
 				}
 
@@ -171,8 +179,8 @@ namespace Eval {
 
 			if constexpr (Phase == gState::ENDGAME) {
 				if (!dist_updated) {
-					common_data.t_o_dist[SIDE] += Value::distance_score.get(sq, common_data.k_sq[SIDE]);
-					common_data.t_o_dist[!SIDE] += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
+					eval_lookup.t_o_dist[SIDE] += Value::distance_score.get(sq, eval_lookup.k_sq[SIDE]);
+					eval_lookup.t_o_dist[!SIDE] += Value::distance_score.get(sq, eval_lookup.k_sq[!SIDE]);
 				}
 			}
 		}
@@ -182,8 +190,8 @@ namespace Eval {
 
 		// save tarrasch masks
 		if constexpr (Phase == gState::ENDGAME) {
-			common_data.tarrasch_passed_msk[SIDE] |= rearspan<SIDE>(passed);
-			common_data.tarrasch_passed_msk[!SIDE] |= frontspan<SIDE>(passed);
+			eval_lookup.tarrasch_passed_msk[SIDE] |= rearspan<SIDE>(passed);
+			eval_lookup.tarrasch_passed_msk[!SIDE] |= frontspan<SIDE>(passed);
 		}
 
 		// isolanis and half-isolanis
@@ -222,7 +230,7 @@ namespace Eval {
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == KNIGHT, int> {
 		int sq, eval = 0;
-		const U64 opp_p_att = common_data.pt_att[!SIDE][PAWN];
+		const U64 opp_p_att = eval_lookup.pt_att[!SIDE][PAWN];
 		U64 k_msk = BBs[nWhiteKnight + SIDE], opp_contr, k_att, t_att = eU64;
 
 		while (k_msk) {
@@ -234,22 +242,22 @@ namespace Eval {
 			opp_contr = k_att & opp_p_att;
 			eval -= 20 * bitCount(opp_contr) / bitCount(k_att);
 
-			if (k_att & Value::ext_king_zone.get(common_data.k_sq[!SIDE])) {
-				common_data.att_count[SIDE]++;
-				common_data.att_value[SIDE] += Value::attacker_weight[KNIGHT]
-					* bitCount(k_att & common_data.k_zone[!SIDE]);
+			if (k_att & Value::ext_king_zone.get(eval_lookup.k_sq[!SIDE])) {
+				eval_lookup.att_count[SIDE]++;
+				eval_lookup.att_value[SIDE] += Value::attacker_weight[KNIGHT]
+					* bitCount(k_att & eval_lookup.k_zone[!SIDE]);
 			}
 
 			// outpos check
 			if (bitU64(sq) &
-				(Constans::board_side[!SIDE] & common_data.pt_att[SIDE][PAWN] & ~opp_p_att))
+				(Constans::board_side[!SIDE] & eval_lookup.pt_att[SIDE][PAWN] & ~opp_p_att))
 				eval += Value::outpos_score[sq];
 
-			eval += common_data.pawn_count
-				+ Value::knight_distance_score.get(sq, common_data.k_sq[!SIDE]); // king tropism bonus
+			eval += eval_lookup.pawn_count
+				+ Value::knight_distance_score.get(sq, eval_lookup.k_sq[!SIDE]); // king tropism bonus
 		}
 
-		common_data.pt_att[SIDE][KNIGHT] = t_att;
+		eval_lookup.pt_att[SIDE][KNIGHT] = t_att;
 
 		// mobility: undefended minor pieces and legal moves squares
 		eval -= 2 * bitCount(~t_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
@@ -271,22 +279,22 @@ namespace Eval {
 			b_att = attack<BISHOP>(BBs[nOccupied], sq);
 			t_att |= b_att;
 
-			if (b_att & common_data.k_zone[!SIDE]) {
-				common_data.att_count[SIDE]++;
-				common_data.att_value[SIDE] += Value::attacker_weight[BISHOP]
-					* bitCount(b_att & common_data.k_zone[!SIDE]);
+			if (b_att & eval_lookup.k_zone[!SIDE]) {
+				eval_lookup.att_count[SIDE]++;
+				eval_lookup.att_value[SIDE] += Value::attacker_weight[BISHOP]
+					* bitCount(b_att & eval_lookup.k_zone[!SIDE]);
 			}
 
 			// king tropism score
 			eval += std::max(
-						Value::adiag_score.get(sq, common_data.k_sq[!SIDE]),
-						Value::diag_score.get(sq, common_data.k_sq[!SIDE])
+						Value::adiag_score.get(sq, eval_lookup.k_sq[!SIDE]),
+						Value::diag_score.get(sq, eval_lookup.k_sq[!SIDE])
 					);
 
-			eval -= common_data.pawn_count;
+			eval -= eval_lookup.pawn_count;
 		}
 
-		common_data.pt_att[SIDE][BISHOP] = t_att;
+		eval_lookup.pt_att[SIDE][BISHOP] = t_att;
 
 		eval -= 2 * bitCount(~t_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
 		c_sq += bitCount(t_att);
@@ -298,22 +306,22 @@ namespace Eval {
 		int sq, eval = 0;
 		U64 r_msk = BBs[nWhiteRook + SIDE], r_att;
 		const U64 open_f = ~fileFill(BBs[nWhitePawn + SIDE]);
-		common_data.pt_att[SIDE][ROOK] = eU64;
+		eval_lookup.pt_att[SIDE][ROOK] = eU64;
 
 		while (r_msk) {
 			sq = popLS1B(r_msk);
 			eval += Value::position_score[Phase][ROOK][flipSquare<SIDE>(sq)];
-			common_data.pt_att[SIDE][ROOK] |= (r_att = attack<ROOK>(BBs[nOccupied], sq));
+			eval_lookup.pt_att[SIDE][ROOK] |= (r_att = attack<ROOK>(BBs[nOccupied], sq));
 			c_sq += bitCount(r_att);
 
-			if (r_att & common_data.k_zone[!SIDE]) {
-				common_data.att_count[SIDE]++;
-				common_data.att_value[SIDE] += Value::attacker_weight[ROOK]
-					* bitCount(r_att & common_data.k_zone[!SIDE]);
+			if (r_att & eval_lookup.k_zone[!SIDE]) {
+				eval_lookup.att_count[SIDE]++;
+				eval_lookup.att_value[SIDE] += Value::attacker_weight[ROOK]
+					* bitCount(r_att & eval_lookup.k_zone[!SIDE]);
 			}
 
 			// king tropism score
-			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]);
+			eval += Value::distance_score.get(sq, eval_lookup.k_sq[!SIDE]);
 
 			// open file score
 			if (bitU64(sq) & open_f) eval += 10;
@@ -321,10 +329,10 @@ namespace Eval {
 			if (Constans::f_by_index[sq % 8] & (BBs[nBlackQueen - SIDE] | BBs[nWhiteRook + SIDE])) eval += 10;
 			// tarrasch rule
 			if constexpr (Phase == gState::ENDGAME) {
-				if (bitU64(sq) & common_data.tarrasch_passed_msk[SIDE]) eval += 10;
+				if (bitU64(sq) & eval_lookup.tarrasch_passed_msk[SIDE]) eval += 10;
 			}
 
-			eval -= common_data.pawn_count;
+			eval -= eval_lookup.pawn_count;
 		}
 
 		return eval;
@@ -334,25 +342,25 @@ namespace Eval {
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == QUEEN, int> {
 		int sq, eval = 0;
 		U64 q_msk = BBs[nWhiteQueen + SIDE], q_att;
-		common_data.pt_att[SIDE][QUEEN] = eU64;
+		eval_lookup.pt_att[SIDE][QUEEN] = eU64;
 
 		while (q_msk) {
 			sq = popLS1B(q_msk);
 			eval += Value::position_score[Phase][QUEEN][flipSquare<SIDE>(sq)];
-			common_data.pt_att[SIDE][QUEEN] |= (q_att = attack<QUEEN>(BBs[nOccupied], sq));
+			eval_lookup.pt_att[SIDE][QUEEN] |= (q_att = attack<QUEEN>(BBs[nOccupied], sq));
 			c_sq += bitCount(q_att);
 
-			if (q_att & common_data.k_zone[!SIDE]) {
-				common_data.att_count[SIDE]++;
-				common_data.att_value[SIDE] += Value::attacker_weight[QUEEN]
-					* bitCount(q_att & common_data.k_zone[!SIDE]);
+			if (q_att & eval_lookup.k_zone[!SIDE]) {
+				eval_lookup.att_count[SIDE]++;
+				eval_lookup.att_value[SIDE] += Value::attacker_weight[QUEEN]
+					* bitCount(q_att & eval_lookup.k_zone[!SIDE]);
 			}
 
 			// king tropism score
-			eval += Value::distance_score.get(sq, common_data.k_sq[!SIDE]) 
+			eval += Value::distance_score.get(sq, eval_lookup.k_sq[!SIDE]) 
 				+ std::max(
-					Value::adiag_score.get(sq, common_data.k_sq[!SIDE]),
-					Value::diag_score.get(sq, common_data.k_sq[!SIDE])
+					Value::adiag_score.get(sq, eval_lookup.k_sq[!SIDE]),
+					Value::diag_score.get(sq, eval_lookup.k_sq[!SIDE])
 				);
 
 			if constexpr (Phase == gState::OPENING)
@@ -367,10 +375,10 @@ namespace Eval {
 		int eval = 0;
 
 		// king zone control
-		eval += common_data.att_value[SIDE] * Value::attack_count_weight[common_data.att_count[SIDE]] / 100;
+		eval += eval_lookup.att_value[SIDE] * Value::attack_count_weight[eval_lookup.att_count[SIDE]] / 100;
 
 		if constexpr (Phase != gState::ENDGAME) {
-			eval = Value::king_score[flipSquare<SIDE>(common_data.k_sq[SIDE])];
+			eval = Value::king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
 
 			// check castling possibility
 			if constexpr (Phase == gState::OPENING) {
@@ -378,7 +386,7 @@ namespace Eval {
 					eval += 15;
 			}
 		}
-		else eval = Value::late_king_score[flipSquare<SIDE>(common_data.k_sq[SIDE])];
+		else eval = Value::late_king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
 
 		return eval;
 	}
@@ -398,11 +406,11 @@ namespace Eval {
 		else if constexpr (Phase == gState::ENDGAME) {
 			static constexpr int lazy_margin_ed = 292; //268
 
-			if (((common_data.mid_score * (256 - common_data.phase))
-				+ ((material_sc - lazy_margin_ed) * common_data.phase)) / 256 >= beta)
+			if (((eval_lookup.mid_score * (256 - eval_lookup.phase))
+				+ ((material_sc - lazy_margin_ed) * eval_lookup.phase)) / 256 >= beta)
 				return beta;
-			else if (((common_data.mid_score * (256 - common_data.phase))
-				+ ((material_sc + lazy_margin_ed) * common_data.phase)) / 256 <= alpha)
+			else if (((eval_lookup.mid_score * (256 - eval_lookup.phase))
+				+ ((material_sc + lazy_margin_ed) * eval_lookup.phase)) / 256 <= alpha)
 				return alpha;
 		}
 
@@ -434,24 +442,23 @@ namespace Eval {
 
 	// main evaluation system
 	int evaluate(int alpha, int beta) {
-		common_data.fill();
+		eval_lookup.fill();
 
 		if (game_state.gamePhase() == gState::OPENING)
 			return sideEval<gState::OPENING>(game_state.turn, alpha, beta);
 
 		// score interpolation
-		static constexpr int double_k_val = 2 * Value::KING_VALUE;
-		common_data.phase = ((8150 - (game_state.material[0] + game_state.material[1] - double_k_val)) * 256 + 4075) / 8150;
+		eval_lookup.phase = ((8150 - (game_state.material[0] + game_state.material[1] - Value::DOUBLE_KING_VAL)) * 256 + 4075) / 8150;
 
-		common_data.mid_score = sideEval<gState::MIDDLEGAME>(game_state.turn, alpha, beta);
+		eval_lookup.mid_score = sideEval<gState::MIDDLEGAME>(game_state.turn, alpha, beta);
 
-		common_data.tarrashClear();
-		common_data.kingTropClear();
+		eval_lookup.tarrashClear();
+		eval_lookup.kingTropClear();
 		const int end_score = sideEval<gState::ENDGAME>(game_state.turn, alpha, beta);
 
 		if (end_score >= beta) return beta;
 		else if (end_score <= alpha) return alpha;
-		return ((common_data.mid_score * (256 - common_data.phase)) + (end_score * common_data.phase)) / 256;
+		return ((eval_lookup.mid_score * (256 - eval_lookup.phase)) + (end_score * eval_lookup.phase)) / 256;
 	}
 
 	int qSearch(int alpha, int beta, int ply) {
@@ -466,7 +473,7 @@ namespace Eval {
 		if (eval >= beta) return beta;
 		else if (game_state.gamePhase() != gState::ENDGAME
 			and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
-			and eval + Eval::Value::QUEEN_VALUE <= alpha)
+			and eval + Value::QUEEN_VALUE <= alpha)
 			return alpha;
 		alpha = std::max(alpha, eval);
 

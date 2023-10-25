@@ -68,9 +68,12 @@ template <enumSide PC_SIDE>
 bool isSquareAttacked(int sq);
 
 inline bool isSquareAttacked(int sq, bool side) {
-	return side ? isSquareAttacked<BLACK>(sq)
-		: isSquareAttacked<WHITE>(sq);
+	return side ? 
+		isSquareAttacked<BLACK>(sq) : 
+		isSquareAttacked<WHITE>(sq);
 }
+
+bool isBySliderAttacked(int sq, bool side, U64 occ);
 
 template <enumSide PC_SIDE, enumPiece PC = ANY>
 U64 attackTo(int sq);

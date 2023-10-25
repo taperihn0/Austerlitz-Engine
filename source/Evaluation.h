@@ -55,6 +55,10 @@ namespace Eval {
 			KING_VALUE = 10000
 		};
 
+		enum ScoreConstans {
+			DOUBLE_KING_VAL = 2 * KING_VALUE,
+		};
+
 		constexpr std::array<int, 12> piece_material = {
 			PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE,
 		};
@@ -214,7 +218,7 @@ namespace Eval {
 
 		// easily aggregated lookups
 		using aggregateScoreTab = std::array<std::array<posScoreTab, 6>, 3>;
-		constexpr aggregateScoreTab position_score = {{
+		constexpr aggregateScoreTab position_score = { {
 			{
 				pawn_score,
 				knight_score,
@@ -241,25 +245,28 @@ namespace Eval {
 				late_queen_score,
 				late_king_score
 			}
-		}};
-		
+		} };
+
 		constexpr auto distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int d = cexpr::abs(i % 8 - j % 8) + cexpr::abs(i / 8 - j / 8);
 			return 14 - d;
-		});
+			});
 
 		constexpr auto diag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int sc_i = (i % 8) + (i / 8), sc_j = (j % 8) - (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
-		});
+			});
 
 		constexpr auto adiag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int sc_i = 7 - (i % 8) + (i / 8), sc_j = 7 - (j % 8) + (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
-		});
+			});
 
 		using passedPawnTab = std::array<int, 7>;
-		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
+		constexpr passedPawnTab passed_score = {
+			{ 0, 10, 20, 30, 55, 90, 105 },
+		};
+
 
 		constexpr std::array<int, 10> attack_count_weight = { 0, 50, 75, 88, 94, 97, 99, 99, 99, 99 };
 		constexpr std::array<int, 5> attacker_weight = { 0, 20, 20, 40, 80 };

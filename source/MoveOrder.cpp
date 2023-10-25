@@ -24,12 +24,11 @@ namespace Order {
 		return cap_val;
 	}
 
-	// TODO: pin aware SEE algorithm
 	int see(int sq) {
 		std::array<int, 32> gain;
 		bool side = game_state.turn;
 		std::array<U64, 2> attackers;
-		U64 processed = eU64;
+		U64 processed = eU64, single_att;
 
 		attackers[side] = attackTo(sq, !side);
 
@@ -48,7 +47,17 @@ namespace Order {
 			gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(weakest_att)];
 
 			auto weakest_att = leastValuableAtt(attackers[side], side);
-			processed |= bitU64(getLS1BIndex(BBs[weakest_att] & ~processed));
+			single_att = bitU64(getLS1BIndex(BBs[weakest_att] & ~processed));
+
+			// pin detection
+			if (isBySliderAttacked(getLS1BIndex(BBs[nWhiteKing + side]), 
+				side, BBs[nOccupied] ^ (processed | single_att))) {
+				attackers[side] ^= single_att;
+				i--;
+				break;
+			}
+
+			processed |= single_att;
 
 			side = !side;
 			attackers[side] = attackTo(sq, !side, BBs[nOccupied] ^ processed) & ~processed;
@@ -99,7 +108,7 @@ namespace Order {
 			prev_to = Search::prev_move.getMask<MoveItem::iMask::TARGET>() >> 6,
 			prev_pc = Search::prev_move.getMask<MoveItem::iMask::PIECE>() >> 12,
 			pc = move.getMask<MoveItem::iMask::PIECE>() >> 12,
-			counter_bonus = (ply and Order::countermove[prev_pc][prev_to] == move.raw()) * (4 + ply);
+			counter_bonus = (ply and (Order::countermove[prev_pc][prev_to] == move.raw())) * (4 + ply);
 
 		static constexpr int scale = 13;
 		return (scale * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1 + counter_bonus;

@@ -52,7 +52,6 @@ struct Time {
 
 extern Time time_data;
 
-using ULL = unsigned long long;
 inline constexpr int operator "" _ms(const ULL a) noexcept {
 	return static_cast<int>(a);
 }

@@ -10,6 +10,7 @@
 
 // define bitboard data type 
 using U64 = uint64_t;
+using ULL = unsigned long long;
 
 // custom U64 bitboard of given intiger
 template <typename T, class =
@@ -142,6 +143,9 @@ namespace {
 
 	// empty U64 bitboard pre-compile constans
 	constexpr U64 eU64 = cU64(0);
+
+	// UINT64_MAX
+	constexpr U64 MAX_U64 = std::numeric_limits<U64>::max();
 
 	// pre-compile board size
 	constexpr int bSIZE = 8 * 8;
