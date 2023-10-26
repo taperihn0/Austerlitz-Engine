@@ -5,9 +5,12 @@
 #include "SearchBenchmark.h"
 #include "Zobrist.h"
 #include "Evaluation.h"
+#include "MoveOrder.h"
 #include <iostream>
 #include <string>
 
+// do not check fen position appended moves legality -
+// some extra performance gain where guaranted to get legal moves
 #if defined(__DEBUG__)
 #define _CHECK_MOVE_LEGAL true
 #else
@@ -21,14 +24,9 @@ UCI::UCI()
 }
 
 // return introducing string
-inline std::string introduce() {
-	static constexpr const char* engine_name = "id name Austerlitz@";
-	static constexpr const char* author = "id author Simon B.";
-
-	std::stringstream strm;
-	strm << engine_name << '\n'
-		<< author << "\nuciok\n";
-	return strm.str();
+inline void introduce() {
+	OS << UCI::engine_name << '\n'
+		<< UCI::author << "\nuciok\n";
 }
 
 // serve "go" command
@@ -40,7 +38,7 @@ void parseGo(std::istringstream& strm) {
 
 	if (com == "depth") {
 		strm >> std::skipws >> depth;
-		time_data.is_time = false, time_data.stop = false;
+		Search::time_data.setFixedTime(0);
 		Search::bestMove(depth);
 	}
 	else if (com == "wtime") {
@@ -50,28 +48,14 @@ void parseGo(std::istringstream& strm) {
 			>> std::skipws >> com >> std::skipws >> winc
 			>> std::skipws >> com >> std::skipws >> binc;
 
-		time_data.is_time = true, time_data.stop = false;
-		time_data.left = game_state.turn ? btime : wtime;
-		time_data.inc = game_state.turn ? binc : winc;
-
-		// time for single move
-		time_data.this_move = (time_data.left / 42) + (time_data.inc / 2);
-
-		if (time_data.this_move >= time_data.left)
-			time_data.this_move = time_data.left / 12;
-
-		if (time_data.this_move < 0_ms)
-			time_data.this_move = 5_ms;
-
+		Search::time_data.calcMoveTime(game_state.turn ? btime : wtime, game_state.turn ? binc : winc);
 		Search::bestMove(Search::max_depth);
 	}
 	else if (com == "movetime") {
 		static int mtime;
 		strm >> std::skipws >> mtime;
 
-		time_data.is_time = true, time_data.stop = false;
-		time_data.this_move = mtime;
-
+		Search::time_data.setFixedTime(mtime);
 		Search::bestMove(Search::max_depth);
 	}
 	else if (com == "perft") {
@@ -149,6 +133,23 @@ void UCI::parsePosition(std::istringstream& strm) {
 	}
 }
 
+// prepare for new game
+inline void newGame() {
+	tt.clear();
+	rep_tt.clear();
+	BBs.parseFEN(BitBoardsSet::start_pos);
+}
+
+
+#if defined(__DEBUG__)
+void seePrint(std::istringstream& strm) {
+	std::string sq_str;
+	strm >> std::skipws >> sq_str;
+	int sq = (sq_str[1] - '1') * 8 + (sq_str[0] - 'a');
+	OS << Order::see(sq) << '\n';
+}
+#endif
+
 // main UCI loop
 void UCI::goLoop(int argc, char* argv[]) {
 	std::string line, token;
@@ -167,22 +168,17 @@ void UCI::goLoop(int argc, char* argv[]) {
 
 		strm >> std::skipws >> token;
 
-		if (token == "isready") OS << "readyok\n";
-		else if (token == "position") parsePosition(strm);
-		else if (token == "ucinewgame") { tt.clear(), rep_tt.clear(), BBs.parseFEN(BitBoardsSet::start_pos); }
-		else if (token == "uci") OS << introduce();
-		else if (token == "print") BBs.printBoard();
-		else if (token == "go") parseGo(strm);
-		else if (token == "benchmark") bench.start();
+		if (token == "isready")         OS << "readyok\n";
+		else if (token == "position")   parsePosition(strm);
+		else if (token == "ucinewgame") newGame();
+		else if (token == "uci")        introduce();
+		else if (token == "print")      BBs.printBoard();
+		else if (token == "go")         parseGo(strm);
+		else if (token == "benchmark")  bench.start();
 #if defined(__DEBUG__)
 		else if (token == "hashkey") OS << hash.key << '\n';
 		else if (token == "eval")    OS << Eval::evaluate(Search::low_bound, Search::high_bound) << '\n';
-		else if (token == "see") { 
-			std::string sq_str;
-			strm >> std::skipws >> sq_str;
-			int sq = (sq_str[1] - '1') * 8 + (sq_str[0] - 'a');
-			OS << Order::see(sq) << '\n';
-		}
+		else if (token == "see")     seePrint(strm);
 #endif
 	} while (line != "quit" and argc == 1);
 }

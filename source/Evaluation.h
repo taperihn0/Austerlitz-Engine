@@ -308,7 +308,4 @@ namespace Eval {
 	// main evaluation system
 	int evaluate(int alpha, int beta);
 
-	// quiescence search - protect from dangerous consequences of horizon effect
-	int qSearch(int alpha, int beta, int Ply);
-
 } // namespace Eval

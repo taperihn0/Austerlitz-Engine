@@ -2,30 +2,27 @@
 
 #include "MoveItem.h"
 #include "MoveGeneration.h"
+#include "Search.h"
 
 
 namespace Order {
-	
-	static constexpr int
-		max_Ply = 128,
-		pv_score = 1500000;
 
 	// Most Valuable Victim - Least Valuable Attacker lookup data structure
 	namespace MVV_LVA {
 
 		// in future: smarter mvv/lva values
 		static constexpr std::array<std::array<int, 5>, 6> lookup = {{
-			{ 105, 205, 305, 405, 505 }, 
-			{ 104, 204, 304, 404, 504 },
-			{ 103, 203, 303, 403, 503 },
-			{ 102, 202, 302, 402, 502 },
-			{ 101, 201, 301, 401, 501 },
-			{ 100, 200, 300, 400, 500 }
+			{ 1050, 2050, 3050, 4050, 5050 }, 
+			{ 1040, 2040, 3040, 4040, 5040 },
+			{ 1030, 2030, 3030, 4030, 5030 },
+			{ 1020, 2020, 3020, 4020, 5020 },
+			{ 1010, 2010, 3010, 4010, 5010 },
+			{ 1000, 2000, 3000, 4000, 5000 }
 		}};
 	};
 
-	// Killer Moves lookup table
-	using killerLookUp = std::array<std::array<MoveItem::iMove, Order::max_Ply>, 2>;
+	// Killer Moves lookup table [killer_index][ply_index]
+	using killerLookUp = std::array<std::array<MoveItem::iMove, 128>, 2>;
 	extern killerLookUp killer;
 	
 	// History Moves lookup table in format [piece][to]
@@ -42,14 +39,17 @@ namespace Order {
 	// return value, also so called 'score' of given move
 	int moveScore(const MoveItem::iMove& move, int ply);
 
-	int see(int sq);
+	/* move sorting */
 
 	// sort given move list based on score of each move
 	void sort(MoveList& move_list, int ply);
 
+	/* move ordering techniques */
+
 	// swap best move so it's on the i'th place
 	void pickBest(MoveList& move_list, int s, int ply);
 
+	// pick best capture based on Static Exchange Evaluation
 	int pickBestSEE(MoveList& capt_list, int s);
 
 } // namespace Order
@@ -66,5 +66,10 @@ namespace InitState {
 	// clear history heuristic table
 	inline void clearHistory() {
 		for (auto& x : Order::history_moves) x.fill(0);
+	}
+
+	// clear killer history
+	inline void clearKiller() {
+		for (auto& x : Order::killer) x.fill(0);
 	}
 }

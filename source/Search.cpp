@@ -2,10 +2,22 @@
 #include "MoveGeneration.h"
 #include "Evaluation.h"
 #include "Zobrist.h"
-#include "Timer.h"
+#include "MoveOrder.h"
 
 
 namespace Search {
+
+	// aspiration window reduction size
+	static constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
+
+	// search data stucture
+	static struct SearchResults {
+		int score;
+		ULL nodes;
+	} search_results;
+
+	// forward declaration
+	int qSearch(int alpha, int beta, int Ply);
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
 	template <bool AllowNullMove = true>
@@ -27,7 +39,7 @@ namespace Search {
 		else if (depth <= 0) {
 			// init PV table lenght
 			PV::pv_len[ply] = 0;
-			const int qscore = Eval::qSearch(alpha, beta, ply);
+			const int qscore = qSearch(alpha, beta, ply);
 			if (!time_data.stop)
 				tt.write(0, qscore, 
 					qscore == alpha ? HashEntry::Flag::HASH_ALPHA : 
@@ -70,8 +82,8 @@ namespace Search {
 			depth++;
 
 			if (time_data.is_time and time_data.this_move > 300_ms
-				and time_data.this_move < time_data.left / 11)
-				time_data.this_move += 150_ms;
+				and time_data.this_move < time_data.left / 10)
+				time_data.this_move += 185_ms;
 		}
 
 		const MoveItem::iMove my_prev = prev_move;
@@ -97,8 +109,8 @@ namespace Search {
 			} // recapture extra time
 			else if (ply and prev_to == (move.getMask<MoveItem::iMask::TARGET>() >> 6)
 				and time_data.is_time and time_data.this_move > 300_ms
-				and time_data.this_move < time_data.left / 10) {
-				time_data.this_move += 100_ms;
+				and time_data.this_move < time_data.left / 12) {
+				time_data.this_move += 50_ms;
 			}
 
 			rep_tt.posRegister();
@@ -180,9 +192,62 @@ namespace Search {
 		return alpha;
 	}
 
+	// quiescence search - protect from dangerous consequences of horizon effect
+	int qSearch(int alpha, int beta, int ply) {
+		if (time_data.is_time and !(search_results.nodes & time_check_modulo) and !time_data.checkTimeLeft()) {
+			time_data.stop = true;
+			return time_stop_sign;
+		}
+
+		const int eval = Eval::evaluate(low_bound, beta);
+		search_results.nodes++;
+
+		if (eval >= beta) return beta;
+		else if (game_state.gamePhase() != gState::ENDGAME
+			and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
+			and eval + Eval::Value::QUEEN_VALUE <= alpha)
+			return alpha;
+		alpha = std::max(alpha, eval);
+
+		// generate opponent capture moves
+		auto capt_list = MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>();
+		const BitBoardsSet bbs_cpy = BBs;
+		const gState gstate_cpy = game_state;
+		const U64 hash_cpy = hash.key;
+		int score, see_score;
+
+		for (int i = 0; i < capt_list.size(); i++) {
+
+			// capture ordering
+			see_score = Order::pickBestSEE(capt_list, i);
+			const auto& move = capt_list[i];
+
+			// bad captures pruning
+			if (i >= 1 and see_score < 0)
+				return alpha;
+
+			MovePerform::makeMove(move);
+
+			score = -qSearch(-beta, -alpha, ply + 1);
+
+			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
+			hash.key = hash_cpy;
+
+			if (time_data.stop)
+				return time_stop_sign;
+			else if (score > alpha) {
+				if (score >= beta)
+					return beta;
+				alpha = score;
+			}
+		}
+
+		return alpha;
+	}
+
 	inline void clearHistory() {
 		search_results.nodes = 0;
-		Search::clearKiller();
+		InitState::clearKiller();
 		InitState::clearButterfly();
 		PV::clear();
 		InitState::clearHistory();
@@ -195,13 +260,9 @@ namespace Search {
 		// cleaning
 		clearHistory();
 
-		// aspiration window reduction size
-		static constexpr int window = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
-
 		int lbound = low_bound,
 			hbound = high_bound,
 			curr_dpt = 1;
-			//prev_score;
 
 		time_data.start = now();
 		
@@ -217,7 +278,8 @@ namespace Search {
 			}
 
 			// success - expand bounds for next search
-			lbound = search_results.score - window, hbound = search_results.score + window;
+			lbound = search_results.score - asp_margin;
+			hbound = search_results.score + asp_margin;
 			
 			// (-) search result - opponent checkmating
 			if (search_results.score < mate_comp and search_results.score > mate_score)
@@ -237,9 +299,8 @@ namespace Search {
 				PV::pv_line[0][cnt].print() << ' ';
 			OS << '\n';
 
-			if (time_data.stop) break;
-			else if (time_data.is_time
-				and 5 * sinceStart_ms(time_data.start) / 2 > time_data.this_move)
+			if (time_data.stop 
+				or (time_data.is_time and 5 * sinceStart_ms(time_data.start) / 2 > time_data.this_move))
 				break;
 		}
 
