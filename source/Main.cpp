@@ -8,14 +8,10 @@
 #include "Zobrist.h"
 #include "Evaluation.h"
 
-// global variables storing universal piece data
+
 Zobrist hash;
 
 BitBoardsSet BBs(BitBoardsSet::start_pos);
-
-CSinglePieceAttacks<PAWN> cpawn_attacks;
-CSinglePieceAttacks<KNIGHT> cknight_attacks;
-CSinglePieceAttacks<KING> cking_attacks;
 
 mData mdata;
 gState game_state;

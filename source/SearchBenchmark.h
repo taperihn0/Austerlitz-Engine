@@ -12,7 +12,7 @@
 class SearchBenchmark {
 public:
 	SearchBenchmark() = default;
-	void start();
+	inline void start();
 private:
 	std::ifstream src;
 };

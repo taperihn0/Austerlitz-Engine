@@ -10,7 +10,7 @@ namespace Eval {
 
 	static struct commonEvalData {
 
-		void fill() {
+		void openingDataReset() {
 			k_sq[WHITE] = getLS1BIndex(BBs[nWhiteKing]);
 			k_sq[BLACK] = getLS1BIndex(BBs[nBlackKing]);
 
@@ -18,22 +18,21 @@ namespace Eval {
 			s_pawn_count[BLACK] = bitCount(BBs[nBlackPawn]);
 
 			pawn_count = s_pawn_count[WHITE] + s_pawn_count[BLACK];
-			att_count = { 0, 0 }, att_value = { 0, 0 };
 
 			k_zone[WHITE] = attack<KING>(MAX_U64, k_sq[WHITE]);
 			k_zone[BLACK] = attack<KING>(MAX_U64, k_sq[BLACK]);
+
+			att_count = { 0, 0 }, att_value = { 0, 0 };
 		}
 
-		inline void tarrashClear() noexcept {
-			tarrasch_passed_msk = { eU64, eU64 };
-		}
-
-		inline void kingTropClear() {
+		inline void endgameDataReset() noexcept {
 			passed_count = 0;
 			backward_count = 0;
 			t_passed_dist = { 0, 0 };
 			t_backw_dist = { 0, 0 };
 			t_o_dist = { 0, 0 };
+
+			tarrasch_passed_msk = { eU64, eU64 };
 		}
 
 		template <typename T>
@@ -49,18 +48,6 @@ namespace Eval {
 		bothSideLookUp<std::array<U64, 5>> pt_att;
 
 	} eval_lookup;
-
-	template <enumSide SIDE>
-	U64 pshield(U64 bb) {
-		int shift;
-
-		if constexpr (SIDE) shift = Compass::nort;
-		else shift = Compass::sout;
-
-		bb |= (genShift(bb, shift));
-		bb |= (genShift(bb, shift));
-		return bb;
-	}
 
 	template <enumSide SIDE>
 	int connectivity() {
@@ -206,7 +193,8 @@ namespace Eval {
 				pshield_front = std::get<SIDE>(vertical_pawn_shift)(pshield) & BBs[nWhitePawn + SIDE];
 			const int pshield_count = bitCount(pshield);
 
-			if (pshield_count == 3) eval += 12;
+			if (pshield_count == 3) 
+				eval += 12;
 			else if (pshield_count == 2 and 
 				((pshield << 1) & (pshield >> 1)) == std::get<!SIDE>(vertical_pawn_shift)(pshield_front)) 
 				eval += 8;
@@ -242,10 +230,12 @@ namespace Eval {
 			opp_contr = k_att & opp_p_att;
 			eval -= 20 * bitCount(opp_contr) / bitCount(k_att);
 
-			if (k_att & Value::ext_king_zone.get(eval_lookup.k_sq[!SIDE])) {
-				eval_lookup.att_count[SIDE]++;
-				eval_lookup.att_value[SIDE] += Value::attacker_weight[KNIGHT]
-					* bitCount(k_att & eval_lookup.k_zone[!SIDE]);
+			if constexpr (Phase != gState::ENDGAME) {
+				if (k_att & Value::ext_king_zone.get(eval_lookup.k_sq[!SIDE])) {
+					eval_lookup.att_count[SIDE]++;
+					eval_lookup.att_value[SIDE] += Value::attacker_weight[KNIGHT]
+						* bitCount(k_att & eval_lookup.k_zone[!SIDE]);
+				}
 			}
 
 			// outpos check
@@ -253,8 +243,9 @@ namespace Eval {
 				(Constans::board_side[!SIDE] & eval_lookup.pt_att[SIDE][PAWN] & ~opp_p_att))
 				eval += Value::outpos_score[sq];
 
-			eval += eval_lookup.pawn_count
-				+ Value::knight_distance_score.get(sq, eval_lookup.k_sq[!SIDE]); // king tropism bonus
+			// king tropism bonus
+			eval += Value::knight_distance_score.get(sq, eval_lookup.k_sq[!SIDE])
+				+ eval_lookup.pawn_count;
 		}
 
 		eval_lookup.pt_att[SIDE][KNIGHT] = t_att;
@@ -279,10 +270,12 @@ namespace Eval {
 			b_att = attack<BISHOP>(BBs[nOccupied], sq);
 			t_att |= b_att;
 
-			if (b_att & eval_lookup.k_zone[!SIDE]) {
-				eval_lookup.att_count[SIDE]++;
-				eval_lookup.att_value[SIDE] += Value::attacker_weight[BISHOP]
-					* bitCount(b_att & eval_lookup.k_zone[!SIDE]);
+			if constexpr (Phase != gState::ENDGAME) {
+				if (b_att & eval_lookup.k_zone[!SIDE]) {
+					eval_lookup.att_count[SIDE]++;
+					eval_lookup.att_value[SIDE] += Value::attacker_weight[BISHOP]
+						* bitCount(b_att & eval_lookup.k_zone[!SIDE]);
+				}
 			}
 
 			// king tropism score
@@ -314,10 +307,12 @@ namespace Eval {
 			eval_lookup.pt_att[SIDE][ROOK] |= (r_att = attack<ROOK>(BBs[nOccupied], sq));
 			c_sq += bitCount(r_att);
 
-			if (r_att & eval_lookup.k_zone[!SIDE]) {
-				eval_lookup.att_count[SIDE]++;
-				eval_lookup.att_value[SIDE] += Value::attacker_weight[ROOK]
-					* bitCount(r_att & eval_lookup.k_zone[!SIDE]);
+			if constexpr (Phase != gState::ENDGAME) {
+				if (r_att & eval_lookup.k_zone[!SIDE]) {
+					eval_lookup.att_count[SIDE]++;
+					eval_lookup.att_value[SIDE] += Value::attacker_weight[ROOK]
+						* bitCount(r_att & eval_lookup.k_zone[!SIDE]);
+				}
 			}
 
 			// king tropism score
@@ -350,10 +345,12 @@ namespace Eval {
 			eval_lookup.pt_att[SIDE][QUEEN] |= (q_att = attack<QUEEN>(BBs[nOccupied], sq));
 			c_sq += bitCount(q_att);
 
-			if (q_att & eval_lookup.k_zone[!SIDE]) {
-				eval_lookup.att_count[SIDE]++;
-				eval_lookup.att_value[SIDE] += Value::attacker_weight[QUEEN]
-					* bitCount(q_att & eval_lookup.k_zone[!SIDE]);
+			if constexpr (Phase != gState::ENDGAME) {
+				if (q_att & eval_lookup.k_zone[!SIDE]) {
+					eval_lookup.att_count[SIDE]++;
+					eval_lookup.att_value[SIDE] += Value::attacker_weight[QUEEN]
+						* bitCount(q_att & eval_lookup.k_zone[!SIDE]);
+				}
 			}
 
 			// king tropism score
@@ -372,21 +369,18 @@ namespace Eval {
 
 	template <enumSide SIDE, gState::gPhase Phase>
 	int kingScore() {
-		int eval = 0;
-
-		// king zone control
-		eval += eval_lookup.att_value[SIDE] * Value::attack_count_weight[eval_lookup.att_count[SIDE]] / 100;
+		int eval = // king zone control
+			eval_lookup.att_value[SIDE] * Value::attack_count_weight[eval_lookup.att_count[SIDE]] / 450;
 
 		if constexpr (Phase != gState::ENDGAME) {
-			eval = Value::king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
+			eval += Value::king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
 
 			// check castling possibility
 			if constexpr (Phase == gState::OPENING) {
-				if (isCastle<SIDE>())
-					eval += 15;
+				if (isCastle<SIDE>()) eval += 15;
 			}
 		}
-		else eval = Value::late_king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
+		else eval += Value::late_king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
 
 		return eval;
 	}
@@ -404,7 +398,7 @@ namespace Eval {
 				return alpha;
 		}
 		else if constexpr (Phase == gState::ENDGAME) {
-			static constexpr int lazy_margin_ed = 292; //268
+			static constexpr int lazy_margin_ed = 292;
 
 			if (((eval_lookup.mid_score * (256 - eval_lookup.phase))
 				+ ((material_sc - lazy_margin_ed) * eval_lookup.phase)) / 256 >= beta)
@@ -421,11 +415,12 @@ namespace Eval {
 		if constexpr (Phase == gState::ENDGAME)
 			eval += kingPawnTropism<SIDE>() - kingPawnTropism<!SIDE>();
 
-		eval += kingScore<SIDE, Phase>() - kingScore<!SIDE, Phase>();
 		eval += spcScore<SIDE, KNIGHT, Phase>(c_sq1) - spcScore<!SIDE, KNIGHT, Phase>(c_sq2);
 		eval += spcScore<SIDE, BISHOP, Phase>(c_sq1) - spcScore<!SIDE, BISHOP, Phase>(c_sq2);
 		eval += spcScore<SIDE, ROOK, Phase>(c_sq1) - spcScore<!SIDE, ROOK, Phase>(c_sq2);
 		eval += spcScore<SIDE, QUEEN, Phase>(c_sq1) - spcScore<!SIDE, QUEEN, Phase>(c_sq2);
+
+		eval += kingScore<SIDE, Phase>() - kingScore<!SIDE, Phase>();
 
 		// consider connectivity (double connected squares)
 		eval += connectivity<SIDE>() - connectivity<!SIDE>();
@@ -442,7 +437,7 @@ namespace Eval {
 
 	// main evaluation system
 	int evaluate(int alpha, int beta) {
-		eval_lookup.fill();
+		eval_lookup.openingDataReset();
 
 		if (game_state.gamePhase() == gState::OPENING)
 			return sideEval<gState::OPENING>(game_state.turn, alpha, beta);
@@ -451,9 +446,8 @@ namespace Eval {
 		eval_lookup.phase = ((8150 - (game_state.material[0] + game_state.material[1] - Value::DOUBLE_KING_VAL)) * 256 + 4075) / 8150;
 
 		eval_lookup.mid_score = sideEval<gState::MIDDLEGAME>(game_state.turn, alpha, beta);
-
-		eval_lookup.tarrashClear();
-		eval_lookup.kingTropClear();
+		
+		eval_lookup.endgameDataReset();
 		const int end_score = sideEval<gState::ENDGAME>(game_state.turn, alpha, beta);
 
 		if (end_score >= beta) return beta;

@@ -22,15 +22,13 @@ namespace Order {
 	int getCapturedMaterial(int sq) {
 		int cap_val = 0;
 
-		for (auto pc = nBlackPawn - game_state.turn; pc <= nBlackKing; pc += 2) {
+		for (auto pc = nBlackPawn - game_state.turn; pc <= nBlackKing; pc += 2)
 			if (bitU64(sq) & BBs[pc])
 				cap_val = Eval::Value::piece_material[toPieceType(pc)];
-		}
 
 		return cap_val;
 	}
 
-	// Static Exchange Evaluation
 	int see(int sq) {
 		std::array<int, 32> gain;
 		bool side = game_state.turn;

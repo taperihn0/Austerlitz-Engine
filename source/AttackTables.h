@@ -66,7 +66,7 @@ private:
 public:
 	CSinglePieceAttacks();
 
-	constexpr accessRType operator[](size_t side);
+	constexpr accessRType operator[](size_t side) const;
 private:
 	template <enumSide sT>
 	void Init();
@@ -108,7 +108,8 @@ CSinglePieceAttacks<pT>::CSinglePieceAttacks() {
 
 // return given table of attacks for single pT piece type on sq square
 template <enumPiece pT>
-inline constexpr typename CSinglePieceAttacks<pT>::accessRType CSinglePieceAttacks<pT>::operator[](size_t side) {
+inline constexpr typename CSinglePieceAttacks<pT>::accessRType 
+CSinglePieceAttacks<pT>::operator[](size_t side) const {
 	return arrAttacks[side];
 }
 
@@ -120,6 +121,6 @@ void CSinglePieceAttacks<pT>::Init() {
 }
 
 // declarations of attack look-up tables for simple pieces
-extern CSinglePieceAttacks<PAWN> cpawn_attacks;
-extern CSinglePieceAttacks<KNIGHT> cknight_attacks;
-extern CSinglePieceAttacks<KING> cking_attacks;
+inline CSinglePieceAttacks<PAWN> cpawn_attacks;
+inline CSinglePieceAttacks<KNIGHT> cknight_attacks;
+inline CSinglePieceAttacks<KING> cking_attacks;

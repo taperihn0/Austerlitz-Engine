@@ -100,9 +100,3 @@ inline bool RepetitionTable::isRepetition() {
 		if (tab[i] == hash.key) return true;
 	return false;
 }
-
-
-struct PawnEvalEntry {
-	U64 pawnkey;
-	int eval;
-};

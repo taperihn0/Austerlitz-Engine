@@ -40,6 +40,9 @@ namespace Order {
 	int moveScore(const MoveItem::iMove& move, int ply);
 
 	/* move sorting */
+	
+	// Static Exchange Evaluation for captures
+	int see(int sq);
 
 	// sort given move list based on score of each move
 	void sort(MoveList& move_list, int ply);

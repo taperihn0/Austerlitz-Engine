@@ -431,7 +431,7 @@ namespace MoveGenerator {
 		}
 	}
 
-	// remember about RVO rule
+	// RVO rule
 	template <GenType gType>
 	MoveList generateLegalMoves() {
 		MoveList move_list;
