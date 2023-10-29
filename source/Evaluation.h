@@ -263,9 +263,7 @@ namespace Eval {
 			});
 
 		using passedPawnTab = std::array<int, 7>;
-		constexpr passedPawnTab passed_score = {
-			{ 0, 10, 20, 30, 55, 90, 105 },
-		};
+		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
 
 
 		constexpr std::array<int, 10> attack_count_weight = { 0, 50, 75, 88, 94, 97, 99, 99, 99, 99 };
@@ -296,6 +294,18 @@ namespace Eval {
 			}
 
 			return 3 - c;
+		});
+
+		constexpr auto passer_square = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int i) {
+			const int sq_size = side ? (i / 8) : (7 - i / 8);
+			U64 res = side ? soutFill(bitU64(i)) : nortFill(bitU64(i));
+
+			for (int i = 0; i < sq_size; i++) {
+				res |= westOne(res);
+				res |= eastOne(res);
+			}
+
+			return res;
 		});
 
 	} // namespace Value

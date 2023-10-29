@@ -5,10 +5,6 @@
 #include <string>
 
 #define _PERFT_GENTYPE LEGAL
-#define _HASH_DEBUG() \
-	Zobrist deb = hash; \
-	hash.generateKey(); \
-	assert(hash.key == deb.key && "HASH ERROR");
 		
 
 namespace pinData {
@@ -431,16 +427,17 @@ namespace MoveGenerator {
 		}
 	}
 
-	// RVO rule
 	template <GenType gType>
-	MoveList generateLegalMoves() {
-		MoveList move_list;
-		game_state.turn == WHITE ? generateLegalOf<gType, WHITE>(move_list.it) : generateLegalOf<gType, BLACK>(move_list.it);
-		return move_list;
+	void generateLegalMoves(MoveList& ml) {
+		ml.it = ml.begin();
+
+		game_state.turn == WHITE ?
+			generateLegalOf<gType, WHITE>(ml.it) :
+			generateLegalOf<gType, BLACK>(ml.it);
 	}
 
-	template MoveList generateLegalMoves<LEGAL>();
-	template MoveList generateLegalMoves<CAPTURES>();
+	template void generateLegalMoves<LEGAL>(MoveList&);
+	template void generateLegalMoves<CAPTURES>(MoveList&);
 
 } // namespace MoveGenerator
 
@@ -661,7 +658,10 @@ namespace MoveGenerator {
 			const auto gstate_cpy = game_state;
 			unsigned long long total = 0;
 
-			for (const auto& move : MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>()) {
+			MoveList ml;
+			MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>(ml);
+
+			for (const auto& move : ml) {
 				MovePerform::makeMove(move);
 				total += dPerft<Depth - 1>();
 				MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
@@ -677,7 +677,9 @@ namespace MoveGenerator {
 
 		template <>
 		inline unsigned long long dPerft<1>() {
-			return MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>().size();
+			MoveList ml;
+			MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>(ml);
+			return ml.size();
 		}
 
 		template <int Depth>
@@ -685,10 +687,12 @@ namespace MoveGenerator {
 			static Timer timer;
 			timer.go();
 
-			const auto move_list = MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>();
-			const auto bbs_cpy = BBs;
-			const auto gstate_cpy = game_state;
-			unsigned long long total = 0, single;
+			MoveList move_list;
+			MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>(move_list);
+
+			const BitBoardsSet bbs_cpy = BBs;
+			const gState gstate_cpy = game_state;
+			ULL total = 0, single;
 
 			for (const auto& move : move_list) {
 				MovePerform::makeMove(move);
@@ -704,7 +708,7 @@ namespace MoveGenerator {
 			timer.stop();
 			const auto duration = timer.duration();
 
-			const auto perform_kn = total * 1. / duration;
+			const auto perform_kn = static_cast<int>(total / (1. * (duration + 1) / 1000)) / 1000;
 
 			std::cout << std::endl << "Nodes: " << total << std::endl
 				<< "Timer: ~" << duration << " ms" << std::endl

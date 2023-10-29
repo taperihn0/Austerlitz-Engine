@@ -155,6 +155,12 @@ namespace Eval {
 					eval_lookup.t_passed_dist[!SIDE] += Value::distance_score.get(sq, eval_lookup.k_sq[!SIDE]);
 					eval_lookup.passed_count++;
 					dist_updated = true;
+
+					// clear passer square bonus
+					if (game_state.isPawnEndgame() 
+						and !(Value::passer_square.get(SIDE, sq) & eval_lookup.k_sq[!SIDE])
+						and game_state.turn == SIDE)
+						eval += 30;
 				}
 
 				eval += Value::passed_score[flipRank<SIDE>(sq)];
@@ -368,7 +374,7 @@ namespace Eval {
 	}
 
 	template <enumSide SIDE, gState::gPhase Phase>
-	int kingScore() {
+	int kingScore(int relative_eval) {
 		int eval = // king zone control
 			eval_lookup.att_value[SIDE] * Value::attack_count_weight[eval_lookup.att_count[SIDE]] / 450;
 
@@ -380,7 +386,11 @@ namespace Eval {
 				if (isCastle<SIDE>()) eval += 15;
 			}
 		}
-		else eval += Value::late_king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
+		else {
+			if (relative_eval > 0) 
+				eval += Value::distance_score.get(eval_lookup.k_sq[SIDE], eval_lookup.k_sq[!SIDE]);
+			eval += Value::late_king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
+		}
 
 		return eval;
 	}
@@ -420,12 +430,14 @@ namespace Eval {
 		eval += spcScore<SIDE, ROOK, Phase>(c_sq1) - spcScore<!SIDE, ROOK, Phase>(c_sq2);
 		eval += spcScore<SIDE, QUEEN, Phase>(c_sq1) - spcScore<!SIDE, QUEEN, Phase>(c_sq2);
 
-		eval += kingScore<SIDE, Phase>() - kingScore<!SIDE, Phase>();
-
 		// consider connectivity (double connected squares)
 		eval += connectivity<SIDE>() - connectivity<!SIDE>();
 
-		return material_sc + eval + 2 * (c_sq1 / (c_sq2 + 1));
+		// material score and mobility
+		eval += material_sc + 2 * (c_sq1 / (c_sq2 + 1));
+
+		eval += kingScore<SIDE, Phase>(eval) - kingScore<!SIDE, Phase>(-eval);
+		return eval;
 	}
 
 	template <gState::gPhase Phase>

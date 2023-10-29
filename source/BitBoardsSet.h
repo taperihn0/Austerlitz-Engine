@@ -64,42 +64,6 @@ inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
 }
 
 
-// game state variables
-struct gState {
-	enum gPhase { 
-		OPENING = 0, MIDDLEGAME, ENDGAME 
-	};
-
-	enum Constans {
-		START_SCORE = 28150,
-		ENDPHASE_SCORE = 23300,
-		MIDDLEPHASE_SCORE = 26450,
-		
-		MAX_MOVE_RULE = 50
-	};
-
-	inline bool is50moveDraw() noexcept {
-		return halfmove >= MAX_MOVE_RULE;
-	}
-
-	inline gPhase gamePhase() noexcept {
-		const int total_material = material[0] + material[1];
-
-		return total_material < ENDPHASE_SCORE ? ENDGAME :
-			fullmove > 10 or total_material <= MIDDLEPHASE_SCORE or !castle.raw() ? MIDDLEGAME :
-			OPENING;
-	}
-
-	int ep_sq;
-	enumSide turn;
-	castleRights castle;
-	int halfmove, fullmove;
-	std::array<int, 2> material;
-};
-
-extern gState game_state;
-
-
 // piece enum for their bitboards
 enum enumPiece_bbs : int {
 	nWhitePawn,
@@ -245,3 +209,44 @@ inline int BitBoardsSet::count(size_t piece_get) {
 
 // declare global BitBoardsSet containing piece structure data
 extern BitBoardsSet BBs;
+
+
+// game state variables
+struct gState {
+	enum gPhase {
+		OPENING = 0, MIDDLEGAME, ENDGAME
+	};
+
+	enum Constans {
+		START_SCORE = 28150,
+		ENDPHASE_SCORE = 23300,
+		MIDDLEPHASE_SCORE = 26450,
+
+		MAX_MOVE_RULE = 50
+	};
+
+	inline bool is50moveDraw() noexcept {
+		return halfmove >= MAX_MOVE_RULE;
+	}
+
+	inline gPhase gamePhase() noexcept {
+		const int total_material = material[0] + material[1];
+
+		return total_material < ENDPHASE_SCORE ? ENDGAME :
+			fullmove > 10 or total_material <= MIDDLEPHASE_SCORE or !castle.raw() ? MIDDLEGAME :
+			OPENING;
+	}
+
+	inline bool isPawnEndgame() noexcept {
+		const int total_material = material[0] + material[1] - 20000;
+		return (total_material / 100) == bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
+	}
+
+	int ep_sq;
+	enumSide turn;
+	castleRights castle;
+	int halfmove, fullmove;
+	std::array<int, 2> material;
+};
+
+extern gState game_state;

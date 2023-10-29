@@ -112,7 +112,10 @@ void UCI::parsePosition(std::istringstream& strm) {
 		bool illegal = true;
 
 		// check move validity
-		for (const auto& move : MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>()) {
+		MoveList ml;
+		MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>(ml);
+
+		for (const auto& move : ml) {
 			if (casted == move) {
 				MovePerform::makeMove(move);
 				illegal = false;
@@ -142,12 +145,21 @@ inline void newGame() {
 
 
 #if defined(__DEBUG__)
+
 void seePrint(std::istringstream& strm) {
 	std::string sq_str;
 	strm >> std::skipws >> sq_str;
 	int sq = (sq_str[1] - '1') * 8 + (sq_str[0] - 'a');
 	OS << Order::see(sq) << '\n';
 }
+
+void evalInfo() {
+	OS << "white material: " << game_state.material[0] << '\n'
+		<< "black material: " << game_state.material[1] << '\n'
+		<< "pawn endgame: " << game_state.isPawnEndgame() << '\n'
+		<< Eval::evaluate(Search::low_bound, Search::high_bound) << "\n\n";
+}
+
 #endif
 
 // main UCI loop
@@ -158,7 +170,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 		line += std::string(argv[i]) + " ";
 
 	if (is == &std::cin)
-		OS << "Polish Chess Engine: Austerlitz@ by Simon B.\n";
+		OS << "Polish Chess Engine: Austerlitz 1 by Simon B.\n";
 
 	do {
 		if (argc == 1 and !std::getline(IS, line))
@@ -177,7 +189,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "benchmark")  bench.start();
 #if defined(__DEBUG__)
 		else if (token == "hashkey") OS << hash.key << '\n';
-		else if (token == "eval")    OS << Eval::evaluate(Search::low_bound, Search::high_bound) << '\n';
+		else if (token == "eval")    evalInfo();
 		else if (token == "see")     seePrint(strm);
 #endif
 	} while (line != "quit" and argc == 1);

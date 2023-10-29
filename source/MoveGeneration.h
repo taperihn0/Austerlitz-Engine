@@ -8,7 +8,7 @@
 // storage for generated moves
 struct MoveList {
 public:
-	MoveList()
+	MoveList() noexcept
 		: move_list{}, it(move_list.begin()) {}
 	MoveList(const MoveList& ml)
 		: move_list(ml.move_list), it(move_list.begin() + ml.size()) {}
@@ -29,15 +29,15 @@ public:
 	// ending iterator of generated moves
 	iterator it;
 
-	inline iterator begin() {
+	inline iterator begin() noexcept {
 		return move_list.begin();
 	}
 
-	inline iterator end() {
+	inline iterator end() noexcept {
 		return it;
 	}
 
-	inline c_iterator begin() const {
+	inline c_iterator begin() const noexcept {
 		return move_list.cbegin();
 	}
 
@@ -88,7 +88,7 @@ namespace MoveGenerator {
 
 	// main generation function, generating all the legal moves for all the turn-to-move pieces
 	template <GenType gType>
-	MoveList generateLegalMoves();
+	void generateLegalMoves(MoveList& ml);
 
 } 
 

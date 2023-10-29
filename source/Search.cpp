@@ -7,14 +7,17 @@
 
 namespace Search {
 
-	// aspiration window reduction size
-	static constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
+	 // aspiration window reduction size
+	constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
 
 	// search data stucture
-	static struct SearchResults {
+	struct SearchResults {
 		int score;
 		ULL nodes;
 	} search_results;
+
+	// global pre-alloc move list indexed by [ply][move_index]
+	std::array<MoveList, max_Ply> ml;
 
 	// forward declaration
 	int qSearch(int alpha, int beta, int Ply);
@@ -52,27 +55,29 @@ namespace Search {
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
 		// Null Move Pruning method
-		if (AllowNullMove and !incheck and depth >= 3 and game_state.gamePhase() != gState::ENDGAME) {
-			static constexpr int R = 2;
+		if constexpr (AllowNullMove) {
+			if (!incheck and depth >= 3 and !game_state.isPawnEndgame()) {
+				static constexpr int R = 2;
 
-			const auto ep_cpy = game_state.ep_sq;
-			const auto hash_cpy = hash.key;
+				const auto ep_cpy = game_state.ep_sq;
+				const auto hash_cpy = hash.key;
 
-			rep_tt.posRegister();
-			MovePerform::makeNull();
+				rep_tt.posRegister();
+				MovePerform::makeNull();
 
-			// set allow_null_move to false - prevent from double move passing, it makes no sense then
-			const int score = -alphaBeta<false>(-beta, -beta + 1, depth - 1 - R, ply + 1);
+				// set allow_null_move to false - prevent from double move passing, it makes no sense then
+				const int score = -alphaBeta<false>(-beta, -beta + 1, depth - 1 - R, ply + 1);
 
-			MovePerform::unmakeNull(hash_cpy, ep_cpy);
-			rep_tt.count--;
+				MovePerform::unmakeNull(hash_cpy, ep_cpy);
+				rep_tt.count--;
 
-			if (score >= beta) return beta;
+				if (score >= beta) return beta;
+			}
 		}
 
 		// use fully-legal moves generator
-		auto move_list = MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>();
-		const size_t mcount = move_list.size();
+		MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>(ml[ply]);
+		const size_t mcount = ml[ply].size();
 
 		// no legal moves detected - checkmate or stealmate
 		if (!mcount)
@@ -96,8 +101,8 @@ namespace Search {
 		for (int i = 0; i < mcount; i++) {
 
 			// move ordering
-			Order::pickBest(move_list, i, ply);
-			const auto& move = move_list[i];
+			Order::pickBest(ml[ply], i, ply);
+			const auto& move = ml[ply][i];
 
 			// futility pruning
 			static constexpr int margin = Eval::Value::PAWN_VALUE;
@@ -210,17 +215,17 @@ namespace Search {
 		alpha = std::max(alpha, eval);
 
 		// generate opponent capture moves
-		auto capt_list = MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>();
+		MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>(ml[ply]);
 		const BitBoardsSet bbs_cpy = BBs;
 		const gState gstate_cpy = game_state;
 		const U64 hash_cpy = hash.key;
 		int score, see_score;
 
-		for (int i = 0; i < capt_list.size(); i++) {
+		for (int i = 0; i < ml[ply].size(); i++) {
 
 			// capture ordering
-			see_score = Order::pickBestSEE(capt_list, i);
-			const auto& move = capt_list[i];
+			see_score = Order::pickBestSEE(ml[ply], i);
+			const auto& move = ml[ply][i];
 
 			// bad captures pruning
 			if (i >= 1 and see_score < 0)
@@ -263,6 +268,7 @@ namespace Search {
 		int lbound = low_bound,
 			hbound = high_bound,
 			curr_dpt = 1;
+		long long time;
 
 		time_data.start = now();
 		
@@ -292,7 +298,8 @@ namespace Search {
 
 			OS  << " depth " << curr_dpt++
 				<< " nodes " << search_results.nodes
-				<< " time " << sinceStart_ms(time_data.start)
+				<< " time " << (time = sinceStart_ms(time_data.start))
+				<< " nps " << static_cast<int>(search_results.nodes / (1. * (time + 1) / 1000))
 				<< " pv ";
 
 			for (int cnt = 0; cnt < PV::pv_len[0]; cnt++)
