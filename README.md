@@ -2,7 +2,6 @@
 
 ### TODO in the future:
 
-- *countermove heuristic*
 - *smarter MVV/LVA lookup table values*
 - *mate killers*
 - *replace by depth scheme in main tt*
