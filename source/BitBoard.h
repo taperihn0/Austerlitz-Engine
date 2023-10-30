@@ -199,10 +199,11 @@ namespace {
 		return static_cast<int>(_mm_popcnt_u64(x));
 #elif defined(__GNUC__)
 		return __builtin_popcount(x);
-#endif
+#else
 		int c;
 		for (c = 0; x; x &= x - 1, c++);
 		return c;
+#endif
 	}
 
 } // namespace
@@ -216,15 +217,41 @@ inline int getLS1BIndex(U64 bb) {
 	_BitScanForward64(&s, bb);
 	return s;
 }
+
+inline int getMS1BIndex(U64 bb) {
+	assert(bb != eU64);
+	unsigned long s;
+	_BitScanReverse64(&s, bb);
+	return s;
+}
 #elif defined(__GNUC__)
-inline int getLS1BIndex(U64 bb) noexcept(noexcept(__builtin_ctzll(bb))) {
+inline int getLS1BIndex(U64 bb) {
 	assert(bb != eU64);
 	return __builtin_ctzll(bb);
+}
+
+inline int getMS1BIndex(U64 bb) {
+	assert(bb != eU64);
+	return __builtin_clzll(bb);
 }
 #else
 inline constexpr int getLS1BIndex(U64 bb) noexcept {
 	assert(bb != eU64);
 	return lsbResource::index64[((bb ^ (bb - 1)) * lsbResource::debruijn64) >> 58];
+}
+
+inline constexpr U64 verticalFlip(U64 bb) noexcept {
+	const U64 k1 = C64(0x00FF00FF00FF00FF);
+	const U64 k2 = C64(0x0000FFFF0000FFFF);
+	x = ((x >> 8) & k1) | ((x & k1) << 8);
+	x = ((x >> 16) & k2) | ((x & k2) << 16);
+	x = (x >> 32) | (x << 32);
+	return x;
+}
+
+inline constexpr int getMS1BIndex(U64 bb) noexcept {
+	assert(bb != eU64);
+	return getLS1BIndex(verticalFlip(bb));
 }
 #endif
 

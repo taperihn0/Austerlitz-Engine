@@ -50,6 +50,12 @@ namespace Eval {
 	} eval_lookup;
 
 	template <enumSide SIDE>
+	inline int promotionDistanceBonus(U64 bb) {
+		if constexpr (SIDE) return 7 - (getLS1BIndex(bb) / 8);
+		return getMS1BIndex(bb) / 8;
+	}
+
+	template <enumSide SIDE>
 	int connectivity() {
 		U64 conn = eval_lookup.pt_att[SIDE][PAWN];
 		int eval = 0;
@@ -157,10 +163,9 @@ namespace Eval {
 					dist_updated = true;
 
 					// clear passer square bonus
-					if (game_state.isPawnEndgame() 
-						and !(Value::passer_square.get(SIDE, sq) & eval_lookup.k_sq[!SIDE])
+					if (!(Value::passer_square.get(SIDE, sq) & eval_lookup.k_sq[!SIDE])
 						and game_state.turn == SIDE)
-						eval += 30;
+						eval += 25 + game_state.isPawnEndgame() * 15;
 				}
 
 				eval += Value::passed_score[flipRank<SIDE>(sq)];

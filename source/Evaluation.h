@@ -250,17 +250,17 @@ namespace Eval {
 		constexpr auto distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int d = cexpr::abs(i % 8 - j % 8) + cexpr::abs(i / 8 - j / 8);
 			return 14 - d;
-			});
+		});
 
 		constexpr auto diag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int sc_i = (i % 8) + (i / 8), sc_j = (j % 8) - (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
-			});
+		});
 
 		constexpr auto adiag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int sc_i = 7 - (i % 8) + (i / 8), sc_j = 7 - (j % 8) + (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
-			});
+		});
 
 		using passedPawnTab = std::array<int, 7>;
 		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };

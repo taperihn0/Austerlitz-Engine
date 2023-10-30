@@ -22,10 +22,15 @@ namespace Search {
 	// forward declaration
 	int qSearch(int alpha, int beta, int Ply);
 
+	enum depthNode {
+		LEAF_NODE = 0,
+		PRE_FRONTIER = 1,
+		PRE_PRE_FRONTIER = 2
+	};
+
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
 	template <bool AllowNullMove = true>
 	int alphaBeta(int alpha, int beta, int depth, int ply) {
-
 		// (nodes & check_modulo == 0) is an alternative operation to (nodes % check_modulo == 0)
 		if (time_data.is_time and !(search_results.nodes & time_check_modulo) and !time_data.checkTimeLeft()) {
 			time_data.stop = true;
@@ -35,11 +40,11 @@ namespace Search {
 			return draw_score;
 		
 		// do not use tt in root
-		static int tt_score;
+		int tt_score;
 		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth, ply)))
 			return tt_score;
 		// break condition and quiescence search
-		else if (depth <= 0) {
+		else if (depth <= LEAF_NODE) {
 			// init PV table lenght
 			PV::pv_len[ply] = 0;
 			const int qscore = qSearch(alpha, beta, ply);
@@ -83,13 +88,14 @@ namespace Search {
 		if (!mcount)
 			return incheck ? mate_score + ply : draw_score;
 		// single-response extension
-		else if (incheck and mcount == 1) { 
+		else if (incheck and mcount == 1) {
 			depth++;
 
 			if (time_data.is_time and time_data.this_move > 300_ms
 				and time_data.this_move < time_data.left / 10)
 				time_data.this_move += 185_ms;
 		}
+		else if (incheck) depth++;
 
 		const MoveItem::iMove my_prev = prev_move;
 		const BitBoardsSet bbs_cpy = BBs;
@@ -104,13 +110,22 @@ namespace Search {
 			Order::pickBest(ml[ply], i, ply);
 			const auto& move = ml[ply][i];
 
-			// futility pruning
-			static constexpr int margin = Eval::Value::PAWN_VALUE;
-			if (i > 1 and mcount >= 8 and !move.getMask<MoveItem::iMask::CAPTURE_F>()
-				and depth == 1 and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
-				and beta < -mate_comp and alpha > mate_comp
-				and Eval::evaluate(alpha - margin, Search::high_bound) <= alpha - margin) {
-				return alpha;
+			// check at least PV-node
+			if (i >= 1 and mcount >= 8 and !incheck and !move.getMask<MoveItem::iMask::CAPTURE_F>()
+				and !(move.getMask<MoveItem::iMask::PROMOTION>() >> 20)
+				and beta < -mate_comp and alpha > mate_comp) {
+				// margin for pre-frontier node and for pre-pre-frontier node
+				static constexpr int futility_margin = 80, ext_margin = 450;
+				
+				// pure futility pruning at pre-frontier nodes
+				if (depth == PRE_FRONTIER
+					and Eval::evaluate(alpha - futility_margin, Search::high_bound) <= alpha - futility_margin)
+					return alpha;
+				// extended futility pruning at pre-pre-frontier nodes
+				else if (depth == PRE_PRE_FRONTIER
+					and Eval::evaluate(alpha - ext_margin, Search::high_bound) <= alpha - ext_margin)
+					return alpha;
+
 			} // recapture extra time
 			else if (ply and prev_to == (move.getMask<MoveItem::iMask::TARGET>() >> 6)
 				and time_data.is_time and time_data.this_move > 300_ms
@@ -144,8 +159,7 @@ namespace Search {
 						score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 				}
 			}
-			else
-				score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
+			else score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 
 			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			rep_tt.count--;
@@ -267,7 +281,8 @@ namespace Search {
 
 		int lbound = low_bound,
 			hbound = high_bound,
-			curr_dpt = 1;
+			curr_dpt = 1,
+			prev_score = search_results.score;
 		long long time;
 
 		time_data.start = now();
@@ -277,8 +292,10 @@ namespace Search {
 			prev_move = 0;
 			search_results.score = alphaBeta<false>(lbound, hbound, curr_dpt, 0);
 
-			// fail
-			if (search_results.score <= lbound or search_results.score >= hbound) {
+			if (search_results.score == time_stop_sign)
+				search_results.score = prev_score;
+			// failed aspiration window search
+			else if (search_results.score <= lbound or search_results.score >= hbound) {
 				lbound = low_bound, hbound = high_bound;
 				continue;
 			}
@@ -309,6 +326,8 @@ namespace Search {
 			if (time_data.stop 
 				or (time_data.is_time and 5 * sinceStart_ms(time_data.start) / 2 > time_data.this_move))
 				break;
+
+			prev_score = search_results.score;
 		}
 
 		OS << "bestmove ";
