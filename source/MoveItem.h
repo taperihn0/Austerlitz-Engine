@@ -36,8 +36,7 @@ namespace MoveItem {
 		CASTLE_F      = 0x40000,
 		SIDE_F        = 0x80000,
 		PROMOTION     = 0x700000,
-
-		COORDS = ORIGIN | TARGET
+		COORDS        = ORIGIN | TARGET
 	};
 
 	// encoding mode

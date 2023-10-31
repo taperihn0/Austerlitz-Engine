@@ -6,9 +6,7 @@
 
 namespace Order {
 	
-	static constexpr int
-		pv_score = 15000,
-		relative_history_scale = 13;
+	static constexpr int relative_history_scale = 13;
 
 	// get least valuable attacker bbs index
 	inline size_t leastValuableAtt(U64 att, bool side) {
@@ -103,11 +101,15 @@ namespace Order {
 			return MVV_LVA::lookup[att][victim];
 		}
 
+		static int promo;
+
 		// killer moves score less than basic captures
 		if (move == killer[0][ply])
 			return 900;
 		else if (move == killer[1][ply])
 			return 895;
+		else if ((promo = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
+			return promo;
 
 		// relative history move score
 		const int
@@ -115,7 +117,7 @@ namespace Order {
 			prev_to = Search::prev_move.getMask<MoveItem::iMask::TARGET>() >> 6,
 			prev_pc = Search::prev_move.getMask<MoveItem::iMask::PIECE>() >> 12,
 			counter_bonus = static_cast<bool>(ply and Order::countermove[prev_pc][prev_to] == move.raw()) * (4 + ply);
-
+		
 		return (relative_history_scale * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1 + counter_bonus;
 	}
 
@@ -127,7 +129,7 @@ namespace Order {
 	}
 
 	// pick best based on normal moveScore() eval function
-	void pickBest(MoveList& move_list, int s, int ply) {
+	int pickBest(MoveList& move_list, int s, int ply) {
 		static MoveItem::iMove tmp;
 		int cmp_score = moveScore(move_list[s], ply), i_score;
 
@@ -141,6 +143,8 @@ namespace Order {
 				move_list[s] = tmp;
 			}
 		}
+
+		return cmp_score;
 	}
 
 	// pick best using SEE

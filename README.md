@@ -8,5 +8,5 @@
 - *smarter depth reduction and more accurate conditions defining late moves*
 - *smarter phase checking in null move pruning*
 - *apply gradual widening on re-searches in aspiration window search*
-- *apply extended futility pruning or razoring*
+- *apply razoring*
 - *wise endgame evaluation*

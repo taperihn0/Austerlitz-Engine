@@ -20,12 +20,12 @@ namespace Search {
 	std::array<MoveList, max_Ply> ml;
 
 	// forward declaration
-	int qSearch(int alpha, int beta, int Ply);
+	int qSearch(int alpha, int beta, int ply);
 
 	enum depthNode {
 		LEAF_NODE = 0,
-		PRE_FRONTIER = 1,
-		PRE_PRE_FRONTIER = 2
+		FRONTIER = 1,
+		PRE_FRONTIER = 2
 	};
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
@@ -87,6 +87,8 @@ namespace Search {
 		// no legal moves detected - checkmate or stealmate
 		if (!mcount)
 			return incheck ? mate_score + ply : draw_score;
+		else if (incheck) 
+			depth++;
 		// single-response extension
 		else if (incheck and mcount == 1) {
 			depth++;
@@ -95,34 +97,33 @@ namespace Search {
 				and time_data.this_move < time_data.left / 10)
 				time_data.this_move += 185_ms;
 		}
-		else if (incheck) depth++;
 
 		const MoveItem::iMove my_prev = prev_move;
 		const BitBoardsSet bbs_cpy = BBs;
 		const gState gstate_cpy = game_state;
 		const U64 hash_cpy = hash.key;
-		int score, to, pc, prev_to = my_prev.getMask<MoveItem::iMask::TARGET>() >> 6, prev_pc;
+		int score, to, pc, prev_to = my_prev.getMask<MoveItem::iMask::TARGET>() >> 6, prev_pc, m_score;
 		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
+		bool checking_move;
 
 		for (int i = 0; i < mcount; i++) {
 
 			// move ordering
-			Order::pickBest(ml[ply], i, ply);
+			m_score = Order::pickBest(ml[ply], i, ply);
 			const auto& move = ml[ply][i];
 
-			// check at least PV-node
 			if (i >= 1 and mcount >= 8 and !incheck and !move.getMask<MoveItem::iMask::CAPTURE_F>()
-				and !(move.getMask<MoveItem::iMask::PROMOTION>() >> 20)
-				and beta < -mate_comp and alpha > mate_comp) {
+				and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN
+				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp)) {
 				// margin for pre-frontier node and for pre-pre-frontier node
 				static constexpr int futility_margin = 80, ext_margin = 450;
-				
+
 				// pure futility pruning at pre-frontier nodes
-				if (depth == PRE_FRONTIER
+				if (depth == FRONTIER
 					and Eval::evaluate(alpha - futility_margin, Search::high_bound) <= alpha - futility_margin)
 					return alpha;
 				// extended futility pruning at pre-pre-frontier nodes
-				else if (depth == PRE_PRE_FRONTIER
+				else if (depth == PRE_FRONTIER
 					and Eval::evaluate(alpha - ext_margin, Search::high_bound) <= alpha - ext_margin)
 					return alpha;
 
@@ -136,18 +137,16 @@ namespace Search {
 			rep_tt.posRegister();
 			MovePerform::makeMove(move);
 			prev_move = move;
+			checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
 			// if pv is still left, save time by checking uninteresting moves using null window
 			// if such node fails low, it's a sign we are offered good move (score > alpha)
-			if (i > 1) {
+			if (i >= 1) {
 				// late move reduction
-				if (
-					depth >= 3
-					and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
+				if (depth >= 3 and !checking_move
 					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)
 					and !move.getMask<MoveItem::iMask::CAPTURE_F>()
-					and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN
-					)
+					and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN)
 					score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
 				else score = alpha + 1;
 

@@ -7,6 +7,12 @@
 
 namespace Order {
 
+	static constexpr int pv_score = 15000;
+
+	inline constexpr bool PV_Node(const int m_score) noexcept {
+		return m_score == pv_score;
+	}
+
 	// Most Valuable Victim - Least Valuable Attacker lookup data structure
 	namespace MVV_LVA {
 
@@ -50,7 +56,7 @@ namespace Order {
 	/* move ordering techniques */
 
 	// swap best move so it's on the i'th place
-	void pickBest(MoveList& move_list, int s, int ply);
+	int pickBest(MoveList& move_list, int s, int ply);
 
 	// pick best capture based on Static Exchange Evaluation
 	int pickBestSEE(MoveList& capt_list, int s);
