@@ -87,13 +87,12 @@ namespace Search {
 		// no legal moves detected - checkmate or stealmate
 		if (!mcount)
 			return incheck ? mate_score + ply : draw_score;
-		else if (incheck) 
-			depth++;
-		// single-response extension
-		else if (incheck and mcount == 1) {
+		// check extension
+		else if (incheck) {
 			depth++;
 
-			if (time_data.is_time and time_data.this_move > 300_ms
+			// single-response extra time
+			if (mcount == 1 and time_data.is_time and time_data.this_move > 300_ms
 				and time_data.this_move < time_data.left / 10)
 				time_data.this_move += 185_ms;
 		}

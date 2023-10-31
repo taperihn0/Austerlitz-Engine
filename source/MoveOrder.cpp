@@ -102,14 +102,16 @@ namespace Order {
 		}
 
 		static int promo;
+		static std::array<int, 5> promo_score = { 0, 900, 900, 950, 5500 };
 
 		// killer moves score less than basic captures
 		if (move == killer[0][ply])
 			return 900;
 		else if (move == killer[1][ply])
 			return 895;
+		// promotions score
 		else if ((promo = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
-			return promo;
+			return promo_score[promo]; // return promo;
 
 		// relative history move score
 		const int
