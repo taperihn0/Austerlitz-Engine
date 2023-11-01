@@ -56,7 +56,7 @@ namespace Order {
 	/* move ordering techniques */
 
 	// swap best move so it's on the i'th place
-	int pickBest(MoveList& move_list, int s, int ply);
+	void pickBest(MoveList& move_list, int s, int ply);
 
 	// pick best capture based on Static Exchange Evaluation
 	int pickBestSEE(MoveList& capt_list, int s);

@@ -87,33 +87,36 @@ namespace Search {
 		// no legal moves detected - checkmate or stealmate
 		if (!mcount)
 			return incheck ? mate_score + ply : draw_score;
-		// check extension
-		else if (incheck) {
+		// single-response extra time
+		else if (incheck and mcount == 1) {
 			depth++;
 
 			// single-response extra time
-			if (mcount == 1 and time_data.is_time and time_data.this_move > 300_ms
+			if (time_data.is_time and time_data.this_move > 300_ms
 				and time_data.this_move < time_data.left / 10)
 				time_data.this_move += 185_ms;
 		}
+		// check extension
+		else if (incheck) depth++;
 
 		const MoveItem::iMove my_prev = prev_move;
 		const BitBoardsSet bbs_cpy = BBs;
 		const gState gstate_cpy = game_state;
 		const U64 hash_cpy = hash.key;
-		int score, to, pc, prev_to = my_prev.getMask<MoveItem::iMask::TARGET>() >> 6, prev_pc, m_score;
+		int score, to, pc, prev_to = my_prev.getMask<MoveItem::iMask::TARGET>() >> 6, prev_pc;
 		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
 		bool checking_move;
 
 		for (int i = 0; i < mcount; i++) {
 
 			// move ordering
-			m_score = Order::pickBest(ml[ply], i, ply);
+			Order::pickBest(ml[ply], i, ply);
 			const auto& move = ml[ply][i];
 
 			if (i >= 1 and mcount >= 8 and !incheck and !move.getMask<MoveItem::iMask::CAPTURE_F>()
 				and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN
 				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp)) {
+
 				// margin for pre-frontier node and for pre-pre-frontier node
 				static constexpr int futility_margin = 80, ext_margin = 450;
 
@@ -140,7 +143,7 @@ namespace Search {
 
 			// if pv is still left, save time by checking uninteresting moves using null window
 			// if such node fails low, it's a sign we are offered good move (score > alpha)
-			if (i >= 1) {
+			if (i > 1) {
 				// late move reduction
 				if (depth >= 3 and !checking_move
 					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)

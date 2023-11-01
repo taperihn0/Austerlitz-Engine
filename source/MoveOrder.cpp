@@ -102,16 +102,14 @@ namespace Order {
 		}
 
 		static int promo;
-		static std::array<int, 5> promo_score = { 0, 900, 900, 950, 5500 };
 
 		// killer moves score less than basic captures
 		if (move == killer[0][ply])
 			return 900;
 		else if (move == killer[1][ply])
 			return 895;
-		// promotions score
 		else if ((promo = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
-			return promo_score[promo]; // return promo;
+			return promo;
 
 		// relative history move score
 		const int
@@ -131,7 +129,7 @@ namespace Order {
 	}
 
 	// pick best based on normal moveScore() eval function
-	int pickBest(MoveList& move_list, int s, int ply) {
+	void pickBest(MoveList& move_list, int s, int ply) {
 		static MoveItem::iMove tmp;
 		int cmp_score = moveScore(move_list[s], ply), i_score;
 
@@ -145,8 +143,6 @@ namespace Order {
 				move_list[s] = tmp;
 			}
 		}
-
-		return cmp_score;
 	}
 
 	// pick best using SEE
