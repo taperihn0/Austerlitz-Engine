@@ -234,8 +234,7 @@ namespace Search {
 		const gState gstate_cpy = game_state;
 		const U64 hash_cpy = hash.key;
 		int score, see_score;
-		
-		// is player losing material?
+		// losing material indication flag
 		const bool minus_mdelta = 
 			(game_state.material[game_state.turn] - game_state.material[!game_state.turn]) < 0;
 
@@ -245,11 +244,15 @@ namespace Search {
 			see_score = Order::pickBestSEE(ml[ply], i);
 			const auto& move = ml[ply][i];
 
-			// bad captures pruning
 			if (i >= 1) {
+				// equal captures pruning margin
+				static constexpr int equal_margin = 75;
+
+				// bad captures pruning
 				if (see_score < 0)
 					return alpha;
-				else if (minus_mdelta and !see_score and eval + 75 <= alpha)
+				// equal captures pruning if losing material
+				else if (minus_mdelta and !see_score and eval + equal_margin <= alpha)
 					return alpha;
 			}
 

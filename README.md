@@ -3,7 +3,6 @@
 ### TODO in the future:
 
 - *(?) smarter MVV/LVA lookup table values*
-- *mate killers*
 - *replace by depth scheme in main tt*
 - *more accurate conditions defining late moves*
 - *smarter phase checking in null move pruning*

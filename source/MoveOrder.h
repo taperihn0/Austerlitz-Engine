@@ -28,7 +28,7 @@ namespace Order {
 	};
 
 	// Killer Moves lookup table [killer_index][ply_index]
-	using killerLookUp = std::array<std::array<MoveItem::iMove, 128>, 2>;
+	using killerLookUp = std::array<std::array<MoveItem::iMove, Search::max_Ply>, 2>;
 	extern killerLookUp killer;
 	
 	// History Moves lookup table in format [piece][to]
