@@ -11,11 +11,7 @@
 
 // do not check fen position appended moves legality -
 // some extra performance gain where guaranted to get legal moves
-#if defined(__DEBUG__)
 #define _CHECK_MOVE_LEGAL true
-#else
-#define _CHECK_MOVE_LEGAL false
-#endif
 
 
 UCI::UCI() 
@@ -71,6 +67,8 @@ void UCI::parsePosition(std::istringstream& strm) {
 
 	strm >> std::skipws >> com;
 
+	Search::prev_move = 0;
+
 	// set starting or given fen
 	if (com == "startpos") {
 		BBs.parseFEN(BitBoardsSet::start_pos);
@@ -104,6 +102,7 @@ void UCI::parsePosition(std::istringstream& strm) {
 	rep_tt.clear();
 
 	MoveItem::iMove casted;
+	MoveList ml;
 
 	// scan given moves and perform them on real board
 	while (strm >> std::skipws >> move) {
@@ -112,8 +111,8 @@ void UCI::parsePosition(std::istringstream& strm) {
 #if _CHECK_MOVE_LEGAL
 		bool illegal = true;
 
-		// check move validity
-		MoveList ml;
+		// check move validity - generate all the legal moves and then 
+		// compare given move with all legal moves in move list
 		MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>(ml);
 
 		for (const auto& move : ml) {
@@ -121,6 +120,7 @@ void UCI::parsePosition(std::istringstream& strm) {
 				MovePerform::makeMove(move);
 				illegal = false;
 				rep_tt.posRegister();
+				Search::prev_move = move;
 				break;
 			}
 		}
