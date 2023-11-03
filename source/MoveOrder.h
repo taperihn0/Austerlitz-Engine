@@ -69,6 +69,10 @@ namespace InitState {
 	// clear butterfly
 	inline void clearButterfly() {
 		for (auto& x : Order::butterfly) x.fill(0);
+	}
+
+	// clear countermove table
+	inline void clearCountermove() {
 		for (auto& x : Order::countermove) x.fill(0);
 	}
 	

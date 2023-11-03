@@ -14,5 +14,4 @@
 - *reduce king safety bonus*
 - *(?) compare distance to promote rank in endgame*
 - *SEE tt using such key: key = attackTo(eU64, sq, side);*
-- *do not clear countermove table every time 'go' command is processed*
 
