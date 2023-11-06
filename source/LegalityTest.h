@@ -83,6 +83,7 @@ U64 attackTo(int sq, bool side, U64 occ);
 
 template <enumSide SIDE>
 U64 pinnedPiece(int own_king_sq);
+U64 pinnedPiece(int own_king_sq, bool side);
 
 
 template <enumSide SIDE>
@@ -95,3 +96,4 @@ U64 pinnedDiagonal(int own_king_sq, bool side);
 
 template <enumSide SIDE>
 U64 pinnersPiece(int own_king_sq);
+U64 pinnersPiece(int own_king_sq, U64 occ, U64 blockers, bool side);

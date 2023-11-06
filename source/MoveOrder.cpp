@@ -5,10 +5,8 @@
 
 
 namespace Order {
-	
-	static constexpr int relative_history_scale = 13;
 
-	// get least valuable attacker bbs index
+	// get least valuable attacker bbs index from given attackers set
 	inline size_t leastValuableAtt(U64 att, bool side) {
 		for (auto pc = nWhitePawn + side; pc <= nBlackKing; pc += 2)
 			if (att & BBs[pc]) return pc;
@@ -16,63 +14,79 @@ namespace Order {
 		return nEmpty;
 	}
 
-	// get capture material
-	int getCapturedMaterial(int sq) {
-		int cap_val = 0;
-
+	// get initial material of piece occuping given square
+	size_t getCapturedMaterial(int sq) {
 		for (auto pc = nBlackPawn - game_state.turn; pc <= nBlackKing; pc += 2)
-			if (bitU64(sq) & BBs[pc])
-				cap_val = Eval::Value::piece_material[toPieceType(pc)];
+			if (bitU64(sq) & BBs[pc]) return pc;
 
-		return cap_val;
+		// en passant capture scenario
+		static constexpr std::array<int, 2> ep_shift = { Compass::nort, Compass::sout };
+		return (game_state.ep_sq + ep_shift[game_state.turn] == sq) ? (nBlackPawn - game_state.turn) : nEmpty;
+	}
+
+	// return true when marked attacker cannot perform legal capture of piece on 'sq' square
+	// else return false - 'blocked' means 'pinned' in such detection
+	inline bool blockedAttacker(int sq, U64 occ, int att_sq, bool side, int k_sq) {
+		// get possible pinner of piece
+		const U64 pinner = pinnersPiece(k_sq, occ, BBs[nWhite + side] & occ, side) &
+			attack<QUEEN>(occ, att_sq) & occ;
+
+		// if no pinner found for attacker then return false, else check whether capture is still legal move
+		return pinner and !((inBetween(getLS1BIndex(pinner), k_sq) | pinner) & bitU64(sq));
 	}
 
 	int see(int sq) {
-		std::array<int, 32> gain;
+		std::array<int, 33> gain;
+
+		const std::array<int, 2> k_sq = { 
+			getLS1BIndex(BBs[nWhiteKing]), getLS1BIndex(BBs[nBlackKing])
+		};
+
 		bool side = game_state.turn;
 		std::array<U64, 2> attackers;
-		U64 processed = eU64, single_att;
+		U64 processed = eU64;
 
+		int i = 0, single_att;
+		gain[i] = 0;
+		size_t weakest_att = getCapturedMaterial(sq), prev_weakest;
 		attackers[side] = attackTo(sq, !side);
 
-		int i = 0;
-		gain[i] = getCapturedMaterial(sq);
-
-		auto weakest_att = leastValuableAtt(attackers[side], side);
-		processed = bitU64(getLS1BIndex(BBs[weakest_att]));
-		attackers[side] ^= processed;
-
-		side = !side;
-		attackers[side] = attackTo(sq, !side, BBs[nOccupied] ^ processed);
-
-		while (attackers[side]) {
+		while (attackers[side] and weakest_att < nWhiteKing) {
 			i++;
-			gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(weakest_att)];
+			gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(prev_weakest = weakest_att)];
 
-			auto weakest_att = leastValuableAtt(attackers[side], side);
-			single_att = bitU64(getLS1BIndex(BBs[weakest_att] & ~processed));
+			weakest_att = leastValuableAtt(attackers[side], side);
+			single_att = getLS1BIndex(attackers[side] & BBs[weakest_att]);
 
-			// pin detection
-			if (isBySliderAttacked(getLS1BIndex(BBs[nWhiteKing + side]), 
-				side, BBs[nOccupied] ^ (processed | single_att))) {
-				attackers[side] ^= single_att;
+			// pin detection: if attacker is blocked (pinned) and cannot capture piece on destination square (sq),
+			// then retry loop entry, calculate gain for same index again and delete pinned attacker from current attacking set
+			if (blockedAttacker(sq, BBs[nOccupied] ^ processed, single_att, side, k_sq[side])) {
+				attackers[side] ^= bitU64(single_att);
 				i--;
-				break;
+				weakest_att = prev_weakest;
+				continue;
 			}
 
-			processed |= single_att;
+			processed |= bitU64(single_att);
 
 			side = !side;
 			attackers[side] = attackTo(sq, !side, BBs[nOccupied] ^ processed) & ~processed;
 		}
 
-		while (i >= 1) {
+		while (i >= 2) {
 			gain[i - 1] = -std::max(-gain[i - 1], gain[i]);
 			i--;
 		}
 
-		return gain[0];
+		return gain[1];
 	}
+
+	enum MoveScoreParams {
+		PV_SCORE = 15000,
+		KILLER_1_SCORE = 900,
+		KILLER_2_SCORE = 890,
+		RELATIVE_HISTORY_SCALE = 13,
+	};
 
 	// evaluate move
 	int moveScore(const MoveItem::iMove& move, int ply) {
@@ -80,7 +94,7 @@ namespace Order {
 
 		// pv move detected
 		if (Search::PV::pv_line[ply][0] == move)
-			return pv_score;
+			return PV_SCORE;
 		// distinguish between quiets and captures
 		else if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 			const int att = move.getMask<MoveItem::iMask::PIECE>() >> 12;
@@ -105,9 +119,9 @@ namespace Order {
 
 		// killer moves score less than basic captures
 		if (move == killer[0][ply])
-			return 900;
+			return KILLER_1_SCORE;
 		else if (move == killer[1][ply])
-			return 895;
+			return KILLER_2_SCORE;
 		else if ((promo = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
 			return promo;
 
@@ -116,9 +130,9 @@ namespace Order {
 			pc = move.getMask<MoveItem::iMask::PIECE>() >> 12,
 			prev_to = Search::prev_move.getMask<MoveItem::iMask::TARGET>() >> 6,
 			prev_pc = Search::prev_move.getMask<MoveItem::iMask::PIECE>() >> 12,
-			counter_bonus = static_cast<bool>(ply and Order::countermove[prev_pc][prev_to] == move.raw()) * (4 + ply);
+			counter_bonus = (Order::countermove[prev_pc][prev_to] == move.raw()) * (4 + ply);
 		
-		return (relative_history_scale * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1 + counter_bonus;
+		return (RELATIVE_HISTORY_SCALE * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1 + counter_bonus;
 	}
 
 	// move sorting

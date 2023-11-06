@@ -17,8 +17,8 @@ public:
 	std::istream* is;
 	std::ostream* os;
 
-	static constexpr const char *engine_name = "id name Austerlitz@", 
-		*author = "id author Simon B.";
+	static constexpr const char* engine_name = "id name Austerlitz@",
+		* author = "id author Simon B.";
 };
 
 extern UCI UCI_o;

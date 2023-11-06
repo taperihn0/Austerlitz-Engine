@@ -130,7 +130,7 @@ namespace Search {
 					return alpha;
 
 			} // recapture extra time
-			else if (ply and prev_to == (move.getMask<MoveItem::iMask::TARGET>() >> 6)
+			else if (prev_to == (move.getMask<MoveItem::iMask::TARGET>() >> 6)
 				and time_data.is_time and time_data.this_move > 300_ms
 				and time_data.this_move < time_data.left / 12) {
 				time_data.this_move += 50_ms;

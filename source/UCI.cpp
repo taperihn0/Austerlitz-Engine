@@ -22,7 +22,9 @@ UCI::UCI()
 // return introducing string
 inline void introduce() {
 	OS << UCI::engine_name << '\n'
-		<< UCI::author << "\nuciok\n";
+		<< UCI::author << '\n'
+		<< TranspositionTable::hashInfo() << '\n'
+		<< "uciok\n";
 }
 
 // serve "go" command
@@ -145,8 +147,18 @@ inline void newGame() {
 }
 
 
-#if defined(__DEBUG__)
+void setOption(std::istringstream& strm) {
+	std::string com;
 
+	strm >> std::skipws >> com >> std::skipws >> com;
+
+	if (com == "Hash") {
+		strm >> std::skipws >> com >> std::skipws >> com;
+		tt.setSize(std::stoi(com));
+	}
+}
+
+#if defined(__DEBUG__)
 void seePrint(std::istringstream& strm) {
 	std::string sq_str;
 	strm >> std::skipws >> sq_str;
@@ -160,25 +172,25 @@ void evalInfo() {
 		<< "pawn endgame: " << game_state.isPawnEndgame() << '\n'
 		<< Eval::evaluate(Search::low_bound, Search::high_bound) << "\n\n";
 }
-
 #endif
 
 // main UCI loop
 void UCI::goLoop(int argc, char* argv[]) {
 	std::string line, token;
+	bool skip_getline = argc > 1;
 
 	for (int i = 1; i < argc; i++)
-		line += std::string(argv[i]) + " ";
+		line += " " + std::string(argv[i]);
 
 	if (is == &std::cin)
 		OS << "Polish Chess Engine: Austerlitz 1 by Simon B.\n";
 
 	do {
-		if (argc == 1 and !std::getline(IS, line))
+		if (!skip_getline and !std::getline(IS, line))
 			line = "quit";
 
 		std::istringstream strm(line);
-
+		skip_getline = false;
 		strm >> std::skipws >> token;
 
 		if (token == "isready")         OS << "readyok\n";
@@ -186,12 +198,14 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "ucinewgame") newGame();
 		else if (token == "uci")        introduce();
 		else if (token == "go")         parseGo(strm);
+		else if (token == "setoption")  setOption(strm);
 #if defined(__DEBUG__)
 		else if (token == "print")      BBs.printBoard();
 		else if (token == "benchmark")  bench.start();
 		else if (token == "hashkey")    OS << hash.key << '\n';
 		else if (token == "eval")       evalInfo();
 		else if (token == "see")        seePrint(strm);
+		else if (token == "hash")       OS << tt.currSizeInfo() << '\n';
 #endif
-	} while (line != "quit" and argc == 1);
+	} while (line != "quit");
 }

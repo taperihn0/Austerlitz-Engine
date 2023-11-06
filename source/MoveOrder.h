@@ -7,12 +7,6 @@
 
 namespace Order {
 
-	static constexpr int pv_score = 15000;
-
-	inline constexpr bool PV_Node(const int m_score) noexcept {
-		return m_score == pv_score;
-	}
-
 	// Most Valuable Victim - Least Valuable Attacker lookup data structure
 	namespace MVV_LVA {
 

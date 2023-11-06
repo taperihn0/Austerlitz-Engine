@@ -3,6 +3,7 @@
 #include "BitBoard.h"
 #include "GeneratingMagics.h"
 #include "BitBoardsSet.h"
+#include "string"
 
 
 struct Zobrist {
@@ -44,22 +45,53 @@ struct HashEntry {
 };
 
 
+inline constexpr size_t operator"" _MB(ULL mb) noexcept {
+	return mb * 0x100000;
+}
+
+
 // main transposition table class
 class TranspositionTable {
 public:
-	static constexpr size_t hash_size = 0x400000;
+	static constexpr size_t default_size = 4_MB,
+		min_size = 1_MB, max_size = 128_MB;
 	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, HashEntry::no_score };
-	TranspositionTable() = default;
+	
+	inline TranspositionTable() {
+		setSize(default_size / 1_MB);
+	};
+
+	static inline std::string hashInfo() {
+		return "option name Hash type spin default "
+			+ std::to_string(default_size / 1_MB)
+			+ " min " + std::to_string(min_size / 1_MB) 
+			+ " max " + std::to_string(max_size / 1_MB);
+	}
+
+	inline std::string currSizeInfo() {
+		return "hash size " + std::to_string(hash_size / 1_MB);
+	}
 
 	int read(int alpha, int beta, int g_depth, int ply);
 	void write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply);
 
 	inline void clear() {
-		std::fill(htab.data(), htab.data() + htab.size(), empty_entry);
+		std::fill(htab.begin(), htab.end(), empty_entry);
+	}
+
+	inline void setSize(size_t mb_size) {
+		hash_size = 1_MB * mb_size;
+
+		hash_size = std::max(hash_size, min_size);
+		hash_size = std::min(hash_size, max_size);
+
+		htab.resize(hash_size);
+		clear();
 	}
 
 private:
-	std::array<HashEntry, hash_size> htab;
+	size_t hash_size;
+	std::vector<HashEntry> htab;
 };
 
 extern TranspositionTable tt;

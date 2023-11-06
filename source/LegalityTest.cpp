@@ -152,9 +152,13 @@ U64 pinnedDiagonal(int own_king_sq, bool side) {
 
 // return bitboard of pinned piece of given color
 template <enumSide SIDE>
-inline U64 pinnedPiece(int own_king_sq) {
+U64 pinnedPiece(int own_king_sq) {
 	return pinnedHorizonVertic<SIDE>(own_king_sq)
 		| pinnedDiagonal<SIDE>(own_king_sq);
+}
+
+U64 pinnedPiece(int own_king_sq, bool side) {
+	return side ? pinnedPiece<BLACK>(own_king_sq) : pinnedPiece<WHITE>(own_king_sq);
 }
 
 
@@ -172,13 +176,23 @@ template U64 pinnedDiagonal<BLACK>(int);
 // return bitboard of pinners pieces of given color
 template <enumSide SIDE>
 U64 pinnersPiece(int own_king_sq) {
-	U64 own_side_occ = BBs[nWhite + SIDE],
+	const U64 own_side_occ = BBs[nWhite + SIDE],
 		opRookQueen = BBs[nBlackRook - SIDE] | BBs[nBlackQueen - SIDE],
 		opBishopQueen = BBs[nBlackBishop - SIDE] | BBs[nBlackQueen - SIDE];
 
 	return (opRookQueen & xRayRookAttack(BBs[nOccupied], own_side_occ, own_king_sq)) |
 		(opBishopQueen & xRayBishopAttack(BBs[nOccupied], own_side_occ, own_king_sq));
 }
+
+
+U64 pinnersPiece(int own_king_sq, U64 occ, U64 blockers, bool side) {
+	const U64 opRookQueen = BBs[nBlackRook - side] | BBs[nBlackQueen - side],
+		opBishopQueen = BBs[nBlackBishop - side] | BBs[nBlackQueen - side];
+
+	return (opRookQueen & xRayRookAttack(occ, blockers, own_king_sq)) |
+		(opBishopQueen & xRayBishopAttack(occ, blockers, own_king_sq));
+}
+
 
 template U64 pinnersPiece<WHITE>(int);
 template U64 pinnersPiece<BLACK>(int);

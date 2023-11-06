@@ -6,6 +6,7 @@
 #include <array>
 #include <cassert>
 #include <nmmintrin.h>
+#include <intrin.h>
 #include "staticLookup.h"
 
 // define bitboard data type 
@@ -263,15 +264,15 @@ inline int popLS1B(U64& bb) {
 }
 
 inline constexpr void popBit(U64& bb, int shift) noexcept {
-	bb &= ~(cU64(1) << shift);
+	bb &= ~bitU64(shift);
 }
 
 inline constexpr void setBit(U64& bb, int shift) noexcept {
-	bb |= (cU64(1) << shift);
+	bb |= bitU64(shift);
 }
 
 inline constexpr bool getBit(U64 bb, int shift) noexcept {
-	return bb & (cU64(1) << shift);
+	return bb & bitU64(shift);
 }
 
 inline constexpr void moveBit(U64& bb, int origin, int target) noexcept {
