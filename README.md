@@ -9,9 +9,7 @@
 - *apply gradual widening on re-searches in aspiration window search*
 - *(?) apply razoring*
 - *wise endgame evaluation*
-- *recapture move ordering*
 - *mixed SEE and MVV-LVA in main search*
 - *reduce king safety bonus*
 - *(?) compare distance to promote rank in endgame*
-- *SEE tt using such key: key = attackTo(eU64, sq, side);*
 
