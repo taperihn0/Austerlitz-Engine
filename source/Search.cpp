@@ -223,6 +223,7 @@ namespace Search {
 		search_results.nodes++;
 
 		if (eval >= beta) return beta;
+		// delta pruning
 		else if (game_state.gamePhase() != gState::ENDGAME
 			and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
 			and eval + Eval::Value::QUEEN_VALUE <= alpha)
@@ -246,10 +247,10 @@ namespace Search {
 
 			if (i >= 1) {
 				// equal captures pruning margin
-				static constexpr int equal_margin = 75;
+				static constexpr int equal_margin = 120; // 75
 
 				// bad captures pruning
-				if (see_score < 0)
+				if (see_score <= -200)
 					return alpha;
 				// equal captures pruning if losing material
 				else if (minus_mdelta and !see_score and eval + equal_margin <= alpha)

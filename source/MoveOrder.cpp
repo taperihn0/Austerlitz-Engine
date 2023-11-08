@@ -38,36 +38,21 @@ namespace Order {
 	int see(int sq) {
 		std::array<int, 33> gain;
 
-		const std::array<int, 2> k_sq = { 
-			getLS1BIndex(BBs[nWhiteKing]), getLS1BIndex(BBs[nBlackKing])
-		};
-
 		bool side = game_state.turn;
 		std::array<U64, 2> attackers;
 		U64 processed = eU64;
 
-		int i = 0, single_att;
+		int i = 0;
 		gain[i] = 0;
-		size_t weakest_att = getCapturedMaterial(sq), prev_weakest;
+		size_t weakest_att = getCapturedMaterial(sq);
 		attackers[side] = attackTo(sq, !side);
 
 		while (attackers[side] and weakest_att < nWhiteKing) {
 			i++;
-			gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(prev_weakest = weakest_att)];
+			gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(weakest_att)];
 
 			weakest_att = leastValuableAtt(attackers[side], side);
-			single_att = getLS1BIndex(attackers[side] & BBs[weakest_att]);
-
-			// pin detection: if attacker is blocked (pinned) and cannot capture piece on destination square (sq),
-			// then retry loop entry, calculate gain for same index again and delete pinned attacker from current attacking set
-			if (blockedAttacker(sq, BBs[nOccupied] ^ processed, single_att, side, k_sq[side])) {
-				attackers[side] ^= bitU64(single_att);
-				i--;
-				weakest_att = prev_weakest;
-				continue;
-			}
-
-			processed |= bitU64(single_att);
+			processed |= bitU64(getLS1BIndex(BBs[weakest_att] & ~processed));
 
 			side = !side;
 			attackers[side] = attackTo(sq, !side, BBs[nOccupied] ^ processed) & ~processed;
