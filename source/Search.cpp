@@ -7,7 +7,7 @@
 
 namespace Search {
 
-	 // aspiration window reduction size
+	// aspiration window reduction size
 	constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
 
 	// search data stucture
@@ -16,8 +16,21 @@ namespace Search {
 		ULL nodes;
 	} search_results;
 
-	// global pre-alloc move list indexed by [ply][move_index]
-	std::array<MoveList, max_Ply> ml;
+	// node data variables
+	struct NodeDataAggregator {
+		MoveItem::iMove my_prev;
+		BitBoardsSet bbs_cpy;
+		gState gstate_cpy;
+		U64 hash_cpy;
+		int score, to, pc, prev_to, prev_pc;
+		HashEntry::Flag hash_flag;
+		bool checking_move;
+		MoveList ml;
+		size_t mcount;
+	};
+
+	// global pre-alloc resource variable of every main seach node indexed by [node_ply]
+	std::array<NodeDataAggregator, max_Ply> node;
 
 	// forward declaration
 	int qSearch(int alpha, int beta, int ply);
@@ -25,8 +38,18 @@ namespace Search {
 	enum depthNode {
 		LEAF_NODE = 0,
 		FRONTIER = 1,
-		PRE_FRONTIER = 2
+		PRE_FRONTIER = 2,
+		PRE_PRE_FRONTIER = 3
 	};
+
+	inline void initNodeData(int ply) {
+		node[ply].my_prev = prev_move;
+		node[ply].bbs_cpy = BBs;
+		node[ply].gstate_cpy = game_state;
+		node[ply].hash_cpy = hash.key;
+		node[ply].prev_to = prev_move.getMask<MoveItem::iMask::TARGET>() >> 6;
+		node[ply].hash_flag = HashEntry::Flag::HASH_ALPHA;
+	}
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
 	template <bool AllowNullMove = true>
@@ -38,9 +61,9 @@ namespace Search {
 		}
 		else if (ply and (rep_tt.isRepetition() or game_state.is50moveDraw()))
 			return draw_score;
-		
+
 		// do not use tt in root
-		int tt_score;
+		static int tt_score;
 		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth, ply)))
 			return tt_score;
 		// break condition and quiescence search
@@ -81,44 +104,35 @@ namespace Search {
 		}
 
 		// use fully-legal moves generator
-		MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>(ml[ply]);
-		const size_t mcount = ml[ply].size();
+		MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>(node[ply].ml);
+		node[ply].mcount = node[ply].ml.size();
 
 		// no legal moves detected - checkmate or stealmate
-		if (!mcount)
+		if (!node[ply].mcount)
 			return incheck ? mate_score + ply : draw_score;
-		// single-response extra time
-		else if (incheck and mcount == 1) {
+		// check extension
+		else if (incheck) {
 			depth++;
 
 			// single-response extra time
-			if (time_data.is_time and time_data.this_move > 300_ms
+			if (node[ply].mcount == 1 and time_data.is_time and time_data.this_move > 300_ms
 				and time_data.this_move < time_data.left / 10)
 				time_data.this_move += 185_ms;
 		}
-		// check extension
-		else if (incheck) depth++;
 
-		const MoveItem::iMove my_prev = prev_move;
-		const BitBoardsSet bbs_cpy = BBs;
-		const gState gstate_cpy = game_state;
-		const U64 hash_cpy = hash.key;
-		int score, to, pc, prev_to = my_prev.getMask<MoveItem::iMask::TARGET>() >> 6, prev_pc;
-		HashEntry::Flag hash_flag = HashEntry::Flag::HASH_ALPHA;
-		bool checking_move;
+		initNodeData(ply);
 
-		for (int i = 0; i < mcount; i++) {
-
+		for (int i = 0; i < node[ply].mcount; i++) {
 			// move ordering
-			Order::pickBest(ml[ply], i, ply);
-			const auto& move = ml[ply][i];
+			Order::pickBest(node[ply].ml, i, ply);
+			const auto& move = node[ply].ml[i];
 
-			if (i >= 1 and mcount >= 8 and !incheck and !move.getMask<MoveItem::iMask::CAPTURE_F>()
+			if (i >= 1 and node[ply].mcount >= 8 and !incheck and !move.getMask<MoveItem::iMask::CAPTURE_F>()
 				and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN
 				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp)) {
 
 				// margin for pre-frontier node and for pre-pre-frontier node
-				static constexpr int futility_margin = 80, ext_margin = 450;
+				static constexpr int futility_margin = 80, ext_margin = 450, razor_margin = 950;
 
 				// pure futility pruning at pre-frontier nodes
 				if (depth == FRONTIER
@@ -128,9 +142,13 @@ namespace Search {
 				else if (depth == PRE_FRONTIER
 					and Eval::evaluate(alpha - ext_margin, Search::high_bound) <= alpha - ext_margin)
 					return alpha;
+				/* RAZORING */
+				else if (depth == PRE_PRE_FRONTIER
+					and Eval::evaluate(alpha - razor_margin, Search::high_bound) <= alpha - razor_margin)
+					depth = PRE_FRONTIER;
 
 			} // recapture extra time
-			else if (prev_to == (move.getMask<MoveItem::iMask::TARGET>() >> 6)
+			else if (node[ply].prev_to == (move.getMask<MoveItem::iMask::TARGET>() >> 6)
 				and time_data.is_time and time_data.this_move > 300_ms
 				and time_data.this_move < time_data.left / 12) {
 				time_data.this_move += 50_ms;
@@ -139,64 +157,64 @@ namespace Search {
 			rep_tt.posRegister();
 			MovePerform::makeMove(move);
 			prev_move = move;
-			checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
+			node[ply].checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
 			// if pv is still left, save time by checking uninteresting moves using null window
 			// if such node fails low, it's a sign we are offered good move (score > alpha)
 			if (i > 1) {
 				// late move reduction
-				if (depth >= 3 and !checking_move
+				if (depth >= 3 and !node[ply].checking_move
 					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)
 					and !move.getMask<MoveItem::iMask::CAPTURE_F>()
 					and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN)
-					score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
-				else score = alpha + 1;
+					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
+				else node[ply].score = alpha + 1;
 
 				// null window search
-				if (score > alpha) {
-					score = -alphaBeta(-alpha - 1, -alpha, depth - 1, ply + 1);
+				if (node[ply].score > alpha) {
+					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 1, ply + 1);
 
-					if (score > alpha and score < beta)
-						score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
+					if (node[ply].score > alpha and node[ply].score < beta)
+						node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 				}
 			}
-			else score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
+			else node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 
-			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
+			MovePerform::unmakeMove(node[ply].bbs_cpy, node[ply].gstate_cpy);
 			rep_tt.count--;
-			hash.key = hash_cpy;
-			prev_move = my_prev;
+			hash.key = node[ply].hash_cpy;
+			prev_move = node[ply].my_prev;
 
 			if (time_data.stop) return time_stop_sign;
 
 			// register move appearance in butterfly board
-			to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
-			pc = move.getMask<MoveItem::iMask::PIECE>() >> 12;
-			Order::butterfly[pc][to] += depth;
+			node[ply].to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
+			node[ply].pc = move.getMask<MoveItem::iMask::PIECE>() >> 12;
+			Order::butterfly[node[ply].pc][node[ply].to] += depth;
 
-			if (score > alpha) {
+			if (node[ply].score > alpha) {
 				// fail hard beta-cutoff
-				if (score >= beta) {
+				if (node[ply].score >= beta) {
 					if (!move.getMask<MoveItem::iMask::CAPTURE_F>()) {
 						// store killer move
 						Order::killer[1][ply] = Order::killer[0][ply];
 						Order::killer[0][ply] = move;
 
 						// store move as a history move
-						Order::history_moves[pc][to] += depth * depth;
+						Order::history_moves[node[ply].pc][node[ply].to] += depth * depth;
 
-						prev_pc = my_prev.getMask<MoveItem::iMask::PIECE>() >> 12;
+						node[ply].prev_pc = node[ply].my_prev.getMask<MoveItem::iMask::PIECE>() >> 12;
 
 						// store countermove
-						Order::countermove[prev_pc][prev_to] = move.raw();
+						Order::countermove[node[ply].prev_pc][node[ply].prev_to] = move.raw();
 					}
 
 					tt.write(depth, beta, HashEntry::Flag::HASH_BETA, ply);
 					return beta;
 				}
 
-				hash_flag = HashEntry::Flag::HASH_EXACT;
-				alpha = score;
+				node[ply].hash_flag = HashEntry::Flag::HASH_EXACT;
+				alpha = node[ply].score;
 
 				PV::pv_line[ply][0] = move;
 
@@ -207,7 +225,7 @@ namespace Search {
 			}
 		}
 
-		tt.write(depth, alpha, hash_flag, ply);
+		tt.write(depth, alpha, node[ply].hash_flag, ply);
 		// fail low cutoff (return best option)
 		return alpha;
 	}
@@ -217,35 +235,40 @@ namespace Search {
 		if (time_data.is_time and !(search_results.nodes & time_check_modulo) and !time_data.checkTimeLeft()) {
 			time_data.stop = true;
 			return time_stop_sign;
-		}
+		} 
 
 		const int eval = Eval::evaluate(low_bound, beta);
 		search_results.nodes++;
 
-		if (eval >= beta) return beta;
+		if (eval >= beta) 
+			return beta;
+
+		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn),
+			is_endgame = game_state.gamePhase() == gState::ENDGAME;
+
 		// delta pruning
-		else if (game_state.gamePhase() != gState::ENDGAME
-			and !isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn)
-			and eval + Eval::Value::QUEEN_VALUE <= alpha)
+		if (!is_endgame and !incheck and eval + Eval::Value::QUEEN_VALUE <= alpha)
 			return alpha;
 		alpha = std::max(alpha, eval);
 
-		MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>(ml[ply]);
-		const BitBoardsSet bbs_cpy = BBs;
-		const gState gstate_cpy = game_state;
-		const U64 hash_cpy = hash.key;
-		int score, see_score;
+		MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>(node[ply].ml);
+		node[ply].bbs_cpy = BBs;
+		node[ply].gstate_cpy = game_state;
+		node[ply].hash_cpy = hash.key;
+
+		int see_score;
 		// losing material indication flag
 		const bool minus_mdelta = 
 			(game_state.material[game_state.turn] - game_state.material[!game_state.turn]) < 0;
 
-		for (int i = 0; i < ml[ply].size(); i++) {
+		for (int i = 0; i < node[ply].ml.size(); i++) {
 
 			// capture ordering
-			see_score = Order::pickBestSEE(ml[ply], i);
-			const auto& move = ml[ply][i];
+			see_score = Order::pickBestSEE(node[ply].ml, i);
+			const auto& move = node[ply].ml[i];
 
-			if (i >= 1) {
+			//if (i >= 1) {
+			if (!is_endgame and !incheck and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN) {
 				// equal captures pruning margin
 				static constexpr int equal_margin = 120; // 75
 
@@ -256,20 +279,20 @@ namespace Search {
 				else if (minus_mdelta and !see_score and eval + equal_margin <= alpha)
 					return alpha;
 			}
+			//}
 
 			MovePerform::makeMove(move);
 
-			score = -qSearch(-beta, -alpha, ply + 1);
+			node[ply].score = -qSearch(-beta, -alpha, ply + 1);
 
-			MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
-			hash.key = hash_cpy;
+			MovePerform::unmakeMove(node[ply].bbs_cpy, node[ply].gstate_cpy);
+			hash.key = node[ply].hash_cpy;
 
 			if (time_data.stop)
 				return time_stop_sign;
-			else if (score > alpha) {
-				if (score >= beta)
-					return beta;
-				alpha = score;
+			else if (node[ply].score > alpha) {
+				if (node[ply].score >= beta) return beta;
+				alpha = node[ply].score;
 			}
 		}
 
@@ -285,12 +308,13 @@ namespace Search {
 	}
 
 	// display best move according to search algorithm
-	void bestMove(const int depth) {
+	void bestMove(int depth) {
 		assert(depth > 0 && "Unvalid depth");
 
 		// cleaning
 		clearHistory();
-
+		tt.decreaseAge();
+		
 		int lbound = low_bound,
 			hbound = high_bound,
 			curr_dpt = 1,

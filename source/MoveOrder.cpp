@@ -96,18 +96,17 @@ namespace Order {
 					break;
 				}
 			}
-
+			
 			return MVV_LVA::lookup[att][victim];
 		}
-
-		static int promo;
 
 		// killer moves score less than basic captures
 		if (move == killer[0][ply])
 			return KILLER_1_SCORE;
 		else if (move == killer[1][ply])
 			return KILLER_2_SCORE;
-		else if ((promo = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
+		static int promo;
+		if ((promo = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
 			return promo;
 
 		// relative history move score

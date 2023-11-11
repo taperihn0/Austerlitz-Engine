@@ -39,11 +39,11 @@ struct HashEntry {
 	static inline bool isValid(int g_score) noexcept;
 
 	U64 zobrist;
-	int depth;
+	short depth;
+	uint8_t age;
 	Flag flag;
 	int score;
 };
-
 
 inline constexpr size_t operator"" _MB(ULL mb) noexcept {
 	return mb * 0x100000;
@@ -55,7 +55,7 @@ class TranspositionTable {
 public:
 	static constexpr size_t default_size = 4_MB,
 		min_size = 1_MB, max_size = 128_MB;
-	static constexpr HashEntry empty_entry = { 0, 0, HashEntry::Flag::HASH_EXACT, HashEntry::no_score };
+	static constexpr HashEntry empty_entry = { 0, 0, 0, HashEntry::Flag::HASH_EXACT, HashEntry::no_score };
 	
 	inline TranspositionTable() {
 		setSize(default_size / 1_MB);
@@ -87,6 +87,14 @@ public:
 
 		htab.resize(hash_size);
 		clear();
+	}
+
+	// decrease entries age and delete too old entries 
+	inline void decreaseAge() {
+		for (auto& entry : htab) {
+			if (HashEntry::isValid(entry.score) and ++entry.age >= 3) 
+				entry = empty_entry;
+		}
 	}
 
 private:

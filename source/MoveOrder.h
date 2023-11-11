@@ -9,8 +9,6 @@ namespace Order {
 
 	// Most Valuable Victim - Least Valuable Attacker lookup data structure
 	namespace MVV_LVA {
-
-		// in future: smarter mvv/lva values
 		static constexpr std::array<std::array<int, 5>, 6> lookup = {{
 			{ 1050, 2050, 3050, 4050, 5050 }, 
 			{ 1040, 2040, 3040, 4040, 5040 },
