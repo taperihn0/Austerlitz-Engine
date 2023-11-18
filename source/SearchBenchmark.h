@@ -23,6 +23,7 @@ inline void SearchBenchmark::start() {
 
 	src.open("source\\BenchmarkScript.txt");
 
+	// change current input stream to given file
 	IS_PTR = &src;
 	timer.go();
 

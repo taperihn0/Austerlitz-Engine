@@ -15,10 +15,10 @@ public:
 		*author = "id author Simon B.";
 };
 
+extern UCI UCI_o;
+
 // useful macros for stream pointer manipulating
 #define OS *UCI_o.o_stream
 #define IS *UCI_o.i_stream
 #define OS_PTR UCI_o.o_stream
 #define IS_PTR UCI_o.i_stream
-
-extern UCI UCI_o;

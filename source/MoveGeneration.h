@@ -29,37 +29,17 @@ public:
 	// ending iterator of generated moves
 	iterator it;
 
-	inline iterator begin() noexcept {
-		return move_list.begin();
-	}
+	inline iterator begin() noexcept { return move_list.begin(); }
+	inline iterator end() noexcept { return it; }
 
-	inline iterator end() noexcept {
-		return it;
-	}
+	inline c_iterator begin() const noexcept { return move_list.cbegin(); }
+	inline c_iterator end() const { return static_cast<c_iterator>(it); }
 
-	inline c_iterator begin() const noexcept {
-		return move_list.cbegin();
-	}
+	inline const MoveItem::iMove& operator[](size_t i) const { return move_list[i]; }
+	inline MoveItem::iMove& operator[](size_t i) { return move_list[i]; }
 
-	inline c_iterator end() const {
-		return static_cast<c_iterator>(it);
-	}
-
-	inline const MoveItem::iMove& operator[](size_t i) const {
-		return move_list[i];
-	}
-
-	inline MoveItem::iMove& operator[](size_t i) {
-		return move_list[i];
-	}
-
-	inline std::size_t size() const {
-		return std::distance(move_list.begin(), static_cast<c_iterator>(it));
-	}
-
-	inline std::size_t size() {
-		return std::distance(move_list.begin(), it);
-	}
+	inline std::size_t size() const { return std::distance(move_list.begin(), static_cast<c_iterator>(it)); }
+	inline std::size_t size() { return std::distance(move_list.begin(), it); }
 };
 
 
@@ -68,14 +48,10 @@ namespace MoveGenerator {
 
 	// generation type for move generator
 	enum GenType {
-		LEGAL,
-		CAPTURES,
+		LEGAL, CAPTURES,
 	};
 
 	namespace Analisis {
-
-		// loop through move list and display newly generated moves
-		void populateMoveList(const MoveList& move_list);
 
 		// open this perft test passing compile-time depth manually
 		template <int Depth>

@@ -46,7 +46,7 @@ void Zobrist::generateKey() {
 
 
 int TranspositionTable::read(int alpha, int beta, int g_depth, int ply) {
-	const auto& entry = htab[hash.key % hash_size];
+	const HashEntry& entry = htab[hash.key % hash_size];
 
 	// unmatching zobrist key (key collision), unproper depth of an entry
 	if (entry.zobrist != hash.key or entry.depth < g_depth)
@@ -71,7 +71,7 @@ int TranspositionTable::read(int alpha, int beta, int g_depth, int ply) {
 
 
 void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply) {
-	auto& entry = htab[hash.key % hash_size];
+	HashEntry& entry = htab[hash.key % hash_size];
 
 	// depth-preffered replacement scheme
 	if (entry.depth > g_depth)

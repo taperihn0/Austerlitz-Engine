@@ -13,7 +13,6 @@ inline constexpr auto sinceStart_ms(std::chrono::system_clock::time_point start)
 }
 
 
-// timer class
 class Timer {
 public:
 	Timer() = default;

@@ -52,7 +52,7 @@ inline constexpr size_t operator"" _MB(ULL mb) noexcept {
 // main transposition table class
 class TranspositionTable {
 public:
-	static constexpr size_t default_size = 4_MB,
+	static constexpr size_t default_size = 6_MB,
 		min_size = 1_MB, max_size = 128_MB;
 	static constexpr HashEntry empty_entry = { 0, 0, 0, HashEntry::Flag::HASH_EXACT, HashEntry::no_score };
 	

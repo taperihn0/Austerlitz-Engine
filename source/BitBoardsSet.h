@@ -65,14 +65,14 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) noexcept {
 
 
 namespace pcCastLookUp {
-	constexpr std::array<enumPiece, 12> _pc_cast = {
+	constexpr std::array<enumPiece, 12> pc_cast = {
 		PAWN, PAWN, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, KING, KING
 	};
 }
 
 // get enumPiece from bitboard piece type
 inline constexpr enumPiece toPieceType(size_t pc) {
-	return pcCastLookUp::_pc_cast[pc];
+	return pcCastLookUp::pc_cast[pc];
 }
 
 // handy functions helping getting proper piece index in bitboards set

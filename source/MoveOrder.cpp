@@ -106,6 +106,7 @@ namespace Order {
 		else if (move == killer[1][ply])
 			return KILLER_2_SCORE;
 		static int promo;
+		// althought current promotions ordering looks hilarious, it performs well comparing to previous versions
 		if ((promo = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
 			return promo;
 

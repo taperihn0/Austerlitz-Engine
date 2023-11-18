@@ -3,8 +3,6 @@
 #include "Zobrist.h"
 #include "Evaluation.h"
 #include <string>
-
-#define _PERFT_GENTYPE LEGAL
 		
 
 namespace pinData {
@@ -31,7 +29,7 @@ namespace MoveGenerator {
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
 	inline auto pinMask() -> std::enable_if_t<Pin and PC == QUEEN, U64> {
-		return UINT64_MAX;
+		return MAX_U64;
 	}
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
@@ -73,7 +71,7 @@ namespace MoveGenerator {
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
 	inline auto sqAvaible(int) -> std::enable_if_t<!Pin or (Pin and PC != QUEEN), U64> {
-		return UINT64_MAX;
+		return MAX_U64;
 	};
 
 	// generator functions based on PINNED piece flag -
@@ -346,7 +344,7 @@ namespace MoveGenerator {
 			pinData::hv_pin = pinnedHorizonVertic<SIDE>(pinData::king_sq);
 			pinData::pinned = pinData::diag_pin | pinData::hv_pin;
 			pinData::ksq_diag = attack<BISHOP>(BBs[nBlack - SIDE], pinData::king_sq);
-			checkData::legal_squares = UINT64_MAX;
+			checkData::legal_squares = MAX_U64;
 
 			if (check) {
 				const int checker_sq = getLS1BIndex(checkers);
@@ -624,33 +622,7 @@ namespace MoveGenerator {
 
 	namespace Analisis {
 
-#ifdef __DEBUG__
-		void populateMoveList(MoveList& move_list) {
-			static auto helper = [](bool mask, std::string text, char s = ' ') {
-				if (mask) {
-					std::cout << s << text;
-				}
-			};
-
-			std::cout << "MoveList.size: " << move_list.size() << std::endl << std::endl << ' ';
-
-			for (auto move : move_list) {
-				move.print();
-
-				// printing extra move data
-				auto tmp = move.getMask<MoveItem::iMask::PROMOTION>();
-				if (tmp) std::cout << " nbrq"[tmp >> 20] << " promotion";
-				helper(move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>(), "double push");
-				helper(move.getMask<MoveItem::iMask::CAPTURE_F>(), "capture");
-				helper(move.getMask<MoveItem::iMask::EN_PASSANT_F>(), "en passant");
-				helper(move.getMask<MoveItem::iMask::CASTLE_F>(), "castle");
-
-				std::cout << '\n' << ' ';
-			}
-
-			std::cout << std::endl;
-		}
-#endif
+		static constexpr GenType perft_gentype = LEGAL;
 
 		template <int Depth>
 		unsigned long long dPerft() {
@@ -659,7 +631,7 @@ namespace MoveGenerator {
 			unsigned long long total = 0;
 
 			MoveList ml;
-			MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>(ml);
+			MoveGenerator::generateLegalMoves<perft_gentype>(ml);
 
 			for (const auto& move : ml) {
 				MovePerform::makeMove(move);
@@ -678,7 +650,7 @@ namespace MoveGenerator {
 		template <>
 		inline unsigned long long dPerft<1>() {
 			MoveList ml;
-			MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>(ml);
+			MoveGenerator::generateLegalMoves<perft_gentype>(ml);
 			return ml.size();
 		}
 
@@ -688,7 +660,7 @@ namespace MoveGenerator {
 			timer.go();
 
 			MoveList move_list;
-			MoveGenerator::generateLegalMoves<_PERFT_GENTYPE>(move_list);
+			MoveGenerator::generateLegalMoves<perft_gentype>(move_list);
 
 			const BitBoardsSet bbs_cpy = BBs;
 			const gState gstate_cpy = game_state;
