@@ -43,7 +43,6 @@ namespace Eval {
 			t_passed_dist, t_backw_dist, t_o_dist, s_pawn_count,
 			k_sq, att_count, att_value;
 
-		int phase, mid_score;
 		bothSideLookUp<U64> k_zone, tarrasch_passed_msk;
 		bothSideLookUp<std::array<U64, 5>> pt_att;
 
@@ -405,21 +404,11 @@ namespace Eval {
 		const int material_sc = game_state.material[SIDE] - game_state.material[!SIDE];
 
 		if constexpr (Phase == gState::OPENING) {
-			static constexpr int lazy_margin_op = 274;
+			static constexpr int lazy_margin_op = 450;
 
 			if (material_sc - lazy_margin_op >= beta)
 				return beta;
 			else if (material_sc + lazy_margin_op <= alpha)
-				return alpha;
-		}
-		else if constexpr (Phase == gState::ENDGAME) {
-			static constexpr int lazy_margin_ed = 292;
-
-			if (((eval_lookup.mid_score * (256 - eval_lookup.phase))
-				+ ((material_sc - lazy_margin_ed) * eval_lookup.phase)) / 256 >= beta)
-				return beta;
-			else if (((eval_lookup.mid_score * (256 - eval_lookup.phase))
-				+ ((material_sc + lazy_margin_ed) * eval_lookup.phase)) / 256 <= alpha)
 				return alpha;
 		}
 
@@ -459,17 +448,14 @@ namespace Eval {
 		if (game_state.gamePhase() == gState::OPENING)
 			return sideEval<gState::OPENING>(game_state.turn, alpha, beta);
 
-		// score interpolation
-		eval_lookup.phase = ((8150 - (game_state.material[0] + game_state.material[1] - Value::DOUBLE_KING_VAL)) * 256 + 4075) / 8150;
-
-		eval_lookup.mid_score = sideEval<gState::MIDDLEGAME>(game_state.turn, alpha, beta);
-		
 		eval_lookup.endgameDataReset();
-		const int end_score = sideEval<gState::ENDGAME>(game_state.turn, alpha, beta);
 
-		if (end_score >= beta) return beta;
-		else if (end_score <= alpha) return alpha;
-		return ((eval_lookup.mid_score * (256 - eval_lookup.phase)) + (end_score * eval_lookup.phase)) / 256;
+		// middlegame and endgame point of view score interpolation
+		const int phase = ((8150 - (game_state.material[0] + game_state.material[1] - Value::DOUBLE_KING_VAL)) * 256 + 4075) / 8150,
+			mid_score = sideEval<gState::MIDDLEGAME>(game_state.turn, alpha, beta),
+			end_score = sideEval<gState::ENDGAME>(game_state.turn, alpha, beta);
+
+		return ((mid_score * (256 - phase)) + (end_score * phase)) / 256;
 	}
 
 } // namespace Eval

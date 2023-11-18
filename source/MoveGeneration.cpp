@@ -697,11 +697,7 @@ namespace MoveGenerator {
 			for (const auto& move : move_list) {
 				MovePerform::makeMove(move);
 				total += (single = dPerft<Depth - 1>());
-
-#ifdef __DEBUG__
 				move.print() << ": " << single << '\n';
-#endif
-
 				MovePerform::unmakeMove(bbs_cpy, gstate_cpy);
 			}
 

@@ -136,15 +136,15 @@ namespace Search {
 
 				// pure futility pruning at pre-frontier nodes
 				if (depth == FRONTIER
-					and Eval::evaluate(alpha - futility_margin, Search::high_bound) <= alpha - futility_margin)
+					and Eval::evaluate(alpha - futility_margin, alpha - futility_margin + 1) <= alpha - futility_margin)
 					return alpha;
 				// extended futility pruning at pre-pre-frontier nodes
 				else if (depth == PRE_FRONTIER
-					and Eval::evaluate(alpha - ext_margin, Search::high_bound) <= alpha - ext_margin)
+					and Eval::evaluate(alpha - ext_margin, alpha - ext_margin + 1) <= alpha - ext_margin)
 					return alpha;
-				/* RAZORING */
+				// razoring
 				else if (depth == PRE_PRE_FRONTIER
-					and Eval::evaluate(alpha - razor_margin, Search::high_bound) <= alpha - razor_margin)
+					and Eval::evaluate(alpha - razor_margin, alpha - razor_margin + 1) <= alpha - razor_margin)
 					depth = PRE_FRONTIER;
 
 			} // recapture extra time
@@ -267,7 +267,6 @@ namespace Search {
 			see_score = Order::pickBestSEE(node[ply].ml, i);
 			const auto& move = node[ply].ml[i];
 
-			//if (i >= 1) {
 			if (!is_endgame and !incheck and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN) {
 				// equal captures pruning margin
 				static constexpr int equal_margin = 120; // 75
@@ -279,7 +278,6 @@ namespace Search {
 				else if (minus_mdelta and !see_score and eval + equal_margin <= alpha)
 					return alpha;
 			}
-			//}
 
 			MovePerform::makeMove(move);
 

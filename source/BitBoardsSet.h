@@ -219,9 +219,8 @@ struct gState {
 
 	enum Constans {
 		START_SCORE = 28150,
-		ENDPHASE_SCORE = 23300,
 		MIDDLEPHASE_SCORE = 26450,
-
+		ENDPHASE_SCORE = 23300,
 		MAX_MOVE_RULE = 50
 	};
 

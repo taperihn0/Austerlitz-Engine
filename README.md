@@ -3,7 +3,6 @@
 ### TODO in the future:
 
 - *wise promotion ordering*
-- *lazy evaluation fix*
 - *smarter phase checking in null move pruning*
 - *apply gradual widening on re-searches in aspiration window search*
 - *wise endgame evaluation*

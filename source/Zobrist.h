@@ -39,8 +39,7 @@ struct HashEntry {
 	static inline bool isValid(int g_score) noexcept;
 
 	U64 zobrist;
-	short depth;
-	uint8_t age;
+	uint8_t depth, age;
 	Flag flag;
 	int score;
 };

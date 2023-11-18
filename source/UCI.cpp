@@ -199,9 +199,9 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "uci")        introduce();
 		else if (token == "go")         parseGo(strm);
 		else if (token == "setoption")  setOption(strm);
-#if defined(__DEBUG__)
 		else if (token == "print")      BBs.printBoard();
 		else if (token == "benchmark")  bench.start();
+#if defined(__DEBUG__)
 		else if (token == "hashkey")    OS << hash.key << '\n';
 		else if (token == "eval")       evalInfo();
 		else if (token == "see")        seePrint(strm);
