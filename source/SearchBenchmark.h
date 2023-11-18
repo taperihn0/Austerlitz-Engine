@@ -23,14 +23,14 @@ inline void SearchBenchmark::start() {
 
 	src.open("source\\BenchmarkScript.txt");
 
-	IS_DST = &src;
+	IS_PTR = &src;
 	timer.go();
 
 	UCI_o.goLoop();
 
 	timer.stop();
 	src.close();
-	IS_DST = &std::cin;
+	IS_PTR = &std::cin;
 	OS << "Total time: " << timer.duration() << " ms\n";
 }
 

@@ -109,7 +109,7 @@ namespace Eval {
 	template <enumSide SIDE>
 	inline int flipSquare(int square) {
 		if constexpr (SIDE) return square;
-		return mirrored_square[square];
+		return ver_flip_square[square];
 	}
 
 	template <enumSide SIDE>

@@ -53,5 +53,5 @@ void MoveItem::iMove::constructMove(std::string move) {
 	cmove = (game_state.turn ?
 		toMove<BLACK>(target, origin, promo) :
 		toMove<WHITE>(target, origin, promo)
-		);
+	);
 }

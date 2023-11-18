@@ -8,12 +8,15 @@
 #include <nmmintrin.h>
 #include <intrin.h>
 #include "staticLookup.h"
+#include "UCI.h"
 
-// define bitboard data type 
+// define bitboard data type:
+// U64 type is used for declaring 64-bit masks as bitboards,
+// while ULL type is preferred when declaring object in a sense of a number, where bits aren't relevant
 using U64 = uint64_t;
 using ULL = unsigned long long;
 
-// custom U64 bitboard of given intiger
+// custom U64 bitboard of given integer
 template <typename T, class =
 	std::enable_if_t<std::is_enum_v<T> or std::is_constructible_v<U64, T>>>
 inline constexpr auto cU64(T s) noexcept {
@@ -36,7 +39,6 @@ inline constexpr auto bitU64(T s) noexcept {
 }
 
 
-
 // enum indexes for little endian rank-file mapping
 enum enumSquare {
 	a1, b1, c1, d1, e1, f1, g1, h1,
@@ -49,8 +51,8 @@ enum enumSquare {
 	a8, b8, c8, d8, e8, f8, g8, h8
 };
 
-// mirror square
-constexpr std::array<int, 64> mirrored_square = {
+// vertical flip squares lookup
+constexpr std::array<int, 64> ver_flip_square = {
 	a8, b8, c8, d8, e8, f8, g8, h8,
 	a7, b7, c7, d7, e7, f7, g7, h7,
 	a6, b6, c6, d6, e6, f6, g6, h6,
@@ -61,7 +63,7 @@ constexpr std::array<int, 64> mirrored_square = {
 	a1, b1, c1, d1, e1, f1, g1, h1
 };
 
-// translate index to string variable square
+// translate index to string square in little endian mapping
 constexpr std::array<const char*, 64> index_to_square = {
 	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
 	"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
@@ -76,7 +78,8 @@ constexpr std::array<const char*, 64> index_to_square = {
 // enum sides color
 enum enumSide : bool { WHITE, BLACK };
 
-inline constexpr enumSide operator!(enumSide s) {
+// flip player's turn
+inline constexpr enumSide operator!(enumSide s) noexcept {
 	return static_cast<enumSide>(!static_cast<bool>(s));
 }
 
@@ -133,8 +136,7 @@ namespace Constans {
 	};
 
 	constexpr std::array<U64, 8> f_by_index = {
-		a_file, a_file << 1, a_file << 2, a_file << 3, a_file << 4, a_file << 5,
-		a_file << 6, a_file << 7
+		a_file, a_file << 1, a_file << 2, a_file << 3, a_file << 4, a_file << 5, a_file << 6, a_file << 7
 	};
 
 } // namespace Constans
@@ -145,11 +147,8 @@ namespace {
 	// empty U64 bitboard pre-compile constans
 	constexpr U64 eU64 = cU64(0);
 
-	// UINT64_MAX
+	// UINT64_MAX alternative
 	constexpr U64 MAX_U64 = std::numeric_limits<U64>::max();
-
-	// pre-compile board size
-	constexpr int bSIZE = 8 * 8;
 
 #if not defined(_MSC_VER) and not defined(__INTEL_COMPILER) and not defined(__GNUC__)
 
@@ -171,25 +170,25 @@ namespace {
 
 #endif
 	
-	// display single bitboard function
+	// display single U64 mask
 	void printBitBoard(U64 bitboard) {
 		int bitcheck = 56;
 
-		std::cout << std::endl << "  ";
+		OS << std::endl << "  ";
 
 		for (int i = 0; i < 8; i++) {
 			for (int j = 0; j < 8; j++) {
-				std::cout << static_cast<bool>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
+				OS << static_cast<bool>(bitboard & (cU64(1) << (bitcheck + j))) << ' ';
 
 				if (j == 7) {
-					std::cout << "  " << 8 - i << "\n  ";
+					OS << "  " << 8 - i << "\n  ";
 				}
 			}
 
 			bitcheck -= 8;
 		}
 
-		std::cout << std::endl << "  a b c d e f g h" << std::endl << std::endl
+		OS << std::endl << "  a b c d e f g h" << std::endl << std::endl
 			<< "bb value: " << bitboard << std::endl;
 	}
 
@@ -210,7 +209,6 @@ namespace {
 } // namespace
 
 
-// basic bitboard functions:
 #if defined(_MSC_VER) or defined(__INTEL_COMPILER)
 inline int getLS1BIndex(U64 bb) {
 	assert(bb != eU64);
@@ -300,21 +298,20 @@ inline constexpr U64 fileFill(U64 bb) noexcept {
 
 template <enumSide SIDE>
 inline constexpr U64 rearspan(U64 bb) noexcept {
-	if constexpr (SIDE)
-		return nortFill(bb);
+	if constexpr (SIDE) return nortFill(bb);
 	return soutFill(bb);
 }
 
 template <enumSide SIDE>
 inline constexpr U64 frontspan(U64 bb) noexcept {
-	if constexpr (SIDE)
-		return soutFill(bb);
+	if constexpr (SIDE) return soutFill(bb);
 	return nortFill(bb);
 }
 
 inline constexpr U64 islandsEastFile(U64 fileset) noexcept {
 	return fileset ^ (fileset & (fileset >> 1));
 }
+
 
 namespace islandCountLookUp {
 	auto lookup = cexpr::CexprArr<false, int, 256>([](U64 bb) {

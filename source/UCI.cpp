@@ -9,13 +9,9 @@
 #include <iostream>
 #include <string>
 
-// do not check fen position appended moves legality -
-// some extra performance gain where guaranted to get legal moves
-#define _CHECK_MOVE_LEGAL true
-
 
 UCI::UCI() 
-	: os(&std::cout), is(&std::cin) {
+	: o_stream(&std::cout), i_stream(&std::cin) {
 	std::ios_base::sync_with_stdio(false);
 }
 
@@ -182,7 +178,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 	for (int i = 1; i < argc; i++)
 		line += " " + std::string(argv[i]);
 
-	if (is == &std::cin)
+	if (i_stream == &std::cin)
 		OS << "Polish Chess Engine: Austerlitz 1 by Simon B.\n";
 
 	do {

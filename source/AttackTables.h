@@ -4,7 +4,7 @@
 #include <functional>
 
 
-// SINGLE ATTACK MASKS for PAWNS, KNIGHTS and KINGS
+// single attacks masks for leaper pieces 
 namespace {
 
 	// mask of avaible attacks for pawn on sq square

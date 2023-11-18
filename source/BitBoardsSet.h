@@ -7,38 +7,20 @@ public:
 	castleRights() = default;
 	
 	enum class cSide {
-		bQUEEN,
-		bROOK,
-		wQUEEN,
-		wROOK,
+		bQUEEN, bROOK,
+		wQUEEN, wROOK,
 	};
 
-	void operator=(const castleRights& cr);
-
-	inline void operator=(uint8_t d) noexcept {
-		decoded = d;
-	}
-
-	inline void operator|=(int s) noexcept {
-		decoded |= s;
-	}
-
-	inline auto operator&(int s) noexcept {
-		return decoded & s;
-	}
+	inline void operator=(const castleRights& cr) noexcept { decoded = cr.decoded; }
+	inline void operator=(uint8_t d) noexcept { decoded = d; }
+	inline void operator|=(int s) noexcept { decoded |= s; }
+	inline auto operator&(int s) noexcept { return decoded & s; }
+	inline void operator&=(uint32_t mask) noexcept { decoded &= mask; }
+	inline uint32_t raw() noexcept { return decoded; }
 
 	template <cSide SIDE>
-	inline bool checkLegalCastle() noexcept {
-		return decoded & (1 << static_cast<int>(SIDE));
-	}
+	inline bool checkLegalCastle() noexcept { return decoded & (1 << static_cast<int>(SIDE)); }
 
-	inline void operator&=(uint32_t mask) {
-		decoded &= mask;
-	}
-
-	inline uint32_t raw() {
-		return decoded;
-	}
 private:
 
 	/*
@@ -53,11 +35,7 @@ private:
 	uint8_t decoded;
 };
 
-inline void castleRights::operator=(const castleRights& cr) {
-	decoded = cr.decoded;
-}
-
-inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
+inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) noexcept {
 	return (SIDE == WHITE) ? 
 			(PC == ROOK ? castleRights::cSide::wROOK : castleRights::cSide::wQUEEN) : 
 		    (PC == ROOK ? castleRights::cSide::bROOK : castleRights::cSide::bQUEEN);
@@ -65,29 +43,15 @@ inline constexpr castleRights::cSide operator&(enumSide SIDE, enumPiece PC) {
 
 
 // piece enum for their bitboards
-enum enumPiece_bbs : int {
-	nWhitePawn,
-	nBlackPawn,
-
-	nWhiteKnight,
-	nBlackKnight,
-
-	nWhiteBishop,
-	nBlackBishop,
-
-	nWhiteRook,
-	nBlackRook,
-
-	nWhiteQueen,
-	nBlackQueen,
-
-	nWhiteKing,
-	nBlackKing,
-
-	nWhite,
-	nBlack,
-	nEmpty,
-	nOccupied,
+enum enumPiece_bbs {
+	nWhitePawn, nBlackPawn,
+	nWhiteKnight, nBlackKnight,
+	nWhiteBishop, nBlackBishop,
+	nWhiteRook, nBlackRook,
+	nWhiteQueen, nBlackQueen,
+	nWhiteKing, nBlackKing,
+	nWhite, nBlack,
+	nEmpty, nOccupied,
 };
 
 // custom operators returning proper type of index of std::array
@@ -100,43 +64,37 @@ inline constexpr size_t operator+(enumPiece_bbs pc, enumSide s) noexcept {
 }
 
 
-constexpr std::array<enumPiece, 12> _pc_cast = {
-	PAWN, PAWN, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, KING, KING
-};
+namespace pcCastLookUp {
+	constexpr std::array<enumPiece, 12> _pc_cast = {
+		PAWN, PAWN, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, KING, KING
+	};
+}
+
+// get enumPiece from bitboard piece type
 inline constexpr enumPiece toPieceType(size_t pc) {
-	return _pc_cast[pc];
+	return pcCastLookUp::_pc_cast[pc];
 }
 
 // handy functions helping getting proper piece index in bitboards set
 namespace {
 
 	template <enumPiece PC>
-	enumPiece_bbs bbsIndex();
+	enumPiece_bbs bbsIndex() noexcept;
 
 	template <enumPiece PC>
-	inline enumPiece_bbs bbsIndex() {
-		return nEmpty;
-	}
+	inline enumPiece_bbs bbsIndex() noexcept { return nEmpty; }
 
 	template <>
-	inline enumPiece_bbs bbsIndex<KNIGHT>() {
-		return nWhiteKnight;
-	}
+	inline enumPiece_bbs bbsIndex<KNIGHT>() noexcept { return nWhiteKnight; }
 
 	template <>
-	inline enumPiece_bbs bbsIndex<BISHOP>() {
-		return nWhiteBishop;
-	}
+	inline enumPiece_bbs bbsIndex<BISHOP>() noexcept { return nWhiteBishop; }
 
 	template <>
-	inline enumPiece_bbs bbsIndex<ROOK>() {
-		return nWhiteRook;
-	}
+	inline enumPiece_bbs bbsIndex<ROOK>() noexcept { return nWhiteRook; }
 
 	template <>
-	inline enumPiece_bbs bbsIndex<QUEEN>() {
-		return nWhiteQueen;
-	}
+	inline enumPiece_bbs bbsIndex<QUEEN>() noexcept { return nWhiteQueen; }
 
 	template <bool Side>
 	enumPiece_bbs bbsIndex(uint32_t pc);

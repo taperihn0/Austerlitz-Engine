@@ -2,11 +2,11 @@
 #include "Zobrist.h"
 #include "Search.h"
 #include "Evaluation.h"
+#include "UCI.h"
 
 
-BitBoardsSet::BitBoardsSet(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) {
-	bbs = cbbs.bbs;
-}
+BitBoardsSet::BitBoardsSet(const BitBoardsSet& cbbs) noexcept(nothrow_copy_assign) 
+: bbs(cbbs.bbs) {}
 
 BitBoardsSet::BitBoardsSet(const std::string& fen) {
 	clear();
@@ -15,11 +15,13 @@ BitBoardsSet::BitBoardsSet(const std::string& fen) {
 
 void BitBoardsSet::parseFEN(const std::string& fen) {
 	clear();
+
 	static constexpr std::array<size_t, 12> bbs_pc = {
 		nWhitePawn, nWhiteKnight, nWhiteBishop, nWhiteRook, nWhiteQueen, nWhiteKing, 
 		nBlackPawn, nBlackKnight, nBlackBishop, nBlackRook, nBlackQueen, nBlackKing
 	};
 	static constexpr std::string_view pc_str = "PNBRQKpnbrqk";
+
 	int x = 0, y = 7;
 	game_state.material = { 0, 0 };
 
@@ -138,7 +140,7 @@ void BitBoardsSet::printBoard() {
 	}
 
 	for (int i = 0; i < 8; i++) {
-		std::cout << '\n' << frame << "\n\t|";
+		OS << '\n' << frame << "\n\t|";
 
 		for (int j = 0; j < 8; j++) {
 			sq_piece = -1;
@@ -150,20 +152,20 @@ void BitBoardsSet::printBoard() {
 				}
 			}
 
-			std::cout << ' ' << (sq_piece != -1 ? "PpNnBbRrQqKk"[sq_piece] : ' ') << " |";
+			OS << ' ' << (sq_piece != -1 ? "PpNnBbRrQqKk"[sq_piece] : ' ') << " |";
 		}
 
-		std::cout << ' ' << (8 - i);
+		OS << ' ' << (8 - i);
 	}
 
-	std::cout << std::endl << frame << std::endl
+	OS << std::endl << frame << std::endl
 		<< "\t  a   b   c   d   e   f   g   h" << std::endl << std::endl
 		<< "  FEN game states: " << states << std::endl
 		<< "  Castling rights: ";
 
 	for (int i = 3; i >= 0; i--) {
-		std::cout << ((game_state.castle & (1 << i)) >> i);
+		OS << ((game_state.castle & (1 << i)) >> i);
 	}
 
-	std::cout << std::endl << std::endl;
+	OS << std::endl << std::endl;
 }
