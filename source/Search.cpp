@@ -159,10 +159,11 @@ namespace Search {
 			prev_move = move;
 			node[ply].checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
-			// if pv is still left, save time by checking uninteresting moves using null window
-			// if such node fails low, it's a sign we are offered good move (score > alpha)
-			if (i > 1) {
-				// late move reduction
+			// if PV move is already processed, save time by checking uninteresting moves 
+			// using null window and late move reduction (PV search) -
+			// however, if such 'late' node fails low, it's a sign we are offered a good move (score > alpha)
+			if (i >= 1) {
+				// late move reduction in null move search
 				if (depth >= 3 and !node[ply].checking_move
 					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)
 					and !move.getMask<MoveItem::iMask::CAPTURE_F>()
@@ -170,13 +171,8 @@ namespace Search {
 					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
 				else node[ply].score = alpha + 1;
 
-				// null window search
-				if (node[ply].score > alpha) {
-					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 1, ply + 1);
-
-					if (node[ply].score > alpha and node[ply].score < beta)
-						node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
-				}
+				if (node[ply].score > alpha) 
+					node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);				
 			}
 			else node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 

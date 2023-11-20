@@ -129,8 +129,7 @@ namespace Constans {
 		board_side[2] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000 },
 		king_center[2] = { 0x000000000000001C, 0x1C00000000000000 },
 		castle_sides[2][2] = { 0x0000000000000003, 0x00000000000000E0, 0x0300000000000000, 0xE000000000000000 },
-		ban_dev_sq[2] = { 0xFFFFFFFFFFFFFF00, 0x00FFFFFFFFFFFFFF },
-		half_board[2] = { 0x0F0F0F0F0F0F0F0F, 0xF0F0F0F0F0F0F0F0 };
+		ban_dev_sq[2] = { 0xFFFFFFFFFFFFFF00, 0x00FFFFFFFFFFFFFF };
 
 	constexpr std::array<U64, 8> r_by_index = {
 		r1_rank, r2_rank, r3_rank, r4_rank, r5_rank, r6_rank, r7_rank, r8_rank
