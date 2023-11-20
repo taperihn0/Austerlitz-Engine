@@ -65,7 +65,6 @@ namespace MoveGenerator {
 	// main generation function, generating all the legal moves for all the turn-to-move pieces
 	template <GenType gType>
 	void generateLegalMoves(MoveList& ml);
-
 } 
 
 

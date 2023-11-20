@@ -19,8 +19,8 @@ namespace Eval {
 
 			pawn_count = s_pawn_count[WHITE] + s_pawn_count[BLACK];
 
-			k_zone[WHITE] = attack<KING>(MAX_U64, k_sq[WHITE]);
-			k_zone[BLACK] = attack<KING>(MAX_U64, k_sq[BLACK]);
+			k_zone[WHITE] = attack<KING>(UINT64_MAX, k_sq[WHITE]);
+			k_zone[BLACK] = attack<KING>(UINT64_MAX, k_sq[BLACK]);
 
 			att_count = { 0, 0 }, att_value = { 0, 0 };
 		}
@@ -435,7 +435,7 @@ namespace Eval {
 	}
 
 	template <gState::gPhase Phase>
-	inline int sideEval(enumSide side, int alpha, int beta) {
+	inline int sideEval(int alpha, int beta) {
 		return game_state.turn == WHITE ? 
 			templEval<WHITE, Phase>(alpha, beta) : 
 			templEval<BLACK, Phase>(alpha, beta);
@@ -446,14 +446,14 @@ namespace Eval {
 		eval_lookup.openingDataReset();
 
 		if (game_state.gamePhase() == gState::OPENING)
-			return sideEval<gState::OPENING>(game_state.turn, alpha, beta);
+			return sideEval<gState::OPENING>(alpha, beta);
 
 		eval_lookup.endgameDataReset();
 
 		// middlegame and endgame point of view score interpolation
 		const int phase = ((8150 - (game_state.material[0] + game_state.material[1] - Value::DOUBLE_KING_VAL)) * 256 + 4075) / 8150,
-			mid_score = sideEval<gState::MIDDLEGAME>(game_state.turn, alpha, beta),
-			end_score = sideEval<gState::ENDGAME>(game_state.turn, alpha, beta);
+			mid_score = sideEval<gState::MIDDLEGAME>(alpha, beta),
+			end_score = sideEval<gState::ENDGAME>(alpha, beta);
 
 		return ((mid_score * (256 - phase)) + (end_score * phase)) / 256;
 	}

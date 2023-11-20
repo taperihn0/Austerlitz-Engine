@@ -123,7 +123,7 @@ template <enumPiece pT>
 inline U64 attack(U64 occ, int sq) noexcept {
     static_assert(pT == KNIGHT or pT == BISHOP or pT == ROOK or pT == QUEEN,
         "Unsupported piece type by attack function");
-    return MAX_U64;
+    return UINT64_MAX;
 }
 
 template <>

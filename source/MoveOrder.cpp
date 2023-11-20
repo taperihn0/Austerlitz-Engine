@@ -24,17 +24,6 @@ namespace Order {
 		return (game_state.ep_sq + ep_shift[game_state.turn] == sq) ? (nBlackPawn - game_state.turn) : nEmpty;
 	}
 
-	// return true when marked attacker cannot perform legal capture of piece on 'sq' square
-	// else return false - 'blocked' means 'pinned' in such detection
-	inline bool blockedAttacker(int sq, U64 occ, int att_sq, bool side, int k_sq) {
-		// get possible pinner of piece
-		const U64 pinner = pinnersPiece(k_sq, occ, BBs[nWhite + side] & occ, side) &
-			attack<QUEEN>(occ, att_sq) & occ;
-
-		// if no pinner found for attacker then return false, else check whether capture is still legal move
-		return pinner and !((inBetween(getLS1BIndex(pinner), k_sq) | pinner) & bitU64(sq));
-	}
-
 	int see(int sq) {
 		std::array<int, 33> gain;
 
@@ -71,6 +60,7 @@ namespace Order {
 		KILLER_1_SCORE = 900,
 		KILLER_2_SCORE = 890,
 		RELATIVE_HISTORY_SCALE = 13,
+		PROMOTION_SCORE = 950,
 	};
 
 	// evaluate move
@@ -105,10 +95,10 @@ namespace Order {
 			return KILLER_1_SCORE;
 		else if (move == killer[1][ply])
 			return KILLER_2_SCORE;
-		static int promo;
-		// althought current promotions ordering looks hilarious, it performs well comparing to previous versions
-		if ((promo = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
-			return promo;
+		// ordering promotions using piece values
+		static int promo_pc;
+		if ((promo_pc = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
+			return PROMOTION_SCORE + promo_pc;
 
 		// relative history move score
 		const int

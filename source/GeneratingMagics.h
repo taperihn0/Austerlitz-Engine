@@ -56,7 +56,7 @@ namespace {
 	U64 randomU64() {
 		static std::mt19937_64 engine(1);
 		// minimum random number set to 1, since 0 can't be magic number
-		static std::uniform_int_distribution<U64> dist(1, MAX_U64);
+		static std::uniform_int_distribution<U64> dist(1, UINT64_MAX);
 
 		return dist(engine) & dist(engine);
 	}

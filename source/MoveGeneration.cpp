@@ -29,7 +29,7 @@ namespace MoveGenerator {
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
 	inline auto pinMask() -> std::enable_if_t<Pin and PC == QUEEN, U64> {
-		return MAX_U64;
+		return UINT64_MAX;
 	}
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
@@ -71,7 +71,7 @@ namespace MoveGenerator {
 
 	template <enumPiece PC, enumSide SIDE, bool Pin>
 	inline auto sqAvaible(int) -> std::enable_if_t<!Pin or (Pin and PC != QUEEN), U64> {
-		return MAX_U64;
+		return UINT64_MAX;
 	};
 
 	// generator functions based on PINNED piece flag -
@@ -344,7 +344,7 @@ namespace MoveGenerator {
 			pinData::hv_pin = pinnedHorizonVertic<SIDE>(pinData::king_sq);
 			pinData::pinned = pinData::diag_pin | pinData::hv_pin;
 			pinData::ksq_diag = attack<BISHOP>(BBs[nBlack - SIDE], pinData::king_sq);
-			checkData::legal_squares = MAX_U64;
+			checkData::legal_squares = UINT64_MAX;
 
 			if (check) {
 				const int checker_sq = getLS1BIndex(checkers);
