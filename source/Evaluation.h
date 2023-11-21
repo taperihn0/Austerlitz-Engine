@@ -10,26 +10,44 @@ namespace Eval {
 	namespace LookUp {
 
 		// backward pawn lookup table of masks
-		constexpr auto back_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr -> U64 {
+		constexpr auto back_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr {
 			const U64 same_bfile = inBetween(sq, (side ? 56 : 0) + sq % 8) | bitU64(sq);
 			return eastOne(same_bfile) | westOne(same_bfile);
 		});
 
 		// masks for isolated pawn (neighbour ranks)
-		constexpr auto n_file = cexpr::CexprArr<false, U64, 64>([](int sq) constexpr -> U64 {
+		constexpr auto n_file = cexpr::CexprArr<false, U64, 64>([](int sq) constexpr {
 			const U64 same_wfile = Constans::f_by_index[sq % 8];
 			return eastOne(same_wfile) | westOne(same_wfile);
 		});
 
 		// same forward rank
-		constexpr auto sf_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr -> U64 {
+		constexpr auto sf_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr {
 			return inBetween(sq, (side ? 0 : 56) + sq % 8);
 		});
 
 		// forward file masks for passed pawns
-		constexpr auto nf_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr -> U64 {
+		constexpr auto nf_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr {
 			const U64 same_forward_rank = sf_file.get(side, sq);
 			return eastOne(same_forward_rank) | westOne(same_forward_rank);
+		});
+
+		// safe passer square, indicating whether passer can get to promotion square without being captured
+		constexpr auto passer_square = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int i) {
+			const int sq_size = side ? (i / 8) : (7 - i / 8);
+			U64 res = side ? soutFill(bitU64(i)) : nortFill(bitU64(i));
+
+			for (int i = 0; i < sq_size; i++) {
+				res |= westOne(res);
+				res |= eastOne(res);
+			}
+
+			return res;
+		});
+
+		// extendend king zone for knights
+		constexpr auto ext_king_zone = cexpr::CexprArr<false, U64, 64>([](int i) {
+			return sqMaskKingAttacks(WHITE, i) | sqMaskKnightAttacks(WHITE, i);
 		});
 	}
 
@@ -265,13 +283,8 @@ namespace Eval {
 		using passedPawnTab = std::array<int, 7>;
 		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
 
-
 		constexpr std::array<int, 11> attack_count_weight = { 0, 0, 50, 75, 88, 94, 97, 99, 105, 110, 120 };
 		constexpr std::array<int, 5> attacker_weight = { 0, 20, 20, 40, 80 };
-
-		constexpr auto ext_king_zone = cexpr::CexprArr<false, U64, 64>([](int i) {
-			return sqMaskKingAttacks(WHITE, i) | sqMaskKnightAttacks(WHITE, i);
-		});
 
 		constexpr posScoreTab outpos_score = {
 			0,   0,   0,   0,   3,   0,  0,  0,
@@ -294,18 +307,6 @@ namespace Eval {
 			}
 
 			return 3 - c;
-		});
-
-		constexpr auto passer_square = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int i) {
-			const int sq_size = side ? (i / 8) : (7 - i / 8);
-			U64 res = side ? soutFill(bitU64(i)) : nortFill(bitU64(i));
-
-			for (int i = 0; i < sq_size; i++) {
-				res |= westOne(res);
-				res |= eastOne(res);
-			}
-
-			return res;
 		});
 
 	} // namespace Value

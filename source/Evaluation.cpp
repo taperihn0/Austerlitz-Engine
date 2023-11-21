@@ -10,7 +10,9 @@ namespace Eval {
 
 	static struct commonEvalData {
 
+		// reset shared evaluation data for opening, middlegame and endgame
 		void openingDataReset() {
+			// king square
 			k_sq[WHITE] = getLS1BIndex(BBs[nWhiteKing]);
 			k_sq[BLACK] = getLS1BIndex(BBs[nBlackKing]);
 
@@ -19,12 +21,15 @@ namespace Eval {
 
 			pawn_count = s_pawn_count[WHITE] + s_pawn_count[BLACK];
 
+			// king zone, used in king safety evaluation
 			k_zone[WHITE] = attack<KING>(UINT64_MAX, k_sq[WHITE]);
 			k_zone[BLACK] = attack<KING>(UINT64_MAX, k_sq[BLACK]);
-
+			
+			// attackers data as used in king safety evaluation
 			att_count = { 0, 0 }, att_value = { 0, 0 };
 		}
 
+		// reset shared evaluation data for endgame phase
 		inline void endgameDataReset() noexcept {
 			passed_count = 0;
 			backward_count = 0;
@@ -34,6 +39,8 @@ namespace Eval {
 
 			tarrasch_passed_msk = { eU64, eU64 };
 		}
+
+		/* common evaluation data for every game phase evaluation */
 
 		template <typename T>
 		using bothSideLookUp = std::array<T, 2>;
@@ -48,12 +55,14 @@ namespace Eval {
 
 	} eval_lookup;
 
+	// bonus for distance from promotion square
 	template <enumSide SIDE>
 	inline int promotionDistanceBonus(U64 bb) {
-		if constexpr (SIDE) return 7 - (getLS1BIndex(bb) / 8);
-		return getMS1BIndex(bb) / 8;
+		if constexpr (SIDE) return (7 - (getLS1BIndex(bb) / 8)) * 2;
+		return (getMS1BIndex(bb) / 8) * 2;
 	}
 
+	// connectivity bonus - squares controlled by at least two pieces
 	template <enumSide SIDE>
 	int connectivity() {
 		U64 conn = eval_lookup.pt_att[SIDE][PAWN];
@@ -67,11 +76,13 @@ namespace Eval {
 		return eval;
 	}
 
+	// penalty for no pawns, especially in endgame
 	template <enumSide SIDE>
 	inline int noPawnsPenalty() noexcept {
 		return (!eval_lookup.s_pawn_count[SIDE]) * (-30);
 	}
 
+	// king pawn tropism, considering pawns distance to own king
 	template <enumSide SIDE>
 	inline int kingPawnTropism() {
 		static constexpr int scale = 16;
@@ -83,15 +94,14 @@ namespace Eval {
 			eval_lookup.t_passed_dist[SIDE] * Value::PASSER_WEIGHT
 			+ eval_lookup.t_backw_dist[SIDE] * Value::BACKWARD_WEIGHT
 			+ eval_lookup.t_o_dist[SIDE] * Value::OTHER_WEIGHT
-			)
-		/ (
+		) / (
 			eval_lookup.passed_count * Value::PASSER_WEIGHT 
 			+ eval_lookup.backward_count * Value::BACKWARD_WEIGHT 
 			+ other_count * Value::OTHER_WEIGHT + 1
-			);
+		);
 	} 
 
-	// simple castle checking
+	// simplified castle checking
 	template <enumSide SIDE>
 	bool isCastle() {
 		if (game_state.castle.checkLegalCastle<SIDE & QUEEN>()
@@ -118,6 +128,7 @@ namespace Eval {
 		return sq / 8;
 	}
 
+	// evaluation of pawn structure of given side
 	template <enumSide SIDE, gState::gPhase Phase>
 	int spawnScore() {
 		static constexpr auto vertical_pawn_shift = std::make_tuple(nortOne, soutOne);
@@ -162,7 +173,7 @@ namespace Eval {
 					dist_updated = true;
 
 					// clear passer square bonus
-					if (!(Value::passer_square.get(SIDE, sq) & eval_lookup.k_sq[!SIDE])
+					if (!(LookUp::passer_square.get(SIDE, sq) & eval_lookup.k_sq[!SIDE])
 						and game_state.turn == SIDE)
 						eval += 25 + game_state.isPawnEndgame() * 15;
 				}
@@ -225,6 +236,7 @@ namespace Eval {
 		return eval;
 	}
 
+	// evaluation of knights
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == KNIGHT, int> {
 		int sq, eval = 0;
@@ -241,7 +253,7 @@ namespace Eval {
 			eval -= 20 * bitCount(opp_contr) / bitCount(k_att);
 
 			if constexpr (Phase != gState::ENDGAME) {
-				if (k_att & Value::ext_king_zone.get(eval_lookup.k_sq[!SIDE])) {
+				if (k_att & LookUp::ext_king_zone.get(eval_lookup.k_sq[!SIDE])) {
 					eval_lookup.att_count[SIDE]++;
 					eval_lookup.att_value[SIDE] += Value::attacker_weight[KNIGHT]
 						* bitCount(k_att & eval_lookup.k_zone[!SIDE]);
@@ -266,6 +278,7 @@ namespace Eval {
 		return eval;
 	}
 
+	// evaluation of bishops
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == BISHOP, int> {
 		int sq, eval = 0;
@@ -294,16 +307,19 @@ namespace Eval {
 						Value::diag_score.get(sq, eval_lookup.k_sq[!SIDE])
 					);
 
+			// bishop's value increasing while number of pawns are decreasing
 			eval -= eval_lookup.pawn_count;
 		}
 
 		eval_lookup.pt_att[SIDE][BISHOP] = t_att;
 
+		// mobility: undefended minor pieces and legal moves squares
 		eval -= 2 * bitCount(~t_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
 		c_sq += bitCount(t_att);
 		return eval;
 	}
 
+	// evaluation of rooks
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == ROOK, int> {
 		int sq, eval = 0;
@@ -337,12 +353,14 @@ namespace Eval {
 				if (bitU64(sq) & eval_lookup.tarrasch_passed_msk[SIDE]) eval += 10;
 			}
 
+			// rook's value increasing as number of pawns is decreasing
 			eval -= eval_lookup.pawn_count;
 		}
 
 		return eval;
 	}
 
+	// evaluation of queens
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == QUEEN, int> {
 		int sq, eval = 0;
@@ -370,6 +388,7 @@ namespace Eval {
 					Value::diag_score.get(sq, eval_lookup.k_sq[!SIDE])
 				);
 
+			// penalty for queen development in opening
 			if constexpr (Phase == gState::OPENING)
 				eval += Value::queen_ban_dev[sq];
 		}
@@ -377,6 +396,7 @@ namespace Eval {
 		return eval;
 	}
 
+	// king evaluation
 	template <enumSide SIDE, gState::gPhase Phase>
 	int kingScore(int relative_eval) {
 		int eval = // king zone control
@@ -390,6 +410,7 @@ namespace Eval {
 				if (isCastle<SIDE>()) eval += 15;
 		}
 		else {
+			// king distance consideration
 			if (relative_eval > 0) 
 				eval += Value::distance_score.get(eval_lookup.k_sq[SIDE], eval_lookup.k_sq[!SIDE]);
 			eval += Value::late_king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
@@ -415,7 +436,7 @@ namespace Eval {
 		int c_sq1 = 0, c_sq2 = 0;
 
 		// pawn structure evaluation
-		int eval += spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
+		int eval = spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
 
 		if constexpr (Phase == gState::ENDGAME)
 			eval += kingPawnTropism<SIDE>() - kingPawnTropism<!SIDE>();
@@ -456,7 +477,7 @@ namespace Eval {
 		const int phase = ((8150 - (game_state.material[0] + game_state.material[1] - Value::DOUBLE_KING_VAL)) * 256 + 4075) / 8150,
 			mid_score = sideEval<gState::MIDDLEGAME>(alpha, beta),
 			end_score = sideEval<gState::ENDGAME>(alpha, beta);
-
+		
 		return ((mid_score * (256 - phase)) + (end_score * phase)) / 256;
 	}
 
