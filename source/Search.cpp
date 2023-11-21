@@ -265,7 +265,7 @@ namespace Search {
 
 			if (!is_endgame and !incheck and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN) {
 				// equal captures pruning margin
-				static constexpr int equal_margin = 120; // 75
+				static constexpr int equal_margin = 120;
 
 				// bad captures pruning
 				if (see_score <= -200)

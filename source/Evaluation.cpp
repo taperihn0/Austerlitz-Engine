@@ -380,15 +380,14 @@ namespace Eval {
 	template <enumSide SIDE, gState::gPhase Phase>
 	int kingScore(int relative_eval) {
 		int eval = // king zone control
-			eval_lookup.att_value[SIDE] * Value::attack_count_weight[eval_lookup.att_count[SIDE]] / 450;
+			eval_lookup.att_value[SIDE] * Value::attack_count_weight[eval_lookup.att_count[SIDE]] / 130;
 
 		if constexpr (Phase != gState::ENDGAME) {
 			eval += Value::king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
 
 			// check castling possibility
-			if constexpr (Phase == gState::OPENING) {
+			if constexpr (Phase == gState::OPENING)
 				if (isCastle<SIDE>()) eval += 15;
-			}
 		}
 		else {
 			if (relative_eval > 0) 
@@ -412,24 +411,27 @@ namespace Eval {
 				return alpha;
 		}
 
-		int eval = 0, c_sq1 = 0, c_sq2 = 0;
+		// controlled squared by each sides
+		int c_sq1 = 0, c_sq2 = 0;
 
-		eval += spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
+		// pawn structure evaluation
+		int eval += spawnScore<SIDE, Phase>() - spawnScore<!SIDE, Phase>();
 
 		if constexpr (Phase == gState::ENDGAME)
 			eval += kingPawnTropism<SIDE>() - kingPawnTropism<!SIDE>();
 
 		eval += spcScore<SIDE, KNIGHT, Phase>(c_sq1) - spcScore<!SIDE, KNIGHT, Phase>(c_sq2);
 		eval += spcScore<SIDE, BISHOP, Phase>(c_sq1) - spcScore<!SIDE, BISHOP, Phase>(c_sq2);
-		eval += spcScore<SIDE, ROOK, Phase>(c_sq1) - spcScore<!SIDE, ROOK, Phase>(c_sq2);
-		eval += spcScore<SIDE, QUEEN, Phase>(c_sq1) - spcScore<!SIDE, QUEEN, Phase>(c_sq2);
+		eval += spcScore<SIDE, ROOK,   Phase>(c_sq1) - spcScore<!SIDE, ROOK,   Phase>(c_sq2);
+		eval += spcScore<SIDE, QUEEN,  Phase>(c_sq1) - spcScore<!SIDE, QUEEN,  Phase>(c_sq2);
 
-		// consider connectivity (double connected squares)
-		eval += connectivity<SIDE>() - connectivity<!SIDE>();
+		eval += 
+			// consider connectivity (double connected squares)			
+			connectivity<SIDE>() - connectivity<!SIDE>()
+			// material score and mobility
+			+ material_sc + 2 * (c_sq1 / (c_sq2 + 1));
 
-		// material score and mobility
-		eval += material_sc + 2 * (c_sq1 / (c_sq2 + 1));
-
+		// king position evaluation
 		eval += kingScore<SIDE, Phase>(eval) - kingScore<!SIDE, Phase>(-eval);
 		return eval;
 	}
