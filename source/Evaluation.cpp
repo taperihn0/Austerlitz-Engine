@@ -69,7 +69,8 @@ namespace Eval {
 		int eval = 0;
 
 		for (int pc = KNIGHT; pc <= QUEEN; pc++) {
-			eval += 3 * bitCount(conn & eval_lookup.pt_att[SIDE][pc]);
+			eval += 2 * bitCount(conn & eval_lookup.pt_att[SIDE][pc] & ~BBs[nBlack - SIDE])
+				+ 4 * bitCount(conn & eval_lookup.pt_att[SIDE][pc] & BBs[nBlack - SIDE]);
 			conn |= eval_lookup.pt_att[SIDE][pc];
 		}
 
@@ -193,7 +194,7 @@ namespace Eval {
 			}
 		}
 
-		// both attacking pawns bonus
+		// both defending another pawn bonus
 		eval += 2 * bitCount(PawnAttacks::bothAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX));
 
 		// save tarrasch masks
@@ -216,22 +217,22 @@ namespace Eval {
 
 			if (pshield_count == 3) 
 				eval += 12;
-			else if (pshield_count == 2 and 
+			else if (pshield_count == 2 and
 				((pshield << 1) & (pshield >> 1)) == std::get<!SIDE>(vertical_pawn_shift)(pshield_front)) 
 				eval += 8;
 			else {
 				// penalty for open file near the king
 				const U64 open_f = ~fileFill(BBs[nWhitePawn + SIDE]);
-				eval -= 3 * bitCount(open_f & ~pshield);
+				eval -= 4 * bitCount(open_f & LookUp::ext_king_zone.get(eval_lookup.k_sq[SIDE]));
 			}
+		}
+		else {
+			// no pawns in endgame penalty
+			eval += !eval_lookup.s_pawn_count[SIDE] ? -30 : promotionDistanceBonus<SIDE>(BBs[nWhitePawn + SIDE]);
 		}
 
 		// overly advanced pawns
 		eval -= 2 * bitCount(overlyAdvancedPawns<SIDE>(BBs[nWhitePawn + SIDE], BBs[nBlackPawn - SIDE]));
-
-		// no pawns in endgame penalty
-		if constexpr (Phase == gState::ENDGAME)
-			eval += noPawnsPenalty<SIDE>();
 
 		return eval;
 	}
@@ -239,7 +240,7 @@ namespace Eval {
 	// evaluation of knights
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == KNIGHT, int> {
-		int sq, eval = 0;
+		int sq, eval = 0, att_count;
 		const U64 opp_p_att = eval_lookup.pt_att[!SIDE][PAWN];
 		U64 k_msk = BBs[nWhiteKnight + SIDE], opp_contr, k_att, t_att = eU64;
 
@@ -250,7 +251,9 @@ namespace Eval {
 			// penalty for squares controled by enemy pawns
 			t_att |= (k_att = attack<KNIGHT>(UINT64_MAX, sq));
 			opp_contr = k_att & opp_p_att;
-			eval -= 20 * bitCount(opp_contr) / bitCount(k_att);
+			att_count = bitCount(k_att);
+			eval -= 20 * bitCount(opp_contr) / att_count;
+			c_sq += att_count;
 
 			if constexpr (Phase != gState::ENDGAME) {
 				if (k_att & LookUp::ext_king_zone.get(eval_lookup.k_sq[!SIDE])) {
@@ -272,23 +275,20 @@ namespace Eval {
 
 		eval_lookup.pt_att[SIDE][KNIGHT] = t_att;
 
-		// mobility: undefended minor pieces and legal moves squares
+		// mobility: undefended minor pieces 
 		eval -= 2 * bitCount(~t_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
-		c_sq += bitCount(t_att);
 		return eval;
 	}
 
 	// evaluation of bishops
 	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
 	auto spcScore(int& c_sq) -> std::enable_if_t<PC == BISHOP, int> {
-		int sq, eval = 0;
+		int sq, eval = 0, b_count = 0;
 		U64 b_msk = BBs[nWhiteBishop + SIDE], b_att, t_att = eU64;
-
-		// bishop pair bonus
-		eval += (bitCount(b_msk) == 2) * 50;
 
 		while (b_msk) {
 			sq = popLS1B(b_msk);
+			b_count++;
 			eval += Value::position_score[Phase][BISHOP][flipSquare<SIDE>(sq)];
 			b_att = attack<BISHOP>(BBs[nOccupied], sq);
 			t_att |= b_att;
@@ -310,6 +310,9 @@ namespace Eval {
 			// bishop's value increasing while number of pawns are decreasing
 			eval -= eval_lookup.pawn_count;
 		}
+
+		// bishop pair bonus
+		eval += (b_count >= 2) * 50;
 
 		eval_lookup.pt_att[SIDE][BISHOP] = t_att;
 
@@ -400,7 +403,7 @@ namespace Eval {
 	template <enumSide SIDE, gState::gPhase Phase>
 	int kingScore(int relative_eval) {
 		int eval = // king zone control
-			eval_lookup.att_value[SIDE] * Value::attack_count_weight[eval_lookup.att_count[SIDE]] / 130;
+			eval_lookup.att_value[SIDE] * Value::attack_count_weight[eval_lookup.att_count[SIDE]] / 110;
 
 		if constexpr (Phase != gState::ENDGAME) {
 			eval += Value::king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];

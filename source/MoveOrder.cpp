@@ -40,6 +40,9 @@ namespace Order {
 			i++;
 			gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(weakest_att)];
 
+			// early pruning proposed by Michael Hoffmann
+			if (std::max(-gain[i - 1], gain[i]) < 0) break;
+
 			weakest_att = leastValuableAtt(attackers[side], side);
 			processed |= bitU64(getLS1BIndex(BBs[weakest_att] & ~processed));
 

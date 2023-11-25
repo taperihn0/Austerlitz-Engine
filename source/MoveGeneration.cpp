@@ -685,44 +685,41 @@ namespace MoveGenerator {
 		}
 
 		// explicit template instantion
-#define INSTANTION(d) template void perft<d>();
-		INSTANTION(1);
-		INSTANTION(2);
-		INSTANTION(3);
-		INSTANTION(4);
-		INSTANTION(5);
-		INSTANTION(6);
-		INSTANTION(7);
-		INSTANTION(8);
-		INSTANTION(9);
-		INSTANTION(10);
-#undef INSTANTION
-		
+		template void perft<1>();
+		template void perft<2>();
+		template void perft<3>();
+		template void perft<4>();
+		template void perft<5>();
+		template void perft<6>();
+		template void perft<7>();
+		template void perft<8>();
+		template void perft<9>();
+		template void perft<10>();
+
 		// helper macro
-#define CALL(d) perft<d>(); \
-				break;
+#define PERFT(d) perft<d>(); break;
 
 		void perftDriver(int depth) {
 			assert(depth > 0 && "Unvalid depth size");
 
 			switch (depth) {
-			case 1:  CALL(1);
-			case 2:  CALL(2);
-			case 3:  CALL(3);
-			case 4:  CALL(4);
-			case 5:  CALL(5);
-			case 6:  CALL(6);
-			case 7:  CALL(7);
-			case 8:  CALL(8);
-			case 9:  CALL(9);
-			case 10: CALL(10);
+			case 1:  PERFT(1);
+			case 2:  PERFT(2);
+			case 3:  PERFT(3);
+			case 4:  PERFT(4);
+			case 5:  PERFT(5);
+			case 6:  PERFT(6);
+			case 7:  PERFT(7);
+			case 8:  PERFT(8);
+			case 9:  PERFT(9);
+			case 10: PERFT(10);
 			default: 
 				OS << "Depth not supported";
 				break;
 			}
 		}
 
-#undef CALL
+#undef PERFT
 
 	} // namespace Analisis
 

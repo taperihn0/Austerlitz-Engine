@@ -88,7 +88,7 @@ namespace Search {
 				static constexpr int R = 2;
 
 				const auto ep_cpy = game_state.ep_sq;
-				const auto hash_cpy = hash.key;
+				node[ply].hash_cpy = hash.key;
 
 				rep_tt.posRegister();
 				MovePerform::makeNull();
@@ -96,7 +96,7 @@ namespace Search {
 				// set allow_null_move to false - prevent from double move passing, it makes no sense then
 				const int score = -alphaBeta<false>(-beta, -beta + 1, depth - 1 - R, ply + 1);
 
-				MovePerform::unmakeNull(hash_cpy, ep_cpy);
+				MovePerform::unmakeNull(node[ply].hash_cpy, ep_cpy);
 				rep_tt.count--;
 
 				if (score >= beta) return beta;
@@ -121,28 +121,29 @@ namespace Search {
 		}
 
 		initNodeData(ply);
+		bool is_pruned = false;
 
-		for (int i = 0; i < node[ply].mcount; i++) {
+		for (int c = 0, i = 0; i < node[ply].mcount; i++, is_pruned = false) {
 			// move ordering
 			Order::pickBest(node[ply].ml, i, ply);
 			const auto& move = node[ply].ml[i];
 
-			if (i >= 1 and node[ply].mcount >= 8 and !incheck and !move.getMask<MoveItem::iMask::CAPTURE_F>()
+			// futility pruning and reduction routines
+			if (i >= 1 and node[ply].mcount >= 8 and !incheck and !move.isCapture()
 				and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN
 				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp)) {
-
-				// margin for pre-frontier node and for pre-pre-frontier node
+				// margins for each depth
 				static constexpr int futility_margin = 80, ext_margin = 450, razor_margin = 950;
 
-				// pure futility pruning at pre-frontier nodes
+				// pure futility pruning at frontiers
 				if (depth == FRONTIER
 					and Eval::evaluate(alpha - futility_margin, alpha - futility_margin + 1) <= alpha - futility_margin)
 					return alpha;
-				// extended futility pruning at pre-pre-frontier nodes
+				// extended futility pruning at pre-frontiers
 				else if (depth == PRE_FRONTIER
 					and Eval::evaluate(alpha - ext_margin, alpha - ext_margin + 1) <= alpha - ext_margin)
 					return alpha;
-				// razoring
+				// razoring reduction at pre-pre-frontiers
 				else if (depth == PRE_PRE_FRONTIER
 					and Eval::evaluate(alpha - razor_margin, alpha - razor_margin + 1) <= alpha - razor_margin)
 					depth = PRE_FRONTIER;
@@ -158,21 +159,26 @@ namespace Search {
 			MovePerform::makeMove(move);
 			prev_move = move;
 			node[ply].checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
-
+			
+			// late move pruning using previous fail-soft moves in nullwindow search and non-late moves count
+			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move
+				and !move.getMask<MoveItem::iMask::CAPTURE_F>() and !move.getMask<MoveItem::iMask::PROMOTION>())
+				is_pruned = true;
 			// if PV move is already processed, save time by checking uninteresting moves 
 			// using null window and late move reduction (PV search) -
 			// however, if such 'late' node fails low, it's a sign we are offered a good move (score > alpha)
-			if (i >= 1) {
+			else if (i >= 1) {
 				// late move reduction in null move search
 				if (depth >= 3 and !node[ply].checking_move
-					and !isSquareAttacked(getLS1BIndex(BBs[nBlackKing - game_state.turn]), !game_state.turn)
 					and !move.getMask<MoveItem::iMask::CAPTURE_F>()
 					and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN)
 					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
 				else node[ply].score = alpha + 1;
 
-				if (node[ply].score > alpha) 
-					node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);				
+				if (node[ply].score > alpha) {
+					node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
+					c++;
+				}
 			}
 			else node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 
@@ -182,6 +188,7 @@ namespace Search {
 			prev_move = node[ply].my_prev;
 
 			if (time_data.stop) return time_stop_sign;
+			else if (is_pruned) return alpha;
 
 			// register move appearance in butterfly board
 			node[ply].to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
@@ -233,7 +240,7 @@ namespace Search {
 			return time_stop_sign;
 		} 
 
-		const int eval = Eval::evaluate(low_bound, beta);
+		const int eval = Eval::evaluate(alpha - Eval::Value::QUEEN_VALUE, beta);
 		search_results.nodes++;
 
 		if (eval >= beta) 

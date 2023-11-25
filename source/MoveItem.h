@@ -57,17 +57,10 @@ namespace MoveItem {
 		iMove() = default;
 
 		// no need to return a value
-		inline void operator=(uint32_t data) noexcept {
-			cmove = data;
-		}
-
-		inline bool operator==(iMove b) const noexcept {
-			return cmove == b.cmove;
-		}
-
-		inline bool operator!=(iMove b) const noexcept {
-			return cmove != b.cmove;
-		}
+		inline void operator=(uint32_t data) noexcept { cmove = data; }
+		inline bool operator==(iMove b) const noexcept { return cmove == b.cmove; }
+		inline bool operator!=(iMove b) const noexcept { return cmove != b.cmove; }
+		inline uint32_t raw() const noexcept { return cmove; }
 
 		template <iMask MASK>
 		inline uint32_t getMask() const noexcept {
@@ -80,12 +73,12 @@ namespace MoveItem {
 				<< " nbrq"[getMask<iMask::PROMOTION>() >> 20];
 		}
 
-		inline uint32_t raw() const noexcept {
-			return cmove;
-		}
-
 		// construct a move based on a normal string notation
 		void constructMove(std::string move);
+
+		inline bool isCapture() const noexcept {
+			return getMask<iMask::CAPTURE_F>();
+		}
 
 	private:
 		uint32_t cmove;

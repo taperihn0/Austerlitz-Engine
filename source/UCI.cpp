@@ -105,8 +105,6 @@ void UCI::parsePosition(std::istringstream& strm) {
 	// scan given moves and perform them on real board
 	while (strm >> std::skipws >> move) {
 		casted.constructMove(move);
-
-#if _CHECK_MOVE_LEGAL
 		bool illegal = true;
 
 		// check move validity - generate all the legal moves and then 
@@ -127,10 +125,6 @@ void UCI::parsePosition(std::istringstream& strm) {
 			OS << "illegal move '" << move << "'\n";
 			return;
 		}
-#else
-		MovePerform::makeMove(casted);
-		rep_tt.posRegister();
-#endif
 	}
 }
 
