@@ -123,15 +123,15 @@ namespace Search {
 		initNodeData(ply);
 		bool is_pruned = false;
 
-		for (int c = 0, i = 0; i < node[ply].mcount; i++, is_pruned = false) {
+		for (int c = 0, i = 0, m_score; i < node[ply].mcount; i++, is_pruned = false) {
 			// move ordering
-			Order::pickBest(node[ply].ml, i, ply);
+			m_score = Order::pickBest(node[ply].ml, i, ply, depth);
 			const auto& move = node[ply].ml[i];
 
 			// futility pruning and reduction routines
-			if (i >= 1 and node[ply].mcount >= 8 and !incheck and !move.isCapture()
-				and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN
+			if (i >= 1 and node[ply].mcount >= 8 and !incheck and move.isWeak(m_score, 900)
 				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp)) {
+				
 				// margins for each depth
 				static constexpr int futility_margin = 80, ext_margin = 450, razor_margin = 950;
 
@@ -160,21 +160,18 @@ namespace Search {
 			prev_move = move;
 			node[ply].checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 			
-			// late move pruning using previous fail-soft moves in nullwindow search and non-late moves count
-			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move
-				and !move.getMask<MoveItem::iMask::CAPTURE_F>() and !move.getMask<MoveItem::iMask::PROMOTION>())
+			// late move pruning using previous fail-low moves in nullwindow search and non-late moves count
+			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move and move.isQuiet())
 				is_pruned = true;
 			// if PV move is already processed, save time by checking uninteresting moves 
 			// using null window and late move reduction (PV search) -
 			// however, if such 'late' node fails low, it's a sign we are offered a good move (score > alpha)
 			else if (i >= 1) {
 				// late move reduction in null move search
-				if (depth >= 3 and !node[ply].checking_move
-					and !move.getMask<MoveItem::iMask::CAPTURE_F>()
-					and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN)
-					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 2, ply + 1);
+				if (depth >= 3 and !node[ply].checking_move and !incheck and move.isWeak(m_score, 900))
+					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 2 - (i >= 6), ply + 1);
 				else node[ply].score = alpha + 1;
-
+				
 				if (node[ply].score > alpha) {
 					node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 					c++;
@@ -198,7 +195,7 @@ namespace Search {
 			if (node[ply].score > alpha) {
 				// fail hard beta-cutoff
 				if (node[ply].score >= beta) {
-					if (!move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+					if (!move.isCapture()) {
 						// store killer move
 						Order::killer[1][ply] = Order::killer[0][ply];
 						Order::killer[0][ply] = move;
@@ -208,7 +205,7 @@ namespace Search {
 
 						node[ply].prev_pc = node[ply].my_prev.getMask<MoveItem::iMask::PIECE>() >> 12;
 
-						// store countermove
+						// store a countermove
 						Order::countermove[node[ply].prev_pc][node[ply].prev_to] = move.raw();
 					}
 
@@ -229,7 +226,7 @@ namespace Search {
 		}
 
 		tt.write(depth, alpha, node[ply].hash_flag, ply);
-		// fail low cutoff (return best option)
+		// fail-low cutoff (return best option)
 		return alpha;
 	}
 
@@ -270,7 +267,7 @@ namespace Search {
 			see_score = Order::pickBestSEE(node[ply].ml, i);
 			const auto& move = node[ply].ml[i];
 
-			if (!is_endgame and !incheck and (move.getMask<MoveItem::iMask::PROMOTION>() >> 20) != QUEEN) {
+			if (!is_endgame and !incheck and !move.isQueenPromo()) {
 				// equal captures pruning margin
 				static constexpr int equal_margin = 120;
 

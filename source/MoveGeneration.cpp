@@ -454,7 +454,7 @@ namespace MovePerform {
 	}
 
 	inline void captureCase(const MoveItem::iMove& move, bool side, int target) {
-		if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+		if (move.isCapture()) {
 			game_state.halfmove = 0;
 			popBit(BBs[nBlack - side], target);
 			
@@ -488,7 +488,7 @@ namespace MovePerform {
 		game_state.ep_sq = -1;
 		game_state.fullmove += side;
 
-		if (move.getMask<MoveItem::iMask::EN_PASSANT_F>()) {
+		if (move.isEnPassant()) {
 			const int ep_pawn = target + (side ? Compass::nort : Compass::sout);
 			
 			hash.key ^= hash.piece_keys.get(nWhitePawn + side, origin);
@@ -507,8 +507,8 @@ namespace MovePerform {
 			moveBit(BBs[nEmpty], target, ep_pawn);
 			return;
 		}
-		else if (const auto promotion = move.getMask<MoveItem::iMask::PROMOTION>()) {
-			const int promo_pc = static_cast<int>(bbsIndex<WHITE>(promotion >> 20)) + side;
+		else if (const int promotion = move.getPromo()) {
+			const int promo_pc = static_cast<int>(bbsIndex<WHITE>(promotion)) + side;
 
 			hash.key ^= hash.piece_keys.get(nWhitePawn + side, origin);
 			hash.key ^= hash.piece_keys.get(promo_pc, target);
@@ -524,7 +524,7 @@ namespace MovePerform {
 			captureCase(move, side, target);
 			return;
 		}
-		else if (move.getMask<MoveItem::iMask::CASTLE_F>()) {
+		else if (move.isCastling()) {
 			// update castling rights - exclude old castle state and set new castle state then
 			hash.key ^= hash.castle_keys.get(game_state.castle.raw());
 			game_state.castle &= ~(side ? 3 : 12);
@@ -573,7 +573,7 @@ namespace MovePerform {
 		hash.key ^= hash.castle_keys.get(game_state.castle.raw());
 
 		// setting new en passant position, if legal and possible (also in Zobrist notation)
-		if (move.getMask<MoveItem::iMask::DOUBLE_PUSH_F>()) {
+		if (move.isDoublePush()) {
 			game_state.ep_sq = target;
 			hash.key ^= hash.enpassant_keys.get(game_state.ep_sq);
 			game_state.halfmove = 0;

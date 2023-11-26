@@ -76,8 +76,36 @@ namespace MoveItem {
 		// construct a move based on a normal string notation
 		void constructMove(std::string move);
 
+		inline int getPromo() const noexcept {
+			return getMask<iMask::PROMOTION>() >> 20;
+		}
+
 		inline bool isCapture() const noexcept {
 			return getMask<iMask::CAPTURE_F>();
+		}
+
+		inline bool isEnPassant() const noexcept {
+			return getMask<iMask::EN_PASSANT_F>();
+		}
+
+		inline bool isDoublePush() const noexcept {
+			return getMask<iMask::DOUBLE_PUSH_F>();
+		}
+
+		inline bool isCastling() const noexcept {
+			return getMask<iMask::CASTLE_F>();
+		}
+
+		inline bool isQueenPromo() const noexcept {
+			return (getMask<iMask::PROMOTION>() >> 20) == QUEEN;
+		}
+
+		inline bool isQuiet() const noexcept {
+			return !getMask<iMask::CAPTURE_F>() and !getMask<iMask::PROMOTION>();
+		}
+
+		inline bool isWeak(const int capt_score, const int see_cmp) const noexcept {
+			return (!getMask<iMask::CAPTURE_F>() or capt_score < see_cmp) and (getMask<iMask::PROMOTION>() >> 20) != QUEEN;
 		}
 
 	private:

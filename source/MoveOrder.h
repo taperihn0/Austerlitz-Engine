@@ -33,9 +33,17 @@ namespace Order {
 
 	// butterfly-based countermove lookup
 	extern butterflyLookUp countermove;
+	
+	enum MoveEvalConstans {
+		PV_SCORE = 15000,
+		PROMOTION_SCORE = 950,
+		FIRST_KILLER_SCORE = 900,
+		SECOND_KILLER_SCORE = 890,
+		RELATIVE_HISTORY_SCALE = 13,
+	};
 
 	// return value, also so called 'score' of given move
-	int moveScore(const MoveItem::iMove& move, int ply);
+	int moveScore(const MoveItem::iMove& move, int ply, int depth);
 
 	/* move sorting */
 	
@@ -43,12 +51,12 @@ namespace Order {
 	int see(int sq);
 
 	// sort given move list based on score of each move
-	void sort(MoveList& move_list, int ply);
+	void sort(MoveList& move_list, int ply, int depth);
 
 	/* move ordering techniques */
 
 	// swap best move so it's on the i'th place
-	void pickBest(MoveList& move_list, int s, int ply);
+	int pickBest(MoveList& move_list, int s, int ply, int depth);
 
 	// pick best capture based on Static Exchange Evaluation
 	int pickBestSEE(MoveList& capt_list, int s);

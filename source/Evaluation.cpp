@@ -348,12 +348,15 @@ namespace Eval {
 			eval += Value::distance_score.get(sq, eval_lookup.k_sq[!SIDE]);
 
 			// open file score
-			if (bitU64(sq) & open_f) eval += 10;
+			if (bitU64(sq) & open_f) 
+				eval += 10;
 			// queen/rook on the same file
-			if (Constans::f_by_index[sq % 8] & (BBs[nBlackQueen - SIDE] | BBs[nWhiteRook + SIDE])) eval += 10;
+			if (Constans::f_by_index[sq % 8] & (BBs[nBlackQueen - SIDE] | BBs[nWhiteRook + SIDE])) 
+				eval += 10;
 			// tarrasch rule
 			if constexpr (Phase == gState::ENDGAME) {
-				if (bitU64(sq) & eval_lookup.tarrasch_passed_msk[SIDE]) eval += 10;
+				if (bitU64(sq) & eval_lookup.tarrasch_passed_msk[SIDE]) 
+					eval += 10;
 			}
 
 			// rook's value increasing as number of pawns is decreasing

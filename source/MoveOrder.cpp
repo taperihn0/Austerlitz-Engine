@@ -40,9 +40,6 @@ namespace Order {
 			i++;
 			gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(weakest_att)];
 
-			// early pruning proposed by Michael Hoffmann
-			if (std::max(-gain[i - 1], gain[i]) < 0) break;
-
 			weakest_att = leastValuableAtt(attackers[side], side);
 			processed |= bitU64(getLS1BIndex(BBs[weakest_att] & ~processed));
 
@@ -58,28 +55,25 @@ namespace Order {
 		return gain[1];
 	}
 
-	enum MoveScoreParams {
-		PV_SCORE = 15000,
-		KILLER_1_SCORE = 900,
-		KILLER_2_SCORE = 890,
-		RELATIVE_HISTORY_SCALE = 13,
-		PROMOTION_SCORE = 950,
-	};
-
 	// evaluate move
-	int moveScore(const MoveItem::iMove& move, int ply) {
+	int moveScore(const MoveItem::iMove& move, int ply, int depth) {
 		const int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 
-		// pv move detected
+		// PV move detected
 		if (Search::PV::pv_line[ply][0] == move)
 			return PV_SCORE;
 		// distinguish between quiets and captures
-		else if (move.getMask<MoveItem::iMask::CAPTURE_F>()) {
+		else if (move.isCapture()) {
+			// evaluate good and equal captures at depth >= 5 slightly above killer moves,
+			// but keep bad captures scoring less than killers
+			if (depth >= 5) 
+				return FIRST_KILLER_SCORE + 1 + see(move.getMask<MoveItem::iMask::TARGET>() >> 6);
+
 			const int att = move.getMask<MoveItem::iMask::PIECE>() >> 12;
 			int victim;
 			const bool side = move.getMask<MoveItem::iMask::SIDE_F>();
 
-			if (move.getMask<MoveItem::iMask::EN_PASSANT_F>())
+			if (move.isEnPassant())
 				return MVV_LVA::lookup[PAWN][PAWN];
 
 			// find victim piece
@@ -93,17 +87,18 @@ namespace Order {
 			return MVV_LVA::lookup[att][victim];
 		}
 
-		// killer moves score less than basic captures
 		if (move == killer[0][ply])
-			return KILLER_1_SCORE;
+			return FIRST_KILLER_SCORE;
 		else if (move == killer[1][ply])
-			return KILLER_2_SCORE;
-		// ordering promotions using piece values
+			return SECOND_KILLER_SCORE;
 		static int promo_pc;
-		if ((promo_pc = move.getMask<MoveItem::iMask::PROMOTION>() >> 20))
+		if ((promo_pc = move.getPromo()))
 			return PROMOTION_SCORE + promo_pc;
 
-		// relative history move score
+		// relative history and countermove heuristic evaluation:
+		// adjust countermove bonus to ply level, since history score of a move 
+		// is increasing as plies are also increasing -
+		// just keep countermove bonus constans relative to history score
 		const int
 			pc = move.getMask<MoveItem::iMask::PIECE>() >> 12,
 			prev_to = Search::prev_move.getMask<MoveItem::iMask::TARGET>() >> 6,
@@ -113,20 +108,20 @@ namespace Order {
 		return (RELATIVE_HISTORY_SCALE * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1 + counter_bonus;
 	}
 
-	// move sorting
-	void sort(MoveList& move_list, int ply) {
-		std::sort(move_list.begin(), move_list.end(), [ply](const MoveItem::iMove& a, const MoveItem::iMove& b) {
-			return moveScore(a, ply) > moveScore(b, ply);
+	// simple move sorting function
+	void sort(MoveList& move_list, int ply, int depth) {
+		std::sort(move_list.begin(), move_list.end(), [ply, depth](const MoveItem::iMove& a, const MoveItem::iMove& b) {
+			return moveScore(a, ply, depth) > moveScore(b, ply, depth);
 		});
 	}
 
 	// pick best based on normal moveScore() eval function
-	void pickBest(MoveList& move_list, int s, int ply) {
+	int pickBest(MoveList& move_list, int s, int ply, int depth) {
 		static MoveItem::iMove tmp;
-		int cmp_score = moveScore(move_list[s], ply), i_score;
+		int cmp_score = moveScore(move_list[s], ply, depth), i_score;
 
 		for (int i = s + 1; i < move_list.size(); i++) {
-			i_score = moveScore(move_list[i], ply);
+			i_score = moveScore(move_list[i], ply, depth);
 
 			if (i_score > cmp_score) {
 				cmp_score = i_score;
@@ -135,6 +130,8 @@ namespace Order {
 				move_list[s] = tmp;
 			}
 		}
+
+		return cmp_score;
 	}
 
 	// pick best using SEE
