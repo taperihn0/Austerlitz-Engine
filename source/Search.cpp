@@ -22,7 +22,7 @@ namespace Search {
 		BitBoardsSet bbs_cpy;
 		gState gstate_cpy;
 		U64 hash_cpy;
-		int score, to, pc, prev_to, prev_pc;
+		int score, to, pc, prev_to, prev_pc, m_score;
 		HashEntry::Flag hash_flag;
 		bool checking_move;
 		MoveList ml;
@@ -70,13 +70,13 @@ namespace Search {
 		else if (depth <= LEAF_NODE) {
 			// init PV table lenght
 			PV::pv_len[ply] = 0;
-			const int qscore = qSearch(alpha, beta, ply);
+			node[ply].score = qSearch(alpha, beta, ply);
 			if (!time_data.stop)
-				tt.write(0, qscore, 
-					qscore == alpha ? HashEntry::Flag::HASH_ALPHA : 
-					qscore == beta ? HashEntry::Flag::HASH_BETA : 
+				tt.write(0, node[ply].score,
+					node[ply].score == alpha ? HashEntry::Flag::HASH_ALPHA :
+					node[ply].score == beta ? HashEntry::Flag::HASH_BETA :
 					HashEntry::Flag::HASH_EXACT, ply);
-			return qscore;
+			return node[ply].score;
 		}
 
 		search_results.nodes++;
@@ -94,12 +94,12 @@ namespace Search {
 				MovePerform::makeNull();
 
 				// set allow_null_move to false - prevent from double move passing, it makes no sense then
-				const int score = -alphaBeta<false>(-beta, -beta + 1, depth - 1 - R, ply + 1);
+				node[ply].score = -alphaBeta<false>(-beta, -beta + 1, depth - 1 - R, ply + 1);
 
 				MovePerform::unmakeNull(node[ply].hash_cpy, ep_cpy);
 				rep_tt.count--;
 
-				if (score >= beta) return beta;
+				if (node[ply].score >= beta) return beta;
 			}
 		}
 
@@ -123,13 +123,13 @@ namespace Search {
 		initNodeData(ply);
 		bool is_pruned = false;
 
-		for (int c = 0, i = 0, m_score; i < node[ply].mcount; i++, is_pruned = false) {
+		for (int c = 0, i = 0; i < node[ply].mcount; i++, is_pruned = false) {
 			// move ordering
-			m_score = Order::pickBest(node[ply].ml, i, ply, depth);
+			node[ply].m_score = Order::pickBest(node[ply].ml, i, ply, depth);
 			const auto& move = node[ply].ml[i];
 
 			// futility pruning and reduction routines
-			if (i >= 1 and node[ply].mcount >= 8 and !incheck and move.isWeak(m_score, 900)
+			if (i >= 1 and node[ply].mcount >= 8 and !incheck and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE)
 				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp)) {
 				
 				// margins for each depth
@@ -164,11 +164,11 @@ namespace Search {
 			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move and move.isQuiet())
 				is_pruned = true;
 			// if PV move is already processed, save time by checking uninteresting moves 
-			// using null window and late move reduction (PV search) -
+			// using null window and late move reduction (PV Search) -
 			// however, if such 'late' node fails low, it's a sign we are offered a good move (score > alpha)
 			else if (i >= 1) {
 				// late move reduction in null move search
-				if (depth >= 3 and !node[ply].checking_move and !incheck and move.isWeak(m_score, 900))
+				if (depth >= 3 and !node[ply].checking_move and !incheck and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE))
 					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 2 - (i >= 6), ply + 1);
 				else node[ply].score = alpha + 1;
 				
@@ -251,31 +251,28 @@ namespace Search {
 			return alpha;
 		alpha = std::max(alpha, eval);
 
-		MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>(node[ply].ml);
+		MoveGenerator::generateLegalMoves<MoveGenerator::TACTICAL>(node[ply].ml);
 		node[ply].bbs_cpy = BBs;
 		node[ply].gstate_cpy = game_state;
 		node[ply].hash_cpy = hash.key;
 
-		int see_score;
 		// losing material indication flag
-		const bool minus_mdelta = 
-			(game_state.material[game_state.turn] - game_state.material[!game_state.turn]) < 0;
+		const bool minus_matdelta = (game_state.material[game_state.turn] - game_state.material[!game_state.turn]) < 0;
 
 		for (int i = 0; i < node[ply].ml.size(); i++) {
-
 			// capture ordering
-			see_score = Order::pickBestSEE(node[ply].ml, i);
+			node[ply].m_score = Order::pickBestTactical(node[ply].ml, i);
 			const auto& move = node[ply].ml[i];
 
-			if (!is_endgame and !incheck and !move.isQueenPromo()) {
+			if (!is_endgame and !incheck and !move.isPromo()) {
 				// equal captures pruning margin
 				static constexpr int equal_margin = 120;
 
 				// bad captures pruning
-				if (see_score <= -200)
+				if (node[ply].m_score <= -200)
 					return alpha;
 				// equal captures pruning if losing material
-				else if (minus_mdelta and !see_score and eval + equal_margin <= alpha)
+				else if (minus_matdelta and !node[ply].m_score and eval + equal_margin <= alpha)
 					return alpha;
 			}
 

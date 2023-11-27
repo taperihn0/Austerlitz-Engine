@@ -59,7 +59,7 @@ namespace Order {
 	int pickBest(MoveList& move_list, int s, int ply, int depth);
 
 	// pick best capture based on Static Exchange Evaluation
-	int pickBestSEE(MoveList& capt_list, int s);
+	int pickBestTactical(MoveList& capt_list, int s);
 
 } // namespace Order
 

@@ -134,14 +134,20 @@ namespace Order {
 		return cmp_score;
 	}
 
-	// pick best using SEE
-	int pickBestSEE(MoveList& capt_list, int s) {
+	// if capture move return it's SEE score,
+	// else if promotion to queen, return promotion score, currently equal to capture score
+	inline int tacticalScore(const MoveItem::iMove& move) {
+		return move.isCapture() ? see(move.getMask<MoveItem::iMask::TARGET>() >> 6) : 0;
+	}
+
+	// pick best tactical move using SEE and promotion ordering
+	int pickBestTactical(MoveList& capt_list, int s) {
 		static MoveItem::iMove tmp;
 		int cmp_score = 
-			see(capt_list[s].getMask<MoveItem::iMask::TARGET>() >> 6), i_score;
+			tacticalScore(capt_list[s]), i_score;
 
 		for (int i = s + 1; i < capt_list.size(); i++) {
-			i_score = see(capt_list[i].getMask<MoveItem::iMask::TARGET>() >> 6);
+			i_score = tacticalScore(capt_list[i]);
 
 			if (i_score > cmp_score) {
 				cmp_score = i_score;

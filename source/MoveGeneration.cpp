@@ -101,7 +101,7 @@ namespace MoveGenerator {
 			}
 
 			// perform quiets
-			if constexpr (gType != CAPTURES) {
+			if constexpr (gType != CAPTURES and gType != TACTICAL) {
 				quiets = attacks & ~BBs[nBlack - SIDE];
 
 				while (quiets) {
@@ -182,7 +182,7 @@ namespace MoveGenerator {
 				east_captures = PawnAttacks::eastAttackPawn<SIDE>(pinData::diag_pin & BBs[nWhitePawn + SIDE],
 					possible_captures);
 
-			if constexpr (gType != CAPTURES) {
+			if constexpr (gType != CAPTURES and gType != TACTICAL) {
 				U64 single_push = PawnPushes::singlePushPawn<SIDE>(hor_pinned_pawns, BBs[nEmpty]),
 					double_push = PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask;
 
@@ -279,17 +279,12 @@ namespace MoveGenerator {
 				single_push & checkData::legal_squares & promote_rank_mask;
 		
 		// process quiet moves
-		if constexpr (gType != CAPTURES) {
+		if constexpr (gType != CAPTURES and gType != TACTICAL) {
 			// double pushes mask initialization, then process it
 			U64 double_push =
 				PawnPushes::singlePushPawn<SIDE>(single_push, BBs[nEmpty]) & double_push_mask & checkData::legal_squares;
 
-			// processing pawn promotions by pushes
-			while (promote_moves) {
-				PawnHelpers::pawnPromotionGenHelper<SIDE, false, single_off>(popLS1B(promote_moves), it);
-			}
-
-			// excluding promotion case - quiet moves without promotion
+			// excluding promotion case - quiet moves
 			single_push &= ~promote_rank_mask & checkData::legal_squares;
 			while (single_push) {
 				target = popLS1B(single_push);
@@ -299,6 +294,19 @@ namespace MoveGenerator {
 			while (double_push) {
 				target = popLS1B(double_push);
 				*it++ = MoveItem::encode<MoveItem::encodeType::DOUBLE_PUSH>(target + double_off, target, PAWN, SIDE);
+			}
+		}
+
+		// processing pawn promotions by pushes
+		if constexpr (gType != CAPTURES) {
+			while (promote_moves) {
+				int target = popLS1B(promote_moves);
+					
+				// as a tactical move, consider only queen promotion, since other promotion should be skipped in qsearch
+				if constexpr (gType != TACTICAL)
+					PawnHelpers::pawnPromotionGenHelper<SIDE, false, single_off>(target, it);
+				else 
+					*it++ = (MoveItem::encodePromotion<SIDE, QUEEN, false>(target + single_off, target));
 			}
 		}
 
@@ -364,7 +372,7 @@ namespace MoveGenerator {
 		int target;
 		bool capture;
 
-		if constexpr (gType == CAPTURES) king_moves &= BBs[nBlack - SIDE];
+		if constexpr (gType == CAPTURES or gType == TACTICAL) king_moves &= BBs[nBlack - SIDE];
 		else king_moves &= ~BBs[nWhite + SIDE];
 
 		// loop throught all king possible moves
@@ -373,14 +381,14 @@ namespace MoveGenerator {
 
 			// checking for an unattacked position after a move
 			if (!isSquareAttacked<SIDE>(target)) {
-				if constexpr (gType == CAPTURES) capture = true;
+				if constexpr (gType == CAPTURES or gType == TACTICAL) capture = true;
 				else capture = bitU64(target) & BBs[nBlack - SIDE];
 				*it++ = MoveItem::encodeQuietCapture<KING, SIDE>(pinData::king_sq, target, capture);
 			}
 		}
 
 		// if only captures generated - no need to consider castling
-		if constexpr (gType == CAPTURES)
+		if constexpr (gType == CAPTURES or gType == TACTICAL)
 			return;
 		else if (check)
 			return;
@@ -436,6 +444,7 @@ namespace MoveGenerator {
 
 	template void generateLegalMoves<LEGAL>(MoveList&);
 	template void generateLegalMoves<CAPTURES>(MoveList&);
+	template void generateLegalMoves<TACTICAL>(MoveList&);
 
 } // namespace MoveGenerator
 

@@ -100,6 +100,10 @@ namespace MoveItem {
 			return (getMask<iMask::PROMOTION>() >> 20) == QUEEN;
 		}
 
+		inline bool isPromo() const noexcept {
+			return getMask<iMask::PROMOTION>();
+		}
+
 		inline bool isQuiet() const noexcept {
 			return !getMask<iMask::CAPTURE_F>() and !getMask<iMask::PROMOTION>();
 		}

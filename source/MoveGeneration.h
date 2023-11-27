@@ -48,7 +48,7 @@ namespace MoveGenerator {
 
 	// generation type for move generator
 	enum GenType {
-		LEGAL, CAPTURES,
+		LEGAL, CAPTURES, TACTICAL
 	};
 
 	namespace Analisis {
