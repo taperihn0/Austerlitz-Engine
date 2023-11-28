@@ -74,7 +74,7 @@ void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag,
 	HashEntry& entry = htab[hash.key % hash_size];
 
 	// depth-preffered replacement scheme
-	if (entry.depth > g_depth)
+	if (!(entry.age <= curr_age - 3) and entry.depth > g_depth)
 		return;
 
 	entry.zobrist = hash.key;
@@ -86,5 +86,5 @@ void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag,
 	entry.score = g_score;
 	entry.flag = g_flag;
 	entry.depth = g_depth;
-	entry.age = 0;
+	entry.age = curr_age;
 }

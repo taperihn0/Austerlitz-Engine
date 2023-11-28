@@ -49,6 +49,7 @@ namespace Eval {
 		constexpr auto ext_king_zone = cexpr::CexprArr<false, U64, 64>([](int i) {
 			return sqMaskKingAttacks(WHITE, i) | sqMaskKnightAttacks(WHITE, i);
 		});
+
 	}
 
 	// resources for evaluating a position

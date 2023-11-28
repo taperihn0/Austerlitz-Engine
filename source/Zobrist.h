@@ -3,7 +3,7 @@
 #include "BitBoard.h"
 #include "GeneratingMagics.h"
 #include "BitBoardsSet.h"
-#include "string"
+#include <string>
 
 
 struct Zobrist {
@@ -56,8 +56,10 @@ public:
 		min_size = 1_MB, max_size = 128_MB;
 	static constexpr HashEntry empty_entry = { 0, 0, 0, HashEntry::Flag::HASH_EXACT, HashEntry::no_score };
 	
-	inline TranspositionTable() {
+	inline TranspositionTable() 
+	: curr_age(0) {
 		setSize(default_size / 1_MB);
+		clear();
 	};
 
 	static inline std::string hashInfo() {
@@ -75,6 +77,7 @@ public:
 	void write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply);
 
 	inline void clear() {
+		curr_age = 0;
 		std::fill(htab.begin(), htab.end(), empty_entry);
 	}
 
@@ -89,16 +92,14 @@ public:
 	}
 
 	// decrease entries age and delete too old entries 
-	inline void decreaseAge() {
-		for (auto& entry : htab) {
-			if (HashEntry::isValid(entry.score) and ++entry.age >= 3) 
-				entry = empty_entry;
-		}
+	inline void increaseAge() {
+		curr_age++;
 	}
 
 private:
 	size_t hash_size;
 	std::vector<HashEntry> htab;
+	uint8_t curr_age;
 };
 
 extern TranspositionTable tt;

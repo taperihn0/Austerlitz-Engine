@@ -161,7 +161,7 @@ namespace Search {
 			node[ply].checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 			
 			// late move pruning using previous fail-low moves in nullwindow search and non-late moves count
-			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move and move.isQuiet())
+			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE))
 				is_pruned = true;
 			// if PV move is already processed, save time by checking uninteresting moves 
 			// using null window and late move reduction (PV Search) -
@@ -308,7 +308,7 @@ namespace Search {
 
 		// cleaning
 		clearHistory();
-		tt.decreaseAge();
+		tt.increaseAge();
 		
 		int lbound = low_bound,
 			hbound = high_bound,

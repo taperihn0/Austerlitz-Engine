@@ -417,8 +417,8 @@ namespace Eval {
 		}
 		else {
 			// king distance consideration
-			if (relative_eval > 0) 
-				eval += Value::distance_score.get(eval_lookup.k_sq[SIDE], eval_lookup.k_sq[!SIDE]);
+			if (relative_eval > 0)
+				eval += Value::distance_score.get(eval_lookup.k_sq[SIDE], eval_lookup.k_sq[!SIDE]);			
 			eval += Value::late_king_score[flipSquare<SIDE>(eval_lookup.k_sq[SIDE])];
 		}
 
