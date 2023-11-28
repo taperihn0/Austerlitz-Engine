@@ -1,4 +1,5 @@
-﻿# 𝔄𝔲𝔰𝔱𝔢𝔯𝔩𝔦𝔱𝔷 Chess Engine by Simon B.
+﻿# 𝔄𝔲𝔰𝔱𝔢𝔯𝔩𝔦𝔱𝔷
+## Chess Engine by Simon B.
 
 ![](logo/austerlitz_background_logo.png)
 
