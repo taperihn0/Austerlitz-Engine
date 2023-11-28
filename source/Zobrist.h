@@ -69,7 +69,7 @@ public:
 	}
 
 	inline std::string currSizeInfo() {
-		return "hash size " + std::to_string(memory_MB_size / 1_MB) + "MB entries " + std::to_string(hash_size);
+		return "hash size " + std::to_string(memory_MB_size / 1_MB) + "MB entries number " + std::to_string(hash_size);
 	}
 
 	int read(int alpha, int beta, int g_depth, int ply);

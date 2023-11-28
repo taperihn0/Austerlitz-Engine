@@ -173,7 +173,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 		line += " " + std::string(argv[i]);
 
 	if (i_stream == &std::cin)
-		OS << "Polish Chess Engine: Austerlitz 1 by Simon B.\n";
+		OS << "Polish chess engine, Austerlitz 1.4.5 - by Simon B.\n";
 
 	do {
 		if (!skip_getline and !std::getline(IS, line))
