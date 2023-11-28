@@ -185,6 +185,9 @@
     <ClInclude Include="source\UCI.h" />
     <ClInclude Include="source\Zobrist.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="LICENSE.md" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
