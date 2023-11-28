@@ -191,11 +191,11 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "setoption")  setOption(strm);
 		else if (token == "print")      BBs.printBoard();
 		else if (token == "benchmark")  bench.start();
+		else if (token == "hashinfo")   OS << tt.currSizeInfo() << '\n';
 #if defined(__DEBUG__)
 		else if (token == "hashkey")    OS << hash.key << '\n';
 		else if (token == "eval")       evalInfo();
 		else if (token == "see")        seePrint(strm);
-		else if (token == "hash")       OS << tt.currSizeInfo() << '\n';
 #endif
 	} while (line != "quit");
 }

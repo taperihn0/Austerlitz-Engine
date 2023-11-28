@@ -30,7 +30,7 @@ struct HashEntry {
 	static constexpr int no_score = std::numeric_limits<int>::min();
 
 	// hashing flags
-	enum class Flag {
+	enum class Flag : uint8_t {
 		HASH_EXACT,
 		HASH_ALPHA,
 		HASH_BETA
@@ -52,25 +52,24 @@ inline constexpr size_t operator"" _MB(ULL mb) noexcept {
 // main transposition table class
 class TranspositionTable {
 public:
-	static constexpr size_t default_size = 6_MB,
-		min_size = 1_MB, max_size = 128_MB;
+	static constexpr size_t default_MB_size = 6_MB,
+		min_MB_size = 1_MB, max_MB_size = 256_MB;
 	static constexpr HashEntry empty_entry = { 0, 0, 0, HashEntry::Flag::HASH_EXACT, HashEntry::no_score };
 	
 	inline TranspositionTable() 
 	: curr_age(0) {
-		setSize(default_size / 1_MB);
-		clear();
+		setSize(default_MB_size / 1_MB);
 	};
 
 	static inline std::string hashInfo() {
 		return "option name Hash type spin default "
-			+ std::to_string(default_size / 1_MB)
-			+ " min " + std::to_string(min_size / 1_MB) 
-			+ " max " + std::to_string(max_size / 1_MB);
+			+ std::to_string(default_MB_size / 1_MB)
+			+ " min " + std::to_string(min_MB_size / 1_MB) 
+			+ " max " + std::to_string(max_MB_size / 1_MB);
 	}
 
 	inline std::string currSizeInfo() {
-		return "hash size " + std::to_string(hash_size / 1_MB);
+		return "hash size " + std::to_string(memory_MB_size / 1_MB) + "MB entries " + std::to_string(hash_size);
 	}
 
 	int read(int alpha, int beta, int g_depth, int ply);
@@ -81,12 +80,15 @@ public:
 		std::fill(htab.begin(), htab.end(), empty_entry);
 	}
 
-	inline void setSize(size_t mb_size) {
-		hash_size = 1_MB * mb_size;
+	inline void setSize(size_t g_size) {
+		memory_MB_size = 1_MB * g_size;
 
-		hash_size = std::max(hash_size, min_size);
-		hash_size = std::min(hash_size, max_size);
+		// adjust memory to min/max memory tt bound size
+		memory_MB_size = std::max(memory_MB_size, min_MB_size);
+		memory_MB_size = std::min(memory_MB_size, max_MB_size);
 
+		// actual hash size, as a given memory size divided by entry size
+		hash_size = memory_MB_size / sizeof(HashEntry);
 		htab.resize(hash_size);
 		clear();
 	}
@@ -97,7 +99,7 @@ public:
 	}
 
 private:
-	size_t hash_size;
+	size_t hash_size, memory_MB_size;
 	std::vector<HashEntry> htab;
 	uint8_t curr_age;
 };
