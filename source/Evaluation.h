@@ -26,7 +26,7 @@ namespace Eval {
 			return inBetween(sq, (side ? 0 : 56) + sq % 8);
 		});
 
-		// forward file masks for passed pawns
+		// forward files masks for passed pawns
 		constexpr auto nf_file = cexpr::CexprArr<true, U64, 2, 64>([](bool side, int sq) constexpr {
 			const U64 same_forward_rank = sf_file.get(side, sq);
 			return eastOne(same_forward_rank) | westOne(same_forward_rank);
@@ -43,11 +43,6 @@ namespace Eval {
 			}
 
 			return res;
-		});
-
-		// extendend king zone for knights
-		constexpr auto ext_king_zone = cexpr::CexprArr<false, U64, 64>([](int i) {
-			return sqMaskKingAttacks(WHITE, i) | sqMaskKnightAttacks(WHITE, i);
 		});
 
 	}
@@ -71,11 +66,8 @@ namespace Eval {
 			BISHOP_VALUE = 325,
 			ROOK_VALUE = 500,
 			QUEEN_VALUE = 975,
-			KING_VALUE = 10000
-		};
-
-		enum ScoreConstans {
-			DOUBLE_KING_VAL = 2 * KING_VALUE,
+			KING_VALUE = 10000,
+			DOUBLE_KING_VAL = 2 * KING_VALUE
 		};
 
 		constexpr std::array<int, 12> piece_material = {
@@ -88,7 +80,7 @@ namespace Eval {
 			OTHER_WEIGHT = 2
 		};
 
-		// single lookup table for score of each square for evary single piece
+		// single lookup table for score of each square for every single piece
 		using posScoreTab = std::array<int, 64>;
 
 		constexpr posScoreTab pawn_score = {
@@ -237,7 +229,7 @@ namespace Eval {
 
 		// easily aggregated lookups
 		using aggregateScoreTab = std::array<std::array<posScoreTab, 6>, 3>;
-		constexpr aggregateScoreTab position_score = { {
+		constexpr aggregateScoreTab position_score = {{
 			{
 				pawn_score,
 				knight_score,
@@ -264,7 +256,8 @@ namespace Eval {
 				late_queen_score,
 				late_king_score
 			}
-		} };
+
+		}};
 
 		constexpr auto distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int d = cexpr::abs(i % 8 - j % 8) + cexpr::abs(i / 8 - j / 8);
@@ -272,12 +265,12 @@ namespace Eval {
 		});
 
 		constexpr auto diag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
-			const int sc_i = (i % 8) + (i / 8), sc_j = (j % 8) - (j / 8);
+			const int sc_i = (i % 8) + (i / 8), sc_j = (j % 8) + (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
 		});
 
 		constexpr auto adiag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
-			const int sc_i = 7 - (i % 8) + (i / 8), sc_j = 7 - (j % 8) + (j / 8);
+			const int sc_i = 7 - (i % 8) - (i / 8), sc_j = 7 - (j % 8) + (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
 		});
 
@@ -309,6 +302,14 @@ namespace Eval {
 
 			return 3 - c;
 		});
+
+		enum connectivityProtectionWeight {
+			ENDGAME_PAWN_ATTACK = 7,
+			PAWN_ATTACK = 6,
+			MINOR_ATTACK = 3,
+			ROOK_ATTACK = 2,
+			QUEEN_ATTACK = 1,
+		};
 
 	} // namespace Value
 

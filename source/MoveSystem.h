@@ -3,7 +3,7 @@
 #include "BitBoard.h"
 
 
-//	compass rose for bit shifting while moving in bitboard 
+// compass rose for bit shifting while moving in bitboard 
 namespace Compass {
 
 	// constants usefull especially for one step only concept
@@ -41,7 +41,7 @@ __CEXPR U64 genShift(U64 bb, int shift) noexcept {
 
 namespace {
 
-	//  ONE STEP ONLY functions
+	// one step only functions
 	__CEXPR U64 nortOne(U64 bb) { return genShift(bb, Compass::nort); }
 	__CEXPR U64 noEaOne(U64 bb) { return genShift((bb & Constans::not_h_file), Compass::noEa); }
 	__CEXPR U64 eastOne(U64 bb) { return genShift((bb & Constans::not_h_file), Compass::east); }

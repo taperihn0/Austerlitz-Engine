@@ -51,17 +51,8 @@ enum enumSquare {
 	a8, b8, c8, d8, e8, f8, g8, h8
 };
 
-// vertical flip squares lookup
-constexpr std::array<int, 64> ver_flip_square = {
-	a8, b8, c8, d8, e8, f8, g8, h8,
-	a7, b7, c7, d7, e7, f7, g7, h7,
-	a6, b6, c6, d6, e6, f6, g6, h6,
-	a5, b5, c5, d5, e5, f5, g5, h5,
-	a4, b4, c4, d4, e4, f4, g4, h4,
-	a3, b3, c3, d3, e3, f3, g3, h3,
-	a2, b2, c2, d2, e2, f2, g2, h2,
-	a1, b1, c1, d1, e1, f1, g1, h1
-};
+// vertical flipped squares
+constexpr auto ver_flip_square = cexpr::CexprArr<false, int, 64>([](int i) constexpr { return i ^ 56; });
 
 // translate index to string square in little endian mapping
 constexpr std::array<const char*, 64> index_to_square = {
@@ -127,7 +118,7 @@ namespace Constans {
 		dsquares = 0xAA55AA55AA55AA55,
 		center = 0x0000001818000000,
 		board_side[2] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000 },
-		king_center[2] = { 0x000000000000001C, 0x1C00000000000000 },
+		king_center[2] = { 0x000000000000FF1C, 0x1CFF000000000000 },
 		castle_sides[2][2] = { 0x0000000000000003, 0x00000000000000E0, 0x0300000000000000, 0xE000000000000000 },
 		ban_dev_sq[2] = { 0xFFFFFFFFFFFFFF00, 0x00FFFFFFFFFFFFFF };
 
@@ -326,5 +317,5 @@ namespace islandCountLookUp {
 }
 
 inline constexpr int islandCount(U64 bb) {
-	return islandCountLookUp::lookup.get(static_cast<int>(bb));
+	return islandCountLookUp::lookup.get(static_cast<uint8_t>(bb));
 }
