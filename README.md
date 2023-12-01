@@ -56,11 +56,13 @@ on HCE - static, hand crafted evaluation routine.
 	* *Pawn Islands*
 	* *Backward Pawns*
 	* *Double Pawns*
-	* *Passers*
-	* *Isolanis*
+	* *Passers, Clear Passers*
+	* *Isolanis, Half-Isolanis*
 	* *Overly Advanced Pawns*
-* *Knight Position*
+	* *Simpified Pawn Shield*
+* *Knights Evaluation*
 	* *Outpos Check*
+	* *Safe Mobility*
 * *Bishop Position*
 	* *Bishop Pair*
 * *Rook Position*
@@ -70,7 +72,7 @@ on HCE - static, hand crafted evaluation routine.
 	* *Early development penalty*
 * *King Zone Control*
 * *Castling Possibility*
-* *Mobility + Connectivity*
+* *Mobility and Connectivity*
 
 ***
 
