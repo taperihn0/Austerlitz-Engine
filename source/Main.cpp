@@ -23,8 +23,6 @@ Order::butterflyLookUp Order::butterfly, Order::countermove;
 UCI UCI_o;
 SearchBenchmark bench;
 
-Search::PV::lenghtPV Search::PV::pv_len;
-Search::PV::linePV Search::PV::pv_line;
 MoveItem::iMove Search::prev_move;
 
 TranspositionTable tt;

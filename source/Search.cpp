@@ -10,6 +10,13 @@ namespace Search {
 	// aspiration window reduction size
 	constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
 
+	MoveItem::iMove bm;
+
+	enum plyNode {
+		ROOT = 0,
+		ROOT_CHILD = 1,
+	};
+
 	// search data stucture
 	struct SearchResults {
 		int score;
@@ -18,7 +25,7 @@ namespace Search {
 
 	// node data variables
 	struct NodeDataAggregator {
-		MoveItem::iMove my_prev;
+		MoveItem::iMove my_prev, node_best_move;
 		BitBoardsSet bbs_cpy;
 		gState gstate_cpy;
 		U64 hash_cpy;
@@ -36,7 +43,7 @@ namespace Search {
 	int qSearch(int alpha, int beta, int ply);
 
 	enum depthNode {
-		LEAF_NODE = 0,
+		LEAF = 0,
 		FRONTIER = 1,
 		PRE_FRONTIER = 2,
 		PRE_PRE_FRONTIER = 3
@@ -49,6 +56,7 @@ namespace Search {
 		node[ply].hash_cpy = hash.key;
 		node[ply].prev_to = prev_move.getMask<MoveItem::iMask::TARGET>() >> 6;
 		node[ply].hash_flag = HashEntry::Flag::HASH_ALPHA;
+		if (ply) node[ply].node_best_move = MoveItem::iMove::no_move;
 	}
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
@@ -59,23 +67,25 @@ namespace Search {
 			time_data.stop = true;
 			return time_stop_sign;
 		}
-		else if (ply and (rep_tt.isRepetition() or game_state.is50moveDraw()))
+		else if (ply != ROOT and (rep_tt.isRepetition() or game_state.is50moveDraw()))
 			return draw_score;
+
+		const bool pv_node = beta - alpha > 1;
 
 		// do not use tt in root
 		static int tt_score;
-		if (ply and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth, ply)))
+		if (ply != ROOT and HashEntry::isValid(tt_score = tt.read(alpha, beta, depth, ply)))
 			return tt_score;
 		// break condition and quiescence search
-		else if (depth <= LEAF_NODE) {
-			// init PV table lenght
-			PV::pv_len[ply] = 0;
+		else if (depth <= LEAF) {
 			node[ply].score = qSearch(alpha, beta, ply);
+
 			if (!time_data.stop)
 				tt.write(0, node[ply].score,
 					node[ply].score == alpha ? HashEntry::Flag::HASH_ALPHA :
 					node[ply].score == beta ? HashEntry::Flag::HASH_BETA :
-					HashEntry::Flag::HASH_EXACT, ply);
+					HashEntry::Flag::HASH_EXACT, ply, MoveItem::iMove::no_move);
+
 			return node[ply].score;
 		}
 
@@ -130,7 +140,7 @@ namespace Search {
 
 			// futility pruning and reduction routines
 			if (i >= 1 and node[ply].mcount >= 8 and !incheck and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE)
-				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp)) {
+				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp) and ply != ROOT) {
 				
 				// margins for each depth
 				static constexpr int futility_margin = 80, ext_margin = 450, razor_margin = 950;
@@ -184,8 +194,12 @@ namespace Search {
 			hash.key = node[ply].hash_cpy;
 			prev_move = node[ply].my_prev;
 
-			if (time_data.stop) return time_stop_sign;
-			else if (is_pruned) return alpha;
+			if (time_data.stop) {
+				tt.write(depth, alpha, node[ply].hash_flag, ply, node[ply].node_best_move);
+				return time_stop_sign;
+			}
+			else if (is_pruned)
+				break;
 
 			// register move appearance in butterfly board
 			node[ply].to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
@@ -193,6 +207,10 @@ namespace Search {
 			Order::butterfly[node[ply].pc][node[ply].to] += depth;
 
 			if (node[ply].score > alpha) {
+				//if (ply == ROOT)
+				//	bm = move;
+				node[ply].node_best_move = move;
+
 				// fail hard beta-cutoff
 				if (node[ply].score >= beta) {
 					if (!move.isCapture()) {
@@ -209,23 +227,16 @@ namespace Search {
 						Order::countermove[node[ply].prev_pc][node[ply].prev_to] = move.raw();
 					}
 
-					tt.write(depth, beta, HashEntry::Flag::HASH_BETA, ply);
+					tt.write(depth, beta, HashEntry::Flag::HASH_BETA, ply, move);
 					return beta;
 				}
 
 				node[ply].hash_flag = HashEntry::Flag::HASH_EXACT;
 				alpha = node[ply].score;
-
-				PV::pv_line[ply][0] = move;
-
-				for (int j = 0; j < PV::pv_len[ply + 1]; j++)
-					PV::pv_line[ply][j + 1] = PV::pv_line[ply + 1][j];
-
-				PV::pv_len[ply] = PV::pv_len[ply + 1] + 1;
 			}
 		}
 
-		tt.write(depth, alpha, node[ply].hash_flag, ply);
+		tt.write(depth, alpha, node[ply].hash_flag, ply, node[ply].node_best_move);
 		// fail-low cutoff (return best option)
 		return alpha;
 	}
@@ -298,7 +309,6 @@ namespace Search {
 		search_results.nodes = 0;
 		InitState::clearKiller();
 		InitState::clearButterfly();
-		PV::clear();
 		InitState::clearHistory();
 	}
 
@@ -315,11 +325,13 @@ namespace Search {
 			curr_dpt = 1,
 			prev_score = search_results.score;
 		long long time;
+		MoveItem::iMove ponder;
 
 		time_data.start = now();
-		
+
 		// aspiration window search
 		while (curr_dpt <= depth) {
+			ponder = MoveItem::iMove::no_move;
 			search_results.score = alphaBeta<false>(lbound, hbound, curr_dpt, 0);
 
 			if (search_results.score == time_stop_sign)
@@ -343,15 +355,13 @@ namespace Search {
 			// no checkmate
 			else OS << "info score cp " << search_results.score;
 
-			OS  << " depth " << curr_dpt++
+			OS  << " depth " << curr_dpt
 				<< " nodes " << search_results.nodes
 				<< " time " << (time = sinceStart_ms(time_data.start))
 				<< " nps " << static_cast<int>(search_results.nodes / (1. * (time + 1) / 1000))
 				<< " pv ";
 
-			for (int cnt = 0; cnt < PV::pv_len[0]; cnt++)
-				PV::pv_line[0][cnt].print() << ' ';
-			OS << '\n';
+			tt.recreatePV(curr_dpt++, node[ROOT].node_best_move, ponder);
 
 			if (time_data.stop 
 				or (time_data.is_time and 5 * sinceStart_ms(time_data.start) / 2 > time_data.this_move))
@@ -361,11 +371,11 @@ namespace Search {
 		}
 
 		OS << "bestmove ";
-		PV::pv_line[0][0].print() << ' ';
+		node[ROOT].node_best_move.print() << ' ';
 
-		if (depth >= 2) {
+		if (ponder != MoveItem::iMove::no_move) {
 			OS << "ponder ";
-			PV::pv_line[1][0].print() << ' ';
+			ponder.print() << ' ';
 		}
 
 		OS << '\n';

@@ -56,6 +56,8 @@ namespace MoveItem {
 		iMove(const iMove&) = default;
 		iMove() = default;
 
+		static constexpr uint32_t no_move = 0;
+
 		// no need to return a value
 		inline void operator=(uint32_t data) noexcept { cmove = data; }
 		inline bool operator==(iMove b) const noexcept { return cmove == b.cmove; }
@@ -68,6 +70,7 @@ namespace MoveItem {
 		}
 
 		inline auto& print() const {
+			if (!cmove) return OS;
 			return OS << index_to_square[getMask<iMask::ORIGIN>()]
 				<< index_to_square[getMask<iMask::TARGET>() >> 6]
 				<< " nbrq"[getMask<iMask::PROMOTION>() >> 20];

@@ -50,9 +50,6 @@ namespace Order {
 	// Static Exchange Evaluation for captures
 	int see(int sq);
 
-	// sort given move list based on score of each move
-	void sort(MoveList& move_list, int ply, int depth);
-
 	/* move ordering techniques */
 
 	// swap best move so it's on the i'th place

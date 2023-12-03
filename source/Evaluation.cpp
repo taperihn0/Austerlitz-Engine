@@ -453,14 +453,27 @@ namespace Eval {
 	template <enumSide SIDE, gState::gPhase Phase>
 	int kingEval(int relative_eval) {
 		// king zone control
-		int eval = eval_vector.att_value[SIDE] * Value::attack_count_weight[eval_vector.att_count[SIDE]] / 120;
+		const int k_zone_control = eval_vector.att_value[SIDE] * Value::attack_count_weight[eval_vector.att_count[SIDE]] / 120;
+		int eval = k_zone_control;
 
 		if constexpr (Phase != gState::ENDGAME) {
 			eval += Value::king_score[flipSquare<SIDE>(eval_vector.k_sq[SIDE])];
 
 			// check castling possibility
-			if constexpr (Phase == gState::OPENING)
+			if constexpr (Phase == gState::OPENING) {
 				if (isCastle<SIDE>()) eval += 15;
+				return eval;
+			}
+			/*
+			else if (k_zone_control <= 20) return eval;
+
+			// king moves count
+			const U64 k_moves = eval_vector.k_zone[SIDE] & BBs[nEmpty];
+
+			// blocked king
+			if (k_moves & ~Constans::r_by_index[eval_vector.k_sq[SIDE]]) eval += 2 * bitCount(k_moves);
+			else eval -= 10;
+			*/
 		}
 		else {
 			// king distance consideration

@@ -1,6 +1,7 @@
 #include "Zobrist.h"
 #include "BitBoardsSet.h"
 #include "Search.h"
+#include "MoveGeneration.h"
 
 // kind of 'wrapper' funcitions for random U64 generator
 inline U64 randomU64wrap_2(int, int) {
@@ -70,7 +71,7 @@ int TranspositionTable::read(int alpha, int beta, int g_depth, int ply) {
 }
 
 
-void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply) {
+void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply, MoveItem::iMove g_move) {
 	HashEntry& entry = htab[hash.key % hash_size];
 
 	// depth-preffered replacement scheme, but if an entry is too old, instantly replace it.
@@ -87,4 +88,44 @@ void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag,
 	entry.flag = g_flag;
 	entry.depth = g_depth;
 	entry.age = curr_age;
+	entry.move = g_move;
+}
+
+
+void TranspositionTable::recreatePV(int g_depth, MoveItem::iMove best, MoveItem::iMove& ponder) {
+	MoveItem::iMove move;
+
+	const BitBoardsSet bbs_cpy = BBs;
+	const gState gstate_cpy = game_state;
+	const U64 hash_cpy = hash.key;
+
+	// print found in search root move and ponder move
+	best.print() << ' ';
+	MovePerform::makeMove(best);
+
+	for (int i = 1; (move = tt.hashMove()) != MoveItem::iMove::no_move and i < g_depth; i++) {
+		if (i == 1) ponder = move;
+		move.print() << ' ';
+		MovePerform::makeMove(move);
+	}
+
+	OS << '\n';
+
+	BBs = bbs_cpy;
+	game_state = gstate_cpy;
+	hash.key = hash_cpy;
+}
+
+
+void TranspositionTable::setSize(size_t g_size) {
+	memory_MB_size = 1_MB * g_size;
+
+	// adjust memory to min/max memory tt bound size
+	memory_MB_size = std::max(memory_MB_size, min_MB_size);
+	memory_MB_size = std::min(memory_MB_size, max_MB_size);
+
+	// actual hash size, as a given memory size divided by entry size
+	hash_size = memory_MB_size / sizeof(HashEntry);
+	htab.resize(hash_size);
+	clear();
 }

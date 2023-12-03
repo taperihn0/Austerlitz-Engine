@@ -3,6 +3,7 @@
 #include "BitBoard.h"
 #include "GeneratingMagics.h"
 #include "BitBoardsSet.h"
+#include "MoveItem.h"
 #include <string>
 
 
@@ -42,6 +43,7 @@ struct HashEntry {
 	uint8_t depth, age;
 	Flag flag;
 	int score;
+	MoveItem::iMove move;
 };
 
 inline constexpr size_t operator"" _MB(ULL mb) noexcept {
@@ -54,49 +56,49 @@ class TranspositionTable {
 public:
 	static constexpr size_t default_MB_size = 6_MB,
 		min_MB_size = 1_MB, max_MB_size = 256_MB;
-	static constexpr HashEntry empty_entry = { 0, 0, 0, HashEntry::Flag::HASH_EXACT, HashEntry::no_score };
+
+	static constexpr HashEntry empty_entry = {
+		0, 0, 0, 
+		HashEntry::Flag::HASH_EXACT, 
+		HashEntry::no_score, MoveItem::iMove::no_move 
+	};
 	
 	inline TranspositionTable() 
 	: curr_age(0) {
 		setSize(default_MB_size / 1_MB);
 	};
 
-	static inline std::string hashInfo() {
-		return "option name Hash type spin default "
-			+ std::to_string(default_MB_size / 1_MB)
-			+ " min " + std::to_string(min_MB_size / 1_MB) 
-			+ " max " + std::to_string(max_MB_size / 1_MB);
-	}
-
-	inline std::string currSizeInfo() {
-		return "hash size " + std::to_string(memory_MB_size / 1_MB) + "MB entries number " + std::to_string(hash_size);
-	}
-
 	int read(int alpha, int beta, int g_depth, int ply);
-	void write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply);
+	void write(int g_depth, int g_score, HashEntry::Flag g_flag, int ply, MoveItem::iMove g_move);
+
+	// get hash move from tt entry of current hashkey
+	inline MoveItem::iMove hashMove() noexcept {
+		const HashEntry& entry = htab[hash.key % hash_size];
+		return (entry.zobrist == hash.key) ? entry.move : MoveItem::iMove::no_move;
+	};
+
+	void recreatePV(int g_depth, MoveItem::iMove best, MoveItem::iMove& ponder);
+	void setSize(size_t g_size);
 
 	inline void clear() {
 		curr_age = 0;
 		std::fill(htab.begin(), htab.end(), empty_entry);
 	}
 
-	inline void setSize(size_t g_size) {
-		memory_MB_size = 1_MB * g_size;
+	static inline std::string hashInfo() {
+		return "option name Hash type spin default "
+			+ std::to_string(default_MB_size / 1_MB)
+			+ " min " + std::to_string(min_MB_size / 1_MB)
+			+ " max " + std::to_string(max_MB_size / 1_MB);
+	}
 
-		// adjust memory to min/max memory tt bound size
-		memory_MB_size = std::max(memory_MB_size, min_MB_size);
-		memory_MB_size = std::min(memory_MB_size, max_MB_size);
-
-		// actual hash size, as a given memory size divided by entry size
-		hash_size = memory_MB_size / sizeof(HashEntry);
-		htab.resize(hash_size);
-		clear();
+	inline std::string currSizeInfo() {
+		return "hash size " + std::to_string(memory_MB_size / 1_MB)
+			+ "MB entries number " + std::to_string(hash_size);
 	}
 
 	// decrease entries age and delete too old entries 
-	inline void increaseAge() {
-		curr_age++;
-	}
+	inline void increaseAge() noexcept { curr_age++; }
 
 private:
 	size_t hash_size, memory_MB_size;
@@ -120,9 +122,7 @@ public:
 	bool isRepetition();
 	void posRegister() noexcept;
 
-	inline void clear() noexcept {
-		count = 0;
-	}
+	inline void clear() noexcept { count = 0; }
 
 	int count;
 private:

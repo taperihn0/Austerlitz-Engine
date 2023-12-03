@@ -25,23 +25,6 @@ namespace Search {
 
 	extern MoveItem::iMove prev_move;
 	extern Time time_data;
-	
-	// Principal Variation lookup tables
-	namespace PV {
-
-		using lenghtPV = std::array<int, Search::max_Ply>;
-		extern lenghtPV pv_len;
-
-		using linePV = std::array<std::array<MoveItem::iMove, Search::max_Ply>, Search::max_Ply>;
-		extern linePV pv_line;
-
-		// clear PV lookup
-		inline void clear() {
-			pv_len.fill(0);
-			for (auto& x : PV::pv_line) x.fill(0);
-		}
-
-	} // namespace PV 
 
 	// calculate best move using Iterative Deepening
 	void bestMove(const int depth);

@@ -56,11 +56,11 @@ namespace Order {
 	}
 
 	// evaluate move
-	int moveScore(const MoveItem::iMove& move, int ply, int depth) {
+	int moveScore(const MoveItem::iMove& move, int ply, int depth, MoveItem::iMove tt_move) {
 		const int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
 
 		// PV move detected
-		if (Search::PV::pv_line[ply][0] == move)
+		if (move == tt_move)
 			return PV_SCORE;
 		// distinguish between quiets and captures
 		else if (move.isCapture()) {
@@ -108,20 +108,14 @@ namespace Order {
 		return (RELATIVE_HISTORY_SCALE * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1 + counter_bonus;
 	}
 
-	// simple move sorting function
-	void sort(MoveList& move_list, int ply, int depth) {
-		std::sort(move_list.begin(), move_list.end(), [ply, depth](const MoveItem::iMove& a, const MoveItem::iMove& b) {
-			return moveScore(a, ply, depth) > moveScore(b, ply, depth);
-		});
-	}
-
 	// pick best based on normal moveScore() eval function
 	int pickBest(MoveList& move_list, int s, int ply, int depth) {
 		static MoveItem::iMove tmp;
-		int cmp_score = moveScore(move_list[s], ply, depth), i_score;
+		const MoveItem::iMove tt_move = tt.hashMove();
+		int cmp_score = moveScore(move_list[s], ply, depth, tt_move), i_score;
 
 		for (int i = s + 1; i < move_list.size(); i++) {
-			i_score = moveScore(move_list[i], ply, depth);
+			i_score = moveScore(move_list[i], ply, depth, tt_move);
 
 			if (i_score > cmp_score) {
 				cmp_score = i_score;
