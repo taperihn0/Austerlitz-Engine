@@ -460,20 +460,8 @@ namespace Eval {
 			eval += Value::king_score[flipSquare<SIDE>(eval_vector.k_sq[SIDE])];
 
 			// check castling possibility
-			if constexpr (Phase == gState::OPENING) {
+			if constexpr (Phase == gState::OPENING)
 				if (isCastle<SIDE>()) eval += 15;
-				return eval;
-			}
-			/*
-			else if (k_zone_control <= 20) return eval;
-
-			// king moves count
-			const U64 k_moves = eval_vector.k_zone[SIDE] & BBs[nEmpty];
-
-			// blocked king
-			if (k_moves & ~Constans::r_by_index[eval_vector.k_sq[SIDE]]) eval += 2 * bitCount(k_moves);
-			else eval -= 10;
-			*/
 		}
 		else {
 			// king distance consideration

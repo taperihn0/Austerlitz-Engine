@@ -92,7 +92,7 @@ namespace Search {
 		search_results.nodes++;
 		const bool incheck = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 
-		// Null Move Pruning method
+		// Null Move Pruning 
 		if constexpr (AllowNullMove) {
 			if (!incheck and depth >= 3 and !game_state.isPawnEndgame()) {
 				static constexpr int R = 2;
@@ -207,8 +207,6 @@ namespace Search {
 			Order::butterfly[node[ply].pc][node[ply].to] += depth;
 
 			if (node[ply].score > alpha) {
-				//if (ply == ROOT)
-				//	bm = move;
 				node[ply].node_best_move = move;
 
 				// fail hard beta-cutoff

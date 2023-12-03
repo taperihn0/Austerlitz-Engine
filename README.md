@@ -25,7 +25,7 @@ on HCE - static, hand crafted evaluation routine.
 	* *Aging, no buckets*
 * *Move Ordering*
 	* *MVV/LVA + Static Exchange Evaluation*
-	* *PV line probing*
+	* *Hash Move Ordering*
 	* *Killer Heuristics*
 	* *Countermove Heuristics*
 	* *Relative History Heuristics*
