@@ -55,26 +55,51 @@ namespace Order {
 		return gain[1];
 	}
 
+	inline int recaptureBonus(const MoveItem::iMove& move) noexcept {
+		return (Search::prev_move.isCapture()
+			and move.getTarget() == Search::prev_move.getTarget()) * RECAPTURE_BONUS;
+	}
+
+	inline int seeScore(const MoveItem::iMove& capt) {
+		return EQUAL_CAPTURE_SCORE + see(capt.getTarget());
+	}
+
+	inline int promotionScore(const MoveItem::iMove& promo_move) noexcept {
+		return PROMOTION_SCORE + promo_move.getPromo();
+	}
+
+	// relative history and countermove heuristic evaluation:
+	// adjust countermove bonus to ply level, since history score of a move 
+	// is increasing as plies are also increasing -
+	// just keep countermove bonus constans relative to history score
+	inline int quietScore(const MoveItem::iMove& move, const int target, const int ply) {
+		const int
+			pc = move.getPiece(),
+			prev_to = Search::prev_move.getTarget(), prev_pc = Search::prev_move.getPiece(),
+			counter_bonus = (Order::countermove[prev_pc][prev_to] == move.raw()) * (ply + 4);
+
+		return RELATIVE_HISTORY_SCALE * history_moves[pc][target] / (butterfly[pc][target] + 1) + counter_bonus + 1;
+	}
+
 	// evaluate move
 	int moveScore(const MoveItem::iMove& move, int ply, int depth, MoveItem::iMove tt_move) {
-		const int target = move.getMask<MoveItem::iMask::TARGET>() >> 6;
+		const int target = move.getTarget();
 
 		// PV move detected
 		if (move == tt_move)
-			return PV_SCORE;
+			return HASH_SCORE;
 		// distinguish between quiets and captures
 		else if (move.isCapture()) {
 			// evaluate good and equal captures at depth >= 5 slightly above killer moves,
 			// but keep bad captures scoring less than killers
 			if (depth >= 5) 
-				return FIRST_KILLER_SCORE + 1 + see(move.getMask<MoveItem::iMask::TARGET>() >> 6);
-
-			const int att = move.getMask<MoveItem::iMask::PIECE>() >> 12;
-			int victim;
-			const bool side = move.getMask<MoveItem::iMask::SIDE_F>();
-
-			if (move.isEnPassant())
+				return seeScore(move);
+			else if (move.isEnPassant()) 
 				return MVV_LVA::lookup[PAWN][PAWN];
+
+			const int att = move.getPiece();
+			int victim;
+			const bool side = move.getSide();
 
 			// find victim piece
 			for (auto pc = nBlackPawn - side; pc <= nBlackQueen; pc += 2) {
@@ -83,29 +108,21 @@ namespace Order {
 					break;
 				}
 			}
-			
-			return MVV_LVA::lookup[att][victim];
+
+			// recapture moves are treated slightly better than same victim-attacker captures
+			const int recapture_bonus = recaptureBonus(move);
+
+			return MVV_LVA::lookup[att][victim] + recapture_bonus;
 		}
 
 		if (move == killer[0][ply])
 			return FIRST_KILLER_SCORE;
 		else if (move == killer[1][ply])
 			return SECOND_KILLER_SCORE;
-		static int promo_pc;
-		if ((promo_pc = move.getPromo()))
-			return PROMOTION_SCORE + promo_pc;
+		else if (move.getPromo())
+			return promotionScore(move);
 
-		// relative history and countermove heuristic evaluation:
-		// adjust countermove bonus to ply level, since history score of a move 
-		// is increasing as plies are also increasing -
-		// just keep countermove bonus constans relative to history score
-		const int
-			pc = move.getMask<MoveItem::iMask::PIECE>() >> 12,
-			prev_to = Search::prev_move.getMask<MoveItem::iMask::TARGET>() >> 6,
-			prev_pc = Search::prev_move.getMask<MoveItem::iMask::PIECE>() >> 12,
-			counter_bonus = (Order::countermove[prev_pc][prev_to] == move.raw()) * (4 + ply);
-		
-		return (RELATIVE_HISTORY_SCALE * history_moves[pc][target]) / (butterfly[pc][target] + 1) + 1 + counter_bonus;
+		return quietScore(move, target, ply);
 	}
 
 	// pick best based on normal moveScore() eval function
@@ -128,10 +145,10 @@ namespace Order {
 		return cmp_score;
 	}
 
-	// if capture move return it's SEE score,
-	// else if promotion to queen, return promotion score, currently equal to capture score
+	// if move is capture return it's SEE score,
+	// else if promotion to queen, return promotion score, currently equal to zero, sane as equal capture score
 	inline int tacticalScore(const MoveItem::iMove& move) {
-		return move.isCapture() ? see(move.getMask<MoveItem::iMask::TARGET>() >> 6) : 0;
+		return move.isCapture() ? see(move.getTarget()) : 0;
 	}
 
 	// pick best tactical move using SEE and promotion ordering

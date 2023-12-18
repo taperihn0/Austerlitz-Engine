@@ -79,7 +79,7 @@ inline constexpr enumPiece toPieceType(size_t pc) {
 namespace {
 
 	template <enumPiece PC>
-	enumPiece_bbs bbsIndex() noexcept;
+	inline enumPiece_bbs bbsIndex() noexcept;
 
 	template <enumPiece PC>
 	inline enumPiece_bbs bbsIndex() noexcept { return nEmpty; }
@@ -97,10 +97,10 @@ namespace {
 	inline enumPiece_bbs bbsIndex<QUEEN>() noexcept { return nWhiteQueen; }
 
 	template <bool Side>
-	enumPiece_bbs bbsIndex(uint32_t pc);
+	inline enumPiece_bbs bbsIndex(uint32_t pc);
 
 	template <>
-	enumPiece_bbs bbsIndex<WHITE>(uint32_t pc) {
+	inline enumPiece_bbs bbsIndex<WHITE>(uint32_t pc) {
 		return pc == PAWN ? nWhitePawn :
 			pc == KNIGHT ? nWhiteKnight :
 			pc == BISHOP ? nWhiteBishop :
@@ -110,7 +110,7 @@ namespace {
 	}
 
 	template <>
-	enumPiece_bbs bbsIndex<BLACK>(uint32_t pc) {
+	inline enumPiece_bbs bbsIndex<BLACK>(uint32_t pc) {
 		return pc == PAWN ? nBlackPawn :
 			pc == KNIGHT ? nBlackKnight :
 			pc == BISHOP ? nBlackBishop :
@@ -119,6 +119,9 @@ namespace {
 			nBlackKing;
 	}
 
+	inline enumPiece_bbs bbsIndex(uint32_t pc, bool side) {
+		return static_cast<enumPiece_bbs>(pc * 2 + side);
+	}
 }
 
 class BitBoardsSet {

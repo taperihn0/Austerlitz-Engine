@@ -26,19 +26,16 @@ template <enumSide PC_SIDE>
 bool isSquareAttacked(int sq) {
 
 	// check pawn attack
-	if (BBs[nBlackPawn - PC_SIDE] & cpawn_attacks[PC_SIDE][sq]) {
+	if (BBs[nBlackPawn - PC_SIDE] & cpawn_attacks[PC_SIDE][sq])
 		return true;
-	}
 
 	// check knight attack
-	if (BBs[nBlackKnight - PC_SIDE] & cknight_attacks[sq]) {
+	if (BBs[nBlackKnight - PC_SIDE] & cknight_attacks[sq])
 		return true;
-	}
 
 	// same for king attacks
-	if (BBs[nBlackKing - PC_SIDE] & cking_attacks[sq]) {
+	if (BBs[nBlackKing - PC_SIDE] & cking_attacks[sq])
 		return true;
-	}
 
 	// sliding pieces attack
 	U64 queen = BBs[nBlackQueen - PC_SIDE],
@@ -46,9 +43,8 @@ bool isSquareAttacked(int sq) {
 		bishopQueen = BBs[nBlackBishop - PC_SIDE] | queen,
 		occ = BBs[nOccupied] & ~BBs[nWhiteKing + PC_SIDE];
 
-	if (bishopQueen & attack<BISHOP>(occ, sq)) {
+	if (bishopQueen & attack<BISHOP>(occ, sq))
 		return true;
-	}
 
 	// final checking
 	return (rookQueen & attack<ROOK>(occ, sq));

@@ -10,8 +10,6 @@ namespace Search {
 	// aspiration window reduction size
 	constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
 
-	MoveItem::iMove bm;
-
 	enum plyNode {
 		ROOT = 0,
 		ROOT_CHILD = 1,
@@ -54,9 +52,9 @@ namespace Search {
 		node[ply].bbs_cpy = BBs;
 		node[ply].gstate_cpy = game_state;
 		node[ply].hash_cpy = hash.key;
-		node[ply].prev_to = prev_move.getMask<MoveItem::iMask::TARGET>() >> 6;
+		node[ply].prev_to = prev_move.getTarget();
 		node[ply].hash_flag = HashEntry::Flag::HASH_ALPHA;
-		if (ply) node[ply].node_best_move = MoveItem::iMove::no_move;
+		if (ply != ROOT) node[ply].node_best_move = MoveItem::iMove::no_move;
 	}
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
@@ -69,8 +67,6 @@ namespace Search {
 		}
 		else if (ply != ROOT and (rep_tt.isRepetition() or game_state.is50moveDraw()))
 			return draw_score;
-
-		const bool pv_node = beta - alpha > 1;
 
 		// do not use tt in root
 		static int tt_score;
@@ -159,7 +155,7 @@ namespace Search {
 					depth = PRE_FRONTIER;
 
 			} // recapture extra time
-			else if (node[ply].prev_to == (move.getMask<MoveItem::iMask::TARGET>() >> 6)
+			else if (node[ply].prev_to == (move.getTarget())
 				and time_data.is_time and time_data.this_move > 300_ms
 				and time_data.this_move < time_data.left / 12) {
 				time_data.this_move += 50_ms;
@@ -171,7 +167,8 @@ namespace Search {
 			node[ply].checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 			
 			// late move pruning using previous fail-low moves in nullwindow search and non-late moves count
-			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE))
+			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move 
+				and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE))
 				is_pruned = true;
 			// if PV move is already processed, save time by checking uninteresting moves 
 			// using null window and late move reduction (PV Search) -
@@ -202,8 +199,8 @@ namespace Search {
 				break;
 
 			// register move appearance in butterfly board
-			node[ply].to = move.getMask<MoveItem::iMask::TARGET>() >> 6;
-			node[ply].pc = move.getMask<MoveItem::iMask::PIECE>() >> 12;
+			node[ply].to = move.getTarget();
+			node[ply].pc = move.getPiece();
 			Order::butterfly[node[ply].pc][node[ply].to] += depth;
 
 			if (node[ply].score > alpha) {
@@ -219,7 +216,7 @@ namespace Search {
 						// store move as a history move
 						Order::history_moves[node[ply].pc][node[ply].to] += depth * depth;
 
-						node[ply].prev_pc = node[ply].my_prev.getMask<MoveItem::iMask::PIECE>() >> 12;
+						node[ply].prev_pc = node[ply].my_prev.getPiece();
 
 						// store a countermove
 						Order::countermove[node[ply].prev_pc][node[ply].prev_to] = move.raw();

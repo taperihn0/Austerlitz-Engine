@@ -99,7 +99,7 @@ void TranspositionTable::recreatePV(int g_depth, MoveItem::iMove best, MoveItem:
 	const gState gstate_cpy = game_state;
 	const U64 hash_cpy = hash.key;
 
-	// print found in search root move and ponder move
+	// print found in search root move
 	best.print() << ' ';
 	MovePerform::makeMove(best);
 

@@ -482,9 +482,9 @@ namespace MovePerform {
 
 	// perform given move
 	void makeMove(const MoveItem::iMove& move) {
-		int target = move.getMask<MoveItem::iMask::TARGET>() >> 6,
-			origin = move.getMask<MoveItem::iMask::ORIGIN>();
-		const bool side = move.getMask<MoveItem::iMask::SIDE_F>();
+		int target = move.getTarget(),
+			origin = move.getOrigin();
+		const bool side = move.getSide();
 
 		// update player to turn and en passant state in Zobrist key
 		hash.key ^= hash.side_key;
@@ -563,7 +563,7 @@ namespace MovePerform {
 		}
 
 		// quiet moves or captures
-		const auto piece = move.getMask<MoveItem::iMask::PIECE>() >> 12;
+		const auto piece = move.getPiece();
 		const int bbs_pc = static_cast<int>(bbsIndex<WHITE>(piece)) + side;
 
 		hash.key ^= hash.piece_keys.get(bbs_pc, origin);

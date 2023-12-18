@@ -4,6 +4,7 @@
 #include "BitBoardsSet.h"
 #include "MoveSystem.h"
 #include "UCI.h"
+#include "LegalityTest.h"
 
 
 /* move list resources -
@@ -72,15 +73,31 @@ namespace MoveItem {
 		inline auto& print() const {
 			if (!cmove) return OS;
 			return OS << index_to_square[getMask<iMask::ORIGIN>()]
-				<< index_to_square[getMask<iMask::TARGET>() >> 6]
-				<< " nbrq"[getMask<iMask::PROMOTION>() >> 20];
+				<< index_to_square[getTarget()]
+				<< " nbrq"[getPromo()];
 		}
 
 		// construct a move based on a normal string notation
 		void constructMove(std::string move);
 
-		inline int getPromo() const noexcept {
+		inline uint32_t getPromo() const noexcept {
 			return getMask<iMask::PROMOTION>() >> 20;
+		}
+
+		inline uint32_t getPiece() const noexcept {
+			return getMask<iMask::PIECE>() >> 12;
+		}
+
+		inline int getTarget() const noexcept {
+			return getMask<iMask::TARGET>() >> 6;
+		}
+
+		inline int getOrigin() const noexcept {
+			return getMask<iMask::ORIGIN>();
+		}
+
+		inline int getSide() const noexcept {
+			return getMask<iMask::SIDE_F>();
 		}
 
 		inline bool isCapture() const noexcept {

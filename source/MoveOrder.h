@@ -35,15 +35,21 @@ namespace Order {
 	extern butterflyLookUp countermove;
 	
 	enum MoveEvalConstans {
-		PV_SCORE = 15000,
+		HASH_SCORE = 15000,
+
 		PROMOTION_SCORE = 950,
+
 		FIRST_KILLER_SCORE = 900,
 		SECOND_KILLER_SCORE = 890,
+
+		EQUAL_CAPTURE_SCORE = FIRST_KILLER_SCORE + 1,
+		RECAPTURE_BONUS = 5,
+
 		RELATIVE_HISTORY_SCALE = 13,
 	};
 
 	// return value, also so called 'score' of given move
-	int moveScore(const MoveItem::iMove& move, int ply, int depth);
+	int moveScore(const MoveItem::iMove& move, int ply, int depth, MoveItem::iMove tt_move);
 
 	/* move sorting */
 	
