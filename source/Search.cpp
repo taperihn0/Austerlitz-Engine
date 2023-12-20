@@ -7,38 +7,10 @@
 
 namespace Search {
 
-	// aspiration window reduction size
-	constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
-
 	enum plyNode {
 		ROOT = 0,
 		ROOT_CHILD = 1,
 	};
-
-	// search data stucture
-	struct SearchResults {
-		int score;
-		ULL nodes;
-	} search_results;
-
-	// node data variables
-	struct NodeDataAggregator {
-		MoveItem::iMove my_prev, node_best_move;
-		BitBoardsSet bbs_cpy;
-		gState gstate_cpy;
-		U64 hash_cpy;
-		int score, to, pc, prev_to, prev_pc, m_score;
-		HashEntry::Flag hash_flag;
-		bool checking_move;
-		MoveList ml;
-		size_t mcount;
-	};
-
-	// global pre-alloc resource variable of every main seach node indexed by [node_ply]
-	std::array<NodeDataAggregator, max_Ply> node;
-
-	// forward declaration
-	int qSearch(int alpha, int beta, int ply);
 
 	enum depthNode {
 		LEAF = 0,
@@ -47,19 +19,67 @@ namespace Search {
 		PRE_PRE_FRONTIER = 3
 	};
 
-	inline void initNodeData(int ply) {
-		node[ply].my_prev = prev_move;
-		node[ply].bbs_cpy = BBs;
-		node[ply].gstate_cpy = game_state;
-		node[ply].hash_cpy = hash.key;
-		node[ply].prev_to = prev_move.getTarget();
-		node[ply].hash_flag = HashEntry::Flag::HASH_ALPHA;
-		if (ply != ROOT) node[ply].node_best_move = MoveItem::iMove::no_move;
+	// search data stucture
+	struct SearchResults {
+		int score;
+		ULL nodes;
+	} search_results;
+
+	class NodesResources {
+	public:
+		inline NodesResources()
+		: node_data({ true }) {};
+
+		// node data variables
+		class NodeDataAggregator {
+		public:
+			inline NodeDataAggregator(bool root_node = false) noexcept
+			: is_root(root_node) {};
+
+			void initNodeData() {
+				my_prev = prev_move;
+				bbs_cpy = BBs;
+				gstate_cpy = game_state;
+				hash_cpy = hash.key;
+				prev_to = my_prev.getTarget();
+				prev_pc = my_prev.getPiece();
+				hash_flag = HashEntry::Flag::HASH_ALPHA;
+				if (!is_root) node_best_move = MoveItem::iMove::no_move;
+			}
+
+			MoveItem::iMove my_prev, node_best_move;
+			BitBoardsSet bbs_cpy;
+			gState gstate_cpy;
+			U64 hash_cpy;
+			int score, to, pc, prev_to, prev_pc, m_score;
+			HashEntry::Flag hash_flag;
+			bool checking_move;
+			MoveList ml;
+			size_t mcount;
+		private:
+			bool is_root;
+		};
+
+		inline NodeDataAggregator& operator[](const int ply) {
+			assert(ply < max_Ply);
+			return node_data[ply];
+		}
+
+	private:
+		// global pre-alloc resource variable of every main seach node indexed by [node_ply]
+		std::array<NodeDataAggregator, max_Ply> node_data;
+	} node;
+
+	// forward declaration
+	int qSearch(int alpha, int beta, int ply);
+
+	inline int dynamicReductionLMR(const int i, const MoveItem::iMove& move) noexcept {
+		return 1 + (i >= 6 and !Order::isCounterMove(move));
 	}
 
 	// negamax algorithm as an extension of minimax algorithm with alpha-beta pruning framework
 	template <bool AllowNullMove = true>
-	int alphaBeta(int alpha, int beta, int depth, int ply) {
+	int alphaBeta(int alpha, int beta, int depth, const int ply) {
 		// (nodes & check_modulo == 0) is an alternative operation to (nodes % check_modulo == 0)
 		if (time_data.is_time and !(search_results.nodes & time_check_modulo) and !time_data.checkTimeLeft()) {
 			time_data.stop = true;
@@ -126,18 +146,19 @@ namespace Search {
 				time_data.this_move += 185_ms;
 		}
 
-		initNodeData(ply);
+		node[ply].initNodeData();
 		bool is_pruned = false;
 
-		for (int c = 0, i = 0; i < node[ply].mcount; i++, is_pruned = false) {
+		for (int fail_low_count = 0, i = 0; i < node[ply].mcount; i++, is_pruned = false) {
 			// move ordering
 			node[ply].m_score = Order::pickBest(node[ply].ml, i, ply, depth);
 			const auto& move = node[ply].ml[i];
 
 			// futility pruning and reduction routines
-			if (i >= 1 and node[ply].mcount >= 8 and !incheck and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE)
-				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp) and ply != ROOT) {
-				
+			if (i >= 1 and ply != ROOT and node[ply].mcount >= 8 and !incheck and move.getPromo() != QUEEN
+				and (!move.isCapture() or node[ply].m_score < Order::FIRST_KILLER_SCORE)
+				and (alpha > mate_comp or alpha < -mate_comp) and (beta > mate_comp or beta < -mate_comp)) {
+
 				// margins for each depth
 				static constexpr int futility_margin = 80, ext_margin = 450, razor_margin = 950;
 
@@ -153,8 +174,8 @@ namespace Search {
 				else if (depth == PRE_PRE_FRONTIER
 					and Eval::evaluate(alpha - razor_margin, alpha - razor_margin + 1) <= alpha - razor_margin)
 					depth = PRE_FRONTIER;
-
-			} // recapture extra time
+			} 
+			// recapture extra time - although it looks strange, it makes engine a little bit stronger
 			else if (node[ply].prev_to == (move.getTarget())
 				and time_data.is_time and time_data.this_move > 300_ms
 				and time_data.this_move < time_data.left / 12) {
@@ -167,24 +188,29 @@ namespace Search {
 			node[ply].checking_move = isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
 			
 			// late move pruning using previous fail-low moves in nullwindow search and non-late moves count
-			if (c > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move 
-				and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE))
+			// based on an assumption that probability of finding a good move after processing many good moves before
+			// decreases significantly.
+			if (fail_low_count > 8 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move
+				and (!move.isCapture() or node[ply].m_score < Order::FIRST_KILLER_SCORE) and move.getPromo() != QUEEN)
 				is_pruned = true;
-			// if PV move is already processed, save time by checking uninteresting moves 
-			// using null window and late move reduction (PV Search) -
-			// however, if such 'late' node fails low, it's a sign we are offered a good move (score > alpha)
-			else if (i >= 1) {
-				// late move reduction in null move search
-				if (depth >= 3 and !node[ply].checking_move and !incheck and move.isWeak(node[ply].m_score, Order::FIRST_KILLER_SCORE))
-					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 2 - (i >= 6), ply + 1);
+			else {
+				// if PV move is already processed, save time by checking uninteresting moves 
+				// using null window and late move reduction (PV Search) -
+				// however, if such 'late' node fails low, it's a sign we are offered a good move (score > alpha)
+				if (node[ply].m_score < Order::HASH_SCORE and depth >= 3 and !node[ply].checking_move and !incheck
+					and (!move.isCapture() or node[ply].m_score < Order::FIRST_KILLER_SCORE)
+					and move.getPromo() != QUEEN) {
+					// late move reduction in null move search
+					const int depth_reduction = dynamicReductionLMR(i, move);
+					node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 1 - depth_reduction, ply + 1);
+				}
 				else node[ply].score = alpha + 1;
-				
+
 				if (node[ply].score > alpha) {
 					node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
-					c++;
+					fail_low_count++;
 				}
 			}
-			else node[ply].score = -alphaBeta(-beta, -alpha, depth - 1, ply + 1);
 
 			MovePerform::unmakeMove(node[ply].bbs_cpy, node[ply].gstate_cpy);
 			rep_tt.count--;
@@ -215,8 +241,6 @@ namespace Search {
 
 						// store move as a history move
 						Order::history_moves[node[ply].pc][node[ply].to] += depth * depth;
-
-						node[ply].prev_pc = node[ply].my_prev.getPiece();
 
 						// store a countermove
 						Order::countermove[node[ply].prev_pc][node[ply].prev_to] = move.raw();
@@ -323,6 +347,9 @@ namespace Search {
 		MoveItem::iMove ponder;
 
 		time_data.start = now();
+
+		// aspiration window reduction size
+		constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
 
 		// aspiration window search
 		while (curr_dpt <= depth) {

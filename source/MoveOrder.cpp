@@ -56,7 +56,7 @@ namespace Order {
 	}
 
 	inline int recaptureBonus(const MoveItem::iMove& move) noexcept {
-		return (Search::prev_move.isCapture()
+		return (Search::prev_move.isCapture() 
 			and move.getTarget() == Search::prev_move.getTarget()) * RECAPTURE_BONUS;
 	}
 
@@ -72,12 +72,8 @@ namespace Order {
 	// adjust countermove bonus to ply level, since history score of a move 
 	// is increasing as plies are also increasing -
 	// just keep countermove bonus constans relative to history score
-	inline int quietScore(const MoveItem::iMove& move, const int target, const int ply) {
-		const int
-			pc = move.getPiece(),
-			prev_to = Search::prev_move.getTarget(), prev_pc = Search::prev_move.getPiece(),
-			counter_bonus = (Order::countermove[prev_pc][prev_to] == move.raw()) * (ply + 4);
-
+	inline int quietScore(const MoveItem::iMove& move, const int target, const int ply) noexcept {
+		const int pc = move.getPiece(), counter_bonus = isCounterMove(move) * (ply + 4);
 		return RELATIVE_HISTORY_SCALE * history_moves[pc][target] / (butterfly[pc][target] + 1) + counter_bonus + 1;
 	}
 

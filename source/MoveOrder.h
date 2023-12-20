@@ -12,9 +12,9 @@ namespace Order {
 		static constexpr std::array<std::array<int, 5>, 6> lookup = {{
 			{ 1050, 2050, 3050, 4050, 5050 }, 
 			{ 1040, 2040, 3040, 4040, 5040 },
-			{ 1030, 2030, 3030, 4030, 5030 },
-			{ 1020, 2020, 3020, 4020, 5020 },
-			{ 1010, 2010, 3010, 4010, 5010 },
+			{ 1038, 2038, 3038, 4038, 5038 },
+			{ 1015, 2015, 3015, 4015, 5015 },
+			{ 1009, 2009, 3009, 4009, 5009 },
 			{ 1000, 2000, 3000, 4000, 5000 }
 		}};
 	};
@@ -48,15 +48,16 @@ namespace Order {
 		RELATIVE_HISTORY_SCALE = 13,
 	};
 
+	inline bool isCounterMove(const MoveItem::iMove& move) {
+		const int prev_to = Search::prev_move.getTarget(), prev_pc = Search::prev_move.getPiece();
+		return Order::countermove[prev_pc][prev_to] == move.raw();
+	}
+
 	// return value, also so called 'score' of given move
 	int moveScore(const MoveItem::iMove& move, int ply, int depth, MoveItem::iMove tt_move);
-
-	/* move sorting */
 	
 	// Static Exchange Evaluation for captures
 	int see(int sq);
-
-	/* move ordering techniques */
 
 	// swap best move so it's on the i'th place
 	int pickBest(MoveList& move_list, int s, int ply, int depth);

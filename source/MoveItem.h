@@ -128,10 +128,6 @@ namespace MoveItem {
 			return !getMask<iMask::CAPTURE_F>() and !getMask<iMask::PROMOTION>();
 		}
 
-		inline bool isWeak(const int capt_score, const int see_cmp) const noexcept {
-			return (!getMask<iMask::CAPTURE_F>() or capt_score < see_cmp) and (getMask<iMask::PROMOTION>() >> 20) != QUEEN;
-		}
-
 	private:
 		uint32_t cmove;
 	};
