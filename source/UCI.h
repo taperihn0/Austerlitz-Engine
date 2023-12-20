@@ -11,8 +11,10 @@ public:
 	std::istream* i_stream;
 	std::ostream* o_stream;
 
-	static constexpr const char* engine_name = "id name Austerlitz v1.4.7",
-		*author = "id author Szymon Belz";
+	static constexpr std::string_view 
+		engine_name = "id name Austerlitz v1.4.8",
+		author = "id author Szymon Belz",
+		introduction = "Polish chess engine, Austerlitz v1.4.8 - by Szymon Belz\n";
 };
 
 extern UCI UCI_o;

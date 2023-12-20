@@ -2,10 +2,13 @@
 
 #include "MoveItem.h"
 #include "Timer.h"
+#include "MoveOrder.h"
 #include <limits>
 
-
-namespace Search {
+// main search class.
+class mSearch {
+public:
+	mSearch() = default;
 
 	// general compile-time constans used in search
 	static constexpr int
@@ -23,10 +26,28 @@ namespace Search {
 
 		time_stop_sign = low_bound + 10;
 
-	extern MoveItem::iMove prev_move;
-	extern Time time_data;
-
 	// calculate best move using Iterative Deepening
 	void bestMove(const int depth);
 
-} // namespace Search
+	Time time_data;
+	mOrder move_order;
+	MoveItem::iMove prev_move;
+
+private:
+	class NodesResources;
+
+	inline int dynamicReductionLMR(const int i, const MoveItem::iMove move);
+	void clearSearchHistory();
+
+	// generate game tree, fill node resources and return positional score
+	template <bool AllowNullMove = true>
+	int alphaBeta(int alpha, int beta, int depth, const int ply);
+
+	int qSearch(int alpha, int beta, const int ply);
+
+	ULL nodes;
+
+}; // class mSearch
+
+
+extern mSearch m_search;

@@ -8,27 +8,19 @@
 #include "Zobrist.h"
 #include "Evaluation.h"
 
-
 Zobrist hash;
-
 BitBoardsSet BBs(BitBoardsSet::start_pos);
 
 mData mdata;
 gState game_state;
 
-Order::killerLookUp Order::killer;
-Order::historyLookUp Order::history_moves;
-Order::butterflyLookUp Order::butterfly, Order::countermove;
-
 UCI UCI_o;
 SearchBenchmark bench;
-
-MoveItem::iMove Search::prev_move;
 
 TranspositionTable tt;
 RepetitionTable rep_tt;
 
-Time Search::time_data;
+mSearch m_search;
 
 int main(int argc, char* argv[]) {
 	InitState::initMAttacksTables();

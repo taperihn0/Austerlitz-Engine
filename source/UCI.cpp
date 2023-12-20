@@ -16,7 +16,7 @@ UCI::UCI()
 }
 
 // return introducing string
-inline void introduce() {
+inline void parseUCI() {
 	OS << UCI::engine_name << '\n'
 		<< UCI::author << '\n'
 		<< TranspositionTable::hashInfo() << '\n'
@@ -32,8 +32,8 @@ void parseGo(std::istringstream& strm) {
 
 	if (com == "depth") {
 		strm >> std::skipws >> depth;
-		Search::time_data.setFixedTime(0);
-		Search::bestMove(depth);
+		m_search.time_data.setFixedTime(0);
+		m_search.bestMove(depth);
 	}
 	else if (com == "wtime") {
 		static int wtime, btime, winc, binc;
@@ -42,15 +42,15 @@ void parseGo(std::istringstream& strm) {
 			>> std::skipws >> com >> std::skipws >> winc
 			>> std::skipws >> com >> std::skipws >> binc;
 
-		Search::time_data.calcMoveTime(game_state.turn ? btime : wtime, game_state.turn ? binc : winc);
-		Search::bestMove(Search::max_depth);
+		m_search.time_data.calcMoveTime(game_state.turn ? btime : wtime, game_state.turn ? binc : winc);
+		m_search.bestMove(mSearch::max_depth);
 	}
 	else if (com == "movetime") {
 		static int mtime;
 		strm >> std::skipws >> mtime;
 
-		Search::time_data.setFixedTime(mtime);
-		Search::bestMove(Search::max_depth);
+		m_search.time_data.setFixedTime(mtime);
+		m_search.bestMove(mSearch::max_depth);
 	}
 	else if (com == "perft") {
 		strm >> std::skipws >> depth;
@@ -65,7 +65,7 @@ void UCI::parsePosition(std::istringstream& strm) {
 
 	strm >> std::skipws >> com;
 
-	Search::prev_move = 0;
+	m_search.prev_move = MoveItem::iMove::no_move;
 
 	// set starting or given fen
 	if (com == "startpos") {
@@ -116,7 +116,7 @@ void UCI::parsePosition(std::istringstream& strm) {
 				MovePerform::makeMove(move);
 				illegal = false;
 				rep_tt.posRegister();
-				Search::prev_move = move;
+				m_search.prev_move = move;
 				break;
 			}
 		}
@@ -132,7 +132,7 @@ void UCI::parsePosition(std::istringstream& strm) {
 inline void newGame() {
 	tt.clear();
 	rep_tt.clear();
-	InitState::clearCountermove();
+	m_search.move_order.clearCountermove();
 	BBs.parseFEN(BitBoardsSet::start_pos);
 }
 
@@ -147,6 +147,7 @@ void setOption(std::istringstream& strm) {
 		tt.setSize(std::stoi(com));
 	}
 }
+
 
 #if defined(__DEBUG__)
 void seePrint(std::istringstream& strm) {
@@ -173,7 +174,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 		line += " " + std::string(argv[i]);
 
 	if (i_stream == &std::cin)
-		OS << "Polish chess engine, Austerlitz v1.4.7 - by Szymon Belz\n";
+		OS << introduction;
 
 	do {
 		if (!skip_getline and !std::getline(IS, line))
@@ -186,7 +187,7 @@ void UCI::goLoop(int argc, char* argv[]) {
 		if (token == "isready")         OS << "readyok\n";
 		else if (token == "position")   parsePosition(strm);
 		else if (token == "ucinewgame") newGame();
-		else if (token == "uci")        introduce();
+		else if (token == "uci")        parseUCI();
 		else if (token == "go")         parseGo(strm);
 		else if (token == "setoption")  setOption(strm);
 		else if (token == "print")      BBs.printBoard();

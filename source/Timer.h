@@ -42,7 +42,6 @@ inline constexpr int operator "" _ms(const ULL a) noexcept {
 }
 
 struct Time {
-
 	inline bool checkTimeLeft() noexcept {
 		return sinceStart_ms(start) < this_move;
 	}
