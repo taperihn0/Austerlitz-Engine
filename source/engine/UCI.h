@@ -7,7 +7,7 @@ class UCI {
 public:
 	UCI();
 	void parsePosition(std::istringstream&);
-	void goLoop(int argc = 1, char* argv[] = nullptr);
+	void goLoop(int argc = 1, const char* argv[] = nullptr);
 	std::istream* i_stream;
 	std::ostream* o_stream;
 

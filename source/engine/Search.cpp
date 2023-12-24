@@ -3,6 +3,7 @@
 #include "Evaluation.h"
 #include "Zobrist.h"
 #include "MoveOrder.h"
+#include "../tuning/TexelTuning.h"
 
 
 enum plyNode {
@@ -19,10 +20,7 @@ enum depthNode {
 
 class mSearch::NodesResources {
 public:
-	inline NodesResources() noexcept
-	: node_data{} {
-		node_data[ROOT].setRoot(true);
-	}
+	NodesResources() = default;
 
 	class NodeDataEntry {
 	public:
@@ -36,11 +34,7 @@ public:
 			prev_to = my_prev.getTarget();
 			prev_pc = my_prev.getPiece();
 			hash_flag = HashEntry::Flag::HASH_ALPHA;
-			if (!is_root) node_best_move = MoveItem::iMove::no_move;
-		}
-
-		inline void setRoot(bool val) noexcept {
-			is_root = val;
+			node_best_move = MoveItem::iMove::no_move;
 		}
 
 		MoveItem::iMove my_prev, node_best_move;
@@ -52,11 +46,6 @@ public:
 		bool checking_move;
 		MoveList ml;
 		size_t mcount;
-
-	private:
-		// internal variable indicating whether node is a root node, 
-		// so whether to clear best move or not
-		bool is_root = false;
 	};
 
 	inline NodeDataEntry& operator[](const int ply) {
@@ -77,7 +66,7 @@ inline int mSearch::dynamicReductionLMR(const int i, const MoveItem::iMove move)
 template <bool AllowNullMove>
 int mSearch::alphaBeta(int alpha, int beta, int depth, const int ply) {
 	// (nodes & check_modulo == 0) is an alternative operation to (nodes % check_modulo == 0)
-	if (time_data.is_time and !(nodes & time_check_modulo) and !time_data.checkTimeLeft()) {
+	if (ply != ROOT and time_data.is_time and !(nodes & time_check_modulo) and !time_data.checkTimeLeft()) {
 		time_data.stop = true;
 		return time_stop_sign;
 	}
@@ -186,7 +175,7 @@ int mSearch::alphaBeta(int alpha, int beta, int depth, const int ply) {
 		// late move pruning using previous fail-low moves in nullwindow search and non-late moves count
 		// based on an assumption that probability of finding a good move after processing many good moves before
 		// decreases significantly.
-		if (fail_low_count > 8 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move
+		if (fail_low_count > 7 and node[ply].mcount >= 10 and depth >= 4 and !node[ply].checking_move
 			and (!move.isCapture() or node[ply].m_score < mOrder::FIRST_KILLER_SCORE) and move.getPromo() != QUEEN)
 			is_pruned = true;
 		else {
@@ -197,7 +186,8 @@ int mSearch::alphaBeta(int alpha, int beta, int depth, const int ply) {
 				and (!move.isCapture() or node[ply].m_score < mOrder::FIRST_KILLER_SCORE)
 				and move.getPromo() != QUEEN) {
 				// late move reduction in null move search
-				const int depth_reduction = dynamicReductionLMR(i, move);
+				//const int depth_reduction = dynamicReductionLMR(i, move);
+				const int depth_reduction = 1 + (i >= 6);
 				node[ply].score = -alphaBeta(-alpha - 1, -alpha, depth - 1 - depth_reduction, ply + 1);
 			}
 			else node[ply].score = alpha + 1;
@@ -214,7 +204,14 @@ int mSearch::alphaBeta(int alpha, int beta, int depth, const int ply) {
 		prev_move = node[ply].my_prev;
 
 		if (time_data.stop) {
-			tt.write(depth, alpha, node[ply].hash_flag, ply, node[ply].node_best_move);
+			MoveItem::iMove tt_move = node[ply].node_best_move;
+
+			if (ply == ROOT and node[ply].node_best_move == MoveItem::iMove::no_move) {
+				node[ply].node_best_move = node[ply].ml[0];
+				tt_move = MoveItem::iMove::no_move;
+			}
+
+			tt.write(depth, alpha, node[ply].hash_flag, ply, tt_move);
 			return time_stop_sign;
 		}
 		else if (is_pruned)
@@ -331,7 +328,7 @@ inline void mSearch::clearSearchHistory() {
 }
 
 // display best move according to search algorithm
-void mSearch::bestMove(int depth) {
+MoveItem::iMove mSearch::bestMove(const int depth) {
 	assert(depth > 0 && "Unvalid depth");
 
 	// cleaning
@@ -339,7 +336,7 @@ void mSearch::bestMove(int depth) {
 	tt.increaseAge();
 		
 	int lbound = low_bound, hbound = high_bound,
-		curr_dpt = 1, score, prev_score;
+		curr_dpt = 1, score, prev_score = HashEntry::no_score;
 	long long time = 0;
 	MoveItem::iMove ponder;
 
@@ -369,7 +366,7 @@ void mSearch::bestMove(int depth) {
 		if (score >= mate_score and score < mate_comp)
 			OS << "info score mate " << (mate_score - score) / 2 - 1;
 		// (+) search result - engine checkmating
-		else if (score > -mate_comp and score < -mate_score)
+		else if (score > -mate_comp and score <= -mate_score)
 			OS << "info score mate " << (-score - mate_score) / 2 + 1;
 		// no checkmate
 		else OS << "info score cp " << score;
@@ -398,4 +395,12 @@ void mSearch::bestMove(int depth) {
 	}
 
 	OS << '\n';
+
+#if COLLECT_POSITION_DATA
+	if (game_state.gamePhase() != gState::OPENING 
+		and score > mSearch::mate_comp and score < -mSearch::mate_comp)
+		game_collector.registerPosition(BBs.getFEN());
+#endif
+
+	return node[ROOT].node_best_move;
 }

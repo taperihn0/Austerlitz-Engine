@@ -26,8 +26,14 @@ public:
 
 		time_stop_sign = low_bound + 10;
 
+	// generate game tree, fill node resources and return positional score
+	template <bool AllowNullMove = true>
+	int alphaBeta(int alpha, int beta, int depth, const int ply);
+
+	int qSearch(int alpha, int beta, const int ply);
+
 	// calculate best move using Iterative Deepening
-	void bestMove(const int depth);
+	MoveItem::iMove bestMove(const int depth);
 
 	Time time_data;
 	mOrder move_order;
@@ -38,12 +44,6 @@ private:
 
 	inline int dynamicReductionLMR(const int i, const MoveItem::iMove move);
 	void clearSearchHistory();
-
-	// generate game tree, fill node resources and return positional score
-	template <bool AllowNullMove = true>
-	int alphaBeta(int alpha, int beta, int depth, const int ply);
-
-	int qSearch(int alpha, int beta, const int ply);
 
 	ULL nodes;
 

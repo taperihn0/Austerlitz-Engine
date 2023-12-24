@@ -153,40 +153,45 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="source\BitBoardsSet.cpp" />
-    <ClCompile Include="source\Evaluation.cpp" />
-    <ClCompile Include="source\LegalityTest.cpp" />
-    <ClCompile Include="source\MagicBitBoards.cpp" />
-    <ClCompile Include="source\Main.cpp" />
-    <ClCompile Include="source\MoveGeneration.cpp" />
-    <ClCompile Include="source\MoveItem.cpp" />
-    <ClCompile Include="source\MoveOrder.cpp" />
-    <ClCompile Include="source\Search.cpp" />
-    <ClCompile Include="source\staticLookup.h" />
-    <ClCompile Include="source\UCI.cpp" />
-    <ClCompile Include="source\Zobrist.cpp" />
+    <ClCompile Include="source\engine\BitBoardsSet.cpp" />
+    <ClCompile Include="source\engine\Evaluation.cpp" />
+    <ClCompile Include="source\engine\LegalityTest.cpp" />
+    <ClCompile Include="source\engine\MagicBitBoards.cpp" />
+    <ClCompile Include="source\engine\Main.cpp" />
+    <ClCompile Include="source\engine\MoveGeneration.cpp" />
+    <ClCompile Include="source\engine\MoveItem.cpp" />
+    <ClCompile Include="source\engine\MoveOrder.cpp" />
+    <ClCompile Include="source\engine\Search.cpp" />
+    <ClCompile Include="source\engine\staticLookup.h" />
+    <ClCompile Include="source\engine\UCI.cpp" />
+    <ClCompile Include="source\engine\Zobrist.cpp" />
+    <ClCompile Include="source\tuning\TexelTuning.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\SearchBenchmark.h" />
-    <ClInclude Include="source\Evaluation.h" />
-    <ClInclude Include="source\MoveOrder.h" />
-    <ClInclude Include="source\Search.h" />
-    <ClInclude Include="source\static.h" />
-    <ClInclude Include="source\BitBoardsSet.h" />
-    <ClInclude Include="source\GeneratingMagics.h" />
-    <ClInclude Include="source\LegalityTest.h" />
-    <ClInclude Include="source\MagicBitBoards.h" />
-    <ClInclude Include="source\AttackTables.h" />
-    <ClInclude Include="source\MoveGeneration.h" />
-    <ClInclude Include="source\MoveItem.h" />
-    <ClInclude Include="source\MoveSystem.h" />
-    <ClInclude Include="source\BitBoard.h" />
-    <ClInclude Include="source\Timer.h" />
-    <ClInclude Include="source\UCI.h" />
-    <ClInclude Include="source\Zobrist.h" />
+    <ClInclude Include="source\engine\SearchBenchmark.h" />
+    <ClInclude Include="source\engine\Evaluation.h" />
+    <ClInclude Include="source\engine\MoveOrder.h" />
+    <ClInclude Include="source\engine\Search.h" />
+    <ClInclude Include="source\engine\static.h" />
+    <ClInclude Include="source\engine\BitBoardsSet.h" />
+    <ClInclude Include="source\engine\GeneratingMagics.h" />
+    <ClInclude Include="source\engine\LegalityTest.h" />
+    <ClInclude Include="source\engine\MagicBitBoards.h" />
+    <ClInclude Include="source\engine\AttackTables.h" />
+    <ClInclude Include="source\engine\MoveGeneration.h" />
+    <ClInclude Include="source\engine\MoveItem.h" />
+    <ClInclude Include="source\engine\MoveSystem.h" />
+    <ClInclude Include="source\engine\BitBoard.h" />
+    <ClInclude Include="source\engine\Timer.h" />
+    <ClInclude Include="source\engine\UCI.h" />
+    <ClInclude Include="source\engine\Zobrist.h" />
+    <ClInclude Include="source\tuning\TexelTuning.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="LICENSE.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="source\data\TuningData.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

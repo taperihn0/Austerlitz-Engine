@@ -143,10 +143,15 @@ public:
 	void clear();
 
 	int count(size_t piece_get);
+	
+	std::string getFEN();
 
 	static constexpr const char* start_pos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 private:
+	std::string getFEN_States();
+
 	static constexpr bool nothrow_copy_assign = std::is_nothrow_copy_assignable_v<std::array<U64, 16>>;
+	static constexpr std::string_view piece_ascii = "PpNnBbRrQqKk";
 
 	// central storage of actual piece structure of every type
 	std::array<U64, 16> bbs;
@@ -197,7 +202,7 @@ struct gState {
 			OPENING;
 	}
 
-	inline bool isPawnEndgame() noexcept {
+	inline bool isPawnEndgame() {
 		const int total_material = material[0] + material[1] - 20000;
 		return (total_material / 100) == bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
 	}

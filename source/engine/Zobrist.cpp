@@ -55,8 +55,8 @@ int TranspositionTable::read(int alpha, int beta, int g_depth, int ply) {
 
 	// 'extract' relative checkmate path from current node
 	const int res =
-		entry.score < Search::mate_comp ? entry.score + ply :
-		entry.score > -Search::mate_comp ? entry.score - ply : entry.score;
+		entry.score < mSearch::mate_comp ? entry.score + ply :
+		entry.score > -mSearch::mate_comp ? entry.score - ply : entry.score;
 
 	switch (entry.flag) {
 	case HashEntry::Flag::HASH_EXACT:
@@ -81,8 +81,8 @@ void TranspositionTable::write(int g_depth, int g_score, HashEntry::Flag g_flag,
 	entry.zobrist = hash.key;
 
 	// set original path to checkmate
-	if (g_score < Search::mate_comp) g_score -= ply;
-	else if (g_score > -Search::mate_comp) g_score += ply;
+	if (g_score < mSearch::mate_comp) g_score -= ply;
+	else if (g_score > -mSearch::mate_comp) g_score += ply;
 
 	entry.score = g_score;
 	entry.flag = g_flag;

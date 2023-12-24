@@ -15,97 +15,106 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Main.cpp">
+    <ClCompile Include="source\engine\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\BitBoardsSet.cpp">
+    <ClCompile Include="source\engine\BitBoardsSet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\MoveGeneration.cpp">
+    <ClCompile Include="source\engine\MoveGeneration.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\MagicBitBoards.cpp">
+    <ClCompile Include="source\engine\MagicBitBoards.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\LegalityTest.cpp">
+    <ClCompile Include="source\engine\LegalityTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Search.cpp">
+    <ClCompile Include="source\engine\Search.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Evaluation.cpp">
+    <ClCompile Include="source\engine\Evaluation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\UCI.cpp">
+    <ClCompile Include="source\engine\UCI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\MoveItem.cpp">
+    <ClCompile Include="source\engine\MoveItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\MoveOrder.cpp">
+    <ClCompile Include="source\engine\MoveOrder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\staticLookup.h">
+    <ClCompile Include="source\engine\staticLookup.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Zobrist.cpp">
+    <ClCompile Include="source\engine\Zobrist.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\tuning\TexelTuning.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\BitBoard.h">
+    <ClInclude Include="source\engine\BitBoard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\MoveSystem.h">
+    <ClInclude Include="source\engine\MoveSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\AttackTables.h">
+    <ClInclude Include="source\engine\AttackTables.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\MagicBitBoards.h">
+    <ClInclude Include="source\engine\MagicBitBoards.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\GeneratingMagics.h">
+    <ClInclude Include="source\engine\GeneratingMagics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\BitBoardsSet.h">
+    <ClInclude Include="source\engine\BitBoardsSet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\LegalityTest.h">
+    <ClInclude Include="source\engine\LegalityTest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\MoveGeneration.h">
+    <ClInclude Include="source\engine\MoveGeneration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\static.h">
+    <ClInclude Include="source\engine\static.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\MoveItem.h">
+    <ClInclude Include="source\engine\MoveItem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Timer.h">
+    <ClInclude Include="source\engine\Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Search.h">
+    <ClInclude Include="source\engine\Search.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Evaluation.h">
+    <ClInclude Include="source\engine\Evaluation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\UCI.h">
+    <ClInclude Include="source\engine\UCI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\MoveOrder.h">
+    <ClInclude Include="source\engine\MoveOrder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\SearchBenchmark.h">
+    <ClInclude Include="source\engine\SearchBenchmark.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Zobrist.h">
+    <ClInclude Include="source\engine\Zobrist.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\tuning\TexelTuning.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="LICENSE.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="source\data\TuningData.txt" />
   </ItemGroup>
 </Project>

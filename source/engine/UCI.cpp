@@ -6,6 +6,7 @@
 #include "Zobrist.h"
 #include "Evaluation.h"
 #include "MoveOrder.h"
+#include "../tuning/TexelTuning.h"
 #include <iostream>
 #include <string>
 
@@ -130,6 +131,10 @@ void UCI::parsePosition(std::istringstream& strm) {
 
 // prepare for new game
 inline void newGame() {
+#if COLLECT_POSITION_DATA
+	game_collector.flushBufor();
+#endif
+
 	tt.clear();
 	rep_tt.clear();
 	m_search.move_order.clearCountermove();
@@ -154,19 +159,29 @@ void seePrint(std::istringstream& strm) {
 	std::string sq_str;
 	strm >> std::skipws >> sq_str;
 	int sq = (sq_str[1] - '1') * 8 + (sq_str[0] - 'a');
-	OS << Order::see(sq) << '\n';
+	OS << mOrder::see(sq) << '\n';
 }
 
 void evalInfo() {
 	OS << "white material: " << game_state.material[0] << '\n'
 		<< "black material: " << game_state.material[1] << '\n'
 		<< "pawn endgame: " << game_state.isPawnEndgame() << '\n'
-		<< Eval::evaluate(Search::low_bound, Search::high_bound) << "\n\n";
+		<< Eval::evaluate(mSearch::low_bound, mSearch::high_bound) << "\n\n";
+}
+#endif
+
+#if ENABLE_TUNING
+void parseTuning(std::istringstream& strm) {
+	std::string opt;
+
+	strm >> std::skipws >> opt;
+
+	if (opt == "k") OS << tuning.computeK() << '\n';
 }
 #endif
 
 // main UCI loop
-void UCI::goLoop(int argc, char* argv[]) {
+void UCI::goLoop(int argc, const char* argv[]) {
 	std::string line, token;
 	bool skip_getline = argc > 1;
 
@@ -198,5 +213,13 @@ void UCI::goLoop(int argc, char* argv[]) {
 		else if (token == "eval")       evalInfo();
 		else if (token == "see")        seePrint(strm);
 #endif
+
+#if ENABLE_TUNING
+		else if (token == "tuning")     parseTuning(strm);
+#endif
 	} while (line != "quit");
+
+#if COLLECT_POSITION_DATA
+	game_collector.flushBufor();
+#endif
 }

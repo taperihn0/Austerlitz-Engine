@@ -61,6 +61,7 @@ namespace MoveItem {
 
 		// no need to return a value
 		inline void operator=(uint32_t data) noexcept { cmove = data; }
+		inline bool operator==(uint32_t data) const noexcept { return cmove == data; }
 		inline bool operator==(iMove b) const noexcept { return cmove == b.cmove; }
 		inline bool operator!=(iMove b) const noexcept { return cmove != b.cmove; }
 		inline uint32_t raw() const noexcept { return cmove; }

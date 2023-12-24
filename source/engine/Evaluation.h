@@ -74,6 +74,7 @@ namespace Eval {
 			PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE,
 		};
 
+		// pawn king tropism weights
 		enum {
 			PASSER_WEIGHT = 6,
 			BACKWARD_WEIGHT = 3,

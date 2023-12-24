@@ -112,6 +112,82 @@ void BitBoardsSet::parseGState(const std::string& fen, int i) {
 void BitBoardsSet::printBoard() {
 	int sq_piece;
 
+	std::string frame = "\t+";
+	for (int r = 0; r < 8; r++) {
+		frame += "---+";
+	}
+
+	for (int i = 0; i < 8; i++) {
+		OS << '\n' << frame << "\n\t|";
+
+		for (int j = 0; j < 8; j++) {
+			sq_piece = -1;
+
+			for (int piece = nWhitePawn; piece <= nBlackKing; piece++) {
+				if (getBit(bbs[piece], (7 - i) * 8 + j)) {
+					sq_piece = piece;
+					break;
+				}
+			}
+
+			OS << ' ' << (sq_piece != -1 ? piece_ascii[sq_piece] : ' ') << " |";
+		}
+
+		OS << ' ' << (8 - i);
+	}
+
+	OS << std::endl << frame << std::endl
+		<< "\t  a   b   c   d   e   f   g   h" << std::endl << std::endl
+		<< "  FEN: " << getFEN() << std::endl
+		<< "  Castling rights: ";
+
+	for (int i = 3; i >= 0; i--) {
+		OS << ((game_state.castle & (1 << i)) >> i);
+	}
+
+	OS << std::endl << std::endl;
+}
+
+std::string BitBoardsSet::getFEN() {
+	std::string fen;
+	int distance, sq_piece;
+
+	for (int i = 0; i < 8; i++) {
+		distance = 0;
+
+		for (int j = 0; j < 8; j++) {
+			sq_piece = -1;
+			
+			for (int piece = nWhitePawn; piece <= nBlackKing; piece++) {
+				if (getBit(bbs[piece], (7 - i) * 8 + j)) {
+					sq_piece = piece;
+					break;
+				}
+			}
+
+			if (sq_piece == -1) {
+				distance++;
+				continue;
+			}
+
+			if (distance) {
+				fen += '0' + distance;
+				distance = 0;
+			}
+
+			fen += piece_ascii[sq_piece];
+		}
+
+		if (distance) fen += '0' + distance;
+		fen += '/';
+	}
+
+	fen.pop_back();
+
+	return fen + ' ' + getFEN_States();
+}
+
+std::string BitBoardsSet::getFEN_States() {
 	std::string states;
 
 	// load current states manually
@@ -134,38 +210,5 @@ void BitBoardsSet::printBoard() {
 	states += ' ';
 	states += std::to_string(game_state.fullmove);
 
-	std::string frame = "\t+";
-	for (int r = 0; r < 8; r++) {
-		frame += "---+";
-	}
-
-	for (int i = 0; i < 8; i++) {
-		OS << '\n' << frame << "\n\t|";
-
-		for (int j = 0; j < 8; j++) {
-			sq_piece = -1;
-
-			for (int piece = nWhitePawn; piece <= nBlackKing; piece++) {
-				if (getBit(bbs[piece], (7 - i) * 8 + j)) {
-					sq_piece = piece;
-					break;
-				}
-			}
-
-			OS << ' ' << (sq_piece != -1 ? "PpNnBbRrQqKk"[sq_piece] : ' ') << " |";
-		}
-
-		OS << ' ' << (8 - i);
-	}
-
-	OS << std::endl << frame << std::endl
-		<< "\t  a   b   c   d   e   f   g   h" << std::endl << std::endl
-		<< "  FEN game states: " << states << std::endl
-		<< "  Castling rights: ";
-
-	for (int i = 3; i >= 0; i--) {
-		OS << ((game_state.castle & (1 << i)) >> i);
-	}
-
-	OS << std::endl << std::endl;
+	return states;
 }
