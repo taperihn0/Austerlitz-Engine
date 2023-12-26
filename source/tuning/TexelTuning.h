@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 
-#define COLLECT_POSITION_DATA true
+#define COLLECT_POSITION_DATA false
 #define ENABLE_TUNING false
 
 class tGameCollector {
@@ -48,13 +48,13 @@ extern tGameCollector game_collector;
 #endif
 
 struct tData {
-	tData();
+	tData() = default;
 	bool openDataFile();
 
 	bool loadTrainingData();
 	void fillEvalSet();
 
-	static constexpr const char* getFilePath() noexcept {
+	static inline constexpr const char* getFilePath() noexcept {
 		return filepath.data();
 	}
 
@@ -69,17 +69,21 @@ private:
 	std::ifstream file;
 };
 
+
 class tTuning {
 public:
 	tTuning();
 
 	void initTuningData();
-
-	double computeK(const int k_precision = 10);
+	void updateK();
 private:
-	double computeE(const double k);
-	double sigmoid(const double k, const double q);
+	double computeK(const int k_precision = 10);
+	double computeE(const double g_k);
+	double sigmoid(const double g_k, const double g_q);
 
+	static constexpr double pre_computed_k = 0.519184;
+
+	double k;
 	tData data;
 };
 

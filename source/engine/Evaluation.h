@@ -50,37 +50,6 @@ namespace Eval {
 	// resources for evaluating a position
 	namespace Value {
 
-		/*
-		* Pawn = 1 Point
-		* Knight = 3.25 Points
-		* Bishop = 3.25 Points
-		* Rook = 5 Points
-		* Queen = 9.75 Points
-		* (accurate pieces values according to GM Larry Kaufman)
-		*/
-
-		// enum of relevant values used in evaluation functions
-		enum PieceValue {
-			PAWN_VALUE = 100,
-			KNIGHT_VALUE = 325,
-			BISHOP_VALUE = 325,
-			ROOK_VALUE = 500,
-			QUEEN_VALUE = 975,
-			KING_VALUE = 10000,
-			DOUBLE_KING_VAL = 2 * KING_VALUE
-		};
-
-		constexpr std::array<int, 12> piece_material = {
-			PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE,
-		};
-
-		// pawn king tropism weights
-		enum {
-			PASSER_WEIGHT = 6,
-			BACKWARD_WEIGHT = 3,
-			OTHER_WEIGHT = 2
-		};
-
 		// single lookup table for score of each square for every single piece
 		using posScoreTab = std::array<int, 64>;
 
@@ -216,21 +185,9 @@ namespace Eval {
 			-53, -34, -21, -11, -28, -14, -24, -43
 		};
 
-		// queen early development penalty 
-		constexpr posScoreTab queen_ban_dev = {
-			-23, -23, -23,  -7, -23, -23, -23, -23,
-			-23, -23, -23, -23, -23, -23, -23, -23,
-			-19, -21, -21, -21, -21, -21, -21, -19,
-			-18, -18, -20, -20, -20, -20, -18, -17,
-			-18, -18, -18, -18, -18, -18, -18, -18,
-			-18, -18, -23, -13, -13, -18, -18, -18,
-			  0,   0,  -4,  -4,  -4,  -4,   0,   0,
-			  0,   0,   0,   0,   0,   0,   0,   0
-		};
-
 		// easily aggregated lookups
 		using aggregateScoreTab = std::array<std::array<posScoreTab, 6>, 3>;
-		constexpr aggregateScoreTab position_score = {{
+		constexpr aggregateScoreTab position_score = { {
 			{
 				pawn_score,
 				knight_score,
@@ -258,39 +215,22 @@ namespace Eval {
 				late_king_score
 			}
 
-		}};
+		} };
 
 		constexpr auto distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int d = cexpr::abs(i % 8 - j % 8) + cexpr::abs(i / 8 - j / 8);
 			return 14 - d;
-		});
+			});
 
 		constexpr auto diag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int sc_i = (i % 8) + (i / 8), sc_j = (j % 8) + (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
-		});
+			});
 
 		constexpr auto adiag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int sc_i = 7 - (i % 8) - (i / 8), sc_j = 7 - (j % 8) + (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
-		});
-
-		using passedPawnTab = std::array<int, 7>;
-		constexpr passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
-
-		constexpr std::array<int, 11> attack_count_weight = { 0, 0, 50, 75, 88, 94, 97, 99, 105, 110, 120 };
-		constexpr std::array<int, 5> attacker_weight = { 0, 20, 20, 40, 80 };
-
-		constexpr posScoreTab outpos_score = {
-			0,   0,   0,   0,   3,   0,  0,  0,
-			0,   0,  13,  10,   9,  13,  2,  0,
-			0,  14,  15,  16,  16,  15, 14,  5,
-			1,   7,  14,  17,  17,  14,  7,  4,
-			0,   2,   4,   9,   9,   4,  2,  1,
-			0,   0,   1,   1,   1,   1,  0,  0,
-			0,   0,   0,   0,   0,   0,  0,  0,
-			0,   0,   0,   0,   0,   0,  0,  0,
-		};
+			});
 
 		constexpr auto knight_distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			int c = 0;
@@ -302,21 +242,98 @@ namespace Eval {
 			}
 
 			return 3 - c;
-		});
+			});
 
-		enum connectivityProtectionWeight {
-			ENDGAME_PAWN_ATTACK = 7,
-			PAWN_ATTACK = 6,
-			MINOR_ATTACK = 3,
-			ROOK_ATTACK = 2,
-			QUEEN_ATTACK = 1,
+		// Package of evaluation parameters for tuning
+		struct EvaluationParameters {
+			std::array<int, 6> piece_material = {
+				100, 325, 325, 500, 975, 10000,
+			};
+
+			int endgame_pawn_attack = 7,
+				pawn_attack = 6,
+				minor_attack = 3,
+				rook_attack = 2,
+				queen_attack = 1;
+
+			int passer_weight = 6, backward_weight = 3, other_weight = 2;
+
+			int promo_distance_scale = 4,
+				king_pawn_tropism_scale = 16,
+				pawn_island_penalty = 3,
+				backward_penalty = 7,
+				double_pawn_penalty = 10,
+				pawn_eg_passer_bonus = 60,
+				protected_pawn_bonus = 6, double_protected_pawn_bonus = 2,
+				isolanis_penalty = 8, half_isolanis_penalty = 2,
+				flat_shield_bonus = 12, triangle_shield_bonus = 8,
+				open_square_penalty = 4,
+				no_pawns_penalty = -30,
+				overly_advanced_penalty = 2;
+
+			int k_mobility_scale = 4, k_mobility_exclude = 4,
+				k_undefended_minor = 2,
+				k_ring_attack_factor = 5,
+				k_tropism_scale = 1, k_pawn_reduction_scale = 1;
+
+			int b_mobility_scale = 3, b_mobility_exclude = 7,
+				b_undefended_minor = 2,
+				b_ring_attack_factor = 5,
+				b_tropism_scale = 1, b_pawn_reduction_scale = 1,
+				b_pair_bonus = 50;
+
+			int r_mobility_exclude = 7,
+				r_ring_attack_factor = 5,
+				r_open_file_bonus = 10, r_queen_file_bonus = 10,
+				r_tarrasch_file_bonus = 10,
+				r_tropism_scale = 1, r_pawn_reduction_scale = 1;
+
+			int q_mobility_exclude = 14,
+				q_ring_attack_factor = 5,
+				q_tropism_scale = 1;
+
+			int kzone_control_reduction = 120,
+				k_castle_bonus = 15,
+				k_eval_cmp_distance = 70,
+				kk_tropism_scale = 2;
+
+			using passedPawnTab = std::array<int, 7>;
+			passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
+
+			std::array<int, 11> attack_count_weight = { 0, 0, 50, 75, 88, 94, 97, 99, 105, 110, 120 };
+			std::array<int, 5> attacker_weight = { 0, 20, 20, 40, 80 };
+
+			// queen early development penalty 
+			posScoreTab queen_ban_dev = {
+				-23, -23, -23,  -7, -23, -23, -23, -23,
+				-23, -23, -23, -23, -23, -23, -23, -23,
+				-19, -21, -21, -21, -21, -21, -21, -19,
+				-18, -18, -20, -20, -20, -20, -18, -17,
+				-18, -18, -18, -18, -18, -18, -18, -18,
+				-18, -18, -23, -13, -13, -18, -18, -18,
+				  0,   0,  -4,  -4,  -4,  -4,   0,   0,
+				  0,   0,   0,   0,   0,   0,   0,   0
+			};
+
+			posScoreTab outpos_score = {
+				0,   0,   0,   0,   3,   0,  0,  0,
+				0,   0,  13,  10,   9,  13,  2,  0,
+				0,  14,  15,  16,  16,  15, 14,  5,
+				1,   7,  14,  17,  17,  14,  7,  4,
+				0,   2,   4,   9,   9,   4,  2,  1,
+				0,   0,   1,   1,   1,   1,  0,  0,
+				0,   0,   0,   0,   0,   0,  0,  0,
+				0,   0,   0,   0,   0,   0,  0,  0,
+			};
 		};
 
 	} // namespace Value
 
+	extern Value::EvaluationParameters params;
+
 	// simple version of evaluation funcion
 	inline int simpleEvaluation() {
-		return Value::PAWN_VALUE * (BBs.count(nWhitePawn + game_state.turn) - BBs.count(nBlackPawn - game_state.turn));
+		return params.piece_material[PAWN] * (BBs.count(nWhitePawn + game_state.turn) - BBs.count(nBlackPawn - game_state.turn));
 	}
 
 	// main evaluation system

@@ -48,7 +48,7 @@ void BitBoardsSet::parseFEN(const std::string& fen) {
 		setBit(bbs[side ? nBlack :nWhite], in);
 		setBit(bbs[nOccupied], in);
 		setBit(bbs[bbs_pc[pc]], in);
-		game_state.material[side] += Eval::Value::piece_material[toPieceType(bbs_pc[pc])];
+		game_state.material[side] += Eval::params.piece_material[toPieceType(bbs_pc[pc])];
 		++x;
 	}
 

@@ -38,9 +38,6 @@ void tGameCollector::storeGameResult() {
 }
 
 
-tData::tData()
-: position_n(0) {}
-
 bool tData::openDataFile() {
 	file.open(filepath.data(), std::ifstream::beg);
 
@@ -56,7 +53,6 @@ bool tData::loadTrainingData() {
 	std::istringstream iss;
 
 	std::string line, fen, res;
-	size_t prev_size = 0;
 
 	for (int i = 1; getline(file, line); i++) {
 		iss.clear();
@@ -65,16 +61,8 @@ bool tData::loadTrainingData() {
 		getline(iss, fen, '#');
 		iss >> std::skipws >> res;
 
-		if (res.size() > 3 or fen.size() + 9 < prev_size) {
-			prev_size = 0;
-			OS << "Line " << i << ": " << line << '\n';
-			continue;
-		}
-
 		position.push_back(fen);
 		gres.push_back(stod(res));
-
-		prev_size = fen.size();
 	}
 
 	position_n = position.size();
@@ -92,12 +80,19 @@ void tData::fillEvalSet() {
 }
 
 
-tTuning::tTuning() {}
+tTuning::tTuning()
+: k(pre_computed_k) {}
 
 void tTuning::initTuningData() {
 	assert(data.openDataFile());
 	assert(data.loadTrainingData());
-	//data.fillEvalSet();
+	data.fillEvalSet();
+}
+
+void tTuning::updateK() {
+	const double new_k_val = computeK();
+	OS << "K = " << new_k_val << '\n';
+	k = new_k_val;
 }
 
 double tTuning::computeK(const int k_precision) {
@@ -109,6 +104,7 @@ double tTuning::computeK(const int k_precision) {
 			error = computeE(curr);
 
 			if (error <= best) {
+				OS << "curr best: " << curr << '\n';
 				best = error;
 				start = curr;
 			}
@@ -125,16 +121,16 @@ double tTuning::computeK(const int k_precision) {
 	return start;
 }
 
-double tTuning::computeE(const double k) {
+double tTuning::computeE(const double g_k) {
 	double res = 0.;
 
 	for (int i = 0; i < data.position_n; i++) {
-		res += std::pow(data.gres[i] - sigmoid(k, static_cast<double>(data.eval[i])), 2);
+		res += std::pow(data.gres[i] - sigmoid(g_k, static_cast<double>(data.eval[i])), 2);
 	}
 
 	return res / static_cast<double>(data.position_n);
 }
 
-inline double tTuning::sigmoid(const double k, const double q) {
-	return 1 / (1 + std::pow(10, -k * q / 400));
+inline double tTuning::sigmoid(const double g_k, const double g_q) {
+	return 1 / (1 + std::pow(10, -g_k * g_q / 400));
 }

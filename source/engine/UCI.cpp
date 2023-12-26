@@ -173,10 +173,9 @@ void evalInfo() {
 #if ENABLE_TUNING
 void parseTuning(std::istringstream& strm) {
 	std::string opt;
-
 	strm >> std::skipws >> opt;
 
-	if (opt == "k") OS << tuning.computeK() << '\n';
+	if (opt == "k") tuning.updateK();
 }
 #endif
 
@@ -215,7 +214,7 @@ void UCI::goLoop(int argc, const char* argv[]) {
 #endif
 
 #if ENABLE_TUNING
-		else if (token == "tuning")     parseTuning(strm);
+		else if (token == "tuner")     parseTuning(strm);
 #endif
 	} while (line != "quit");
 

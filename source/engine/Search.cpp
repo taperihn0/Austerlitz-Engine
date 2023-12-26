@@ -263,7 +263,7 @@ int mSearch::qSearch(int alpha, int beta, const int ply) {
 		return time_stop_sign;
 	} 
 
-	const int eval = Eval::evaluate(alpha - Eval::Value::QUEEN_VALUE, beta);
+	const int eval = Eval::evaluate(alpha - Eval::params.piece_material[QUEEN] - 1, beta);
 	nodes++;
 
 	if (eval >= beta) 
@@ -273,7 +273,7 @@ int mSearch::qSearch(int alpha, int beta, const int ply) {
 		is_endgame = game_state.gamePhase() == gState::ENDGAME;
 
 	// delta pruning
-	if (!is_endgame and !incheck and eval + Eval::Value::QUEEN_VALUE <= alpha)
+	if (!is_endgame and !incheck and eval + Eval::params.piece_material[QUEEN] <= alpha)
 		return alpha;
 	alpha = std::max(alpha, eval);
 
@@ -343,7 +343,7 @@ MoveItem::iMove mSearch::bestMove(const int depth) {
 	time_data.start = now();
 
 	// aspiration window reduction size
-	constexpr int asp_margin = static_cast<int>(0.45 * Eval::Value::PAWN_VALUE);
+	const int asp_margin = static_cast<int>(0.45 * Eval::params.piece_material[PAWN]);
 
 	// aspiration window search
 	while (curr_dpt <= depth) {
@@ -397,8 +397,7 @@ MoveItem::iMove mSearch::bestMove(const int depth) {
 	OS << '\n';
 
 #if COLLECT_POSITION_DATA
-	if (game_state.gamePhase() != gState::OPENING 
-		and score > mSearch::mate_comp and score < -mSearch::mate_comp)
+	if (score > mSearch::mate_comp and score < -mSearch::mate_comp)
 		game_collector.registerPosition(BBs.getFEN());
 #endif
 

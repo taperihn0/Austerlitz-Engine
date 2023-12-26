@@ -23,6 +23,8 @@ RepetitionTable rep_tt;
 
 mSearch m_search;
 
+Eval::Value::EvaluationParameters Eval::params;
+
 #if COLLECT_POSITION_DATA
 tGameCollector game_collector;
 #endif

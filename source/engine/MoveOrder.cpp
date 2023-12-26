@@ -37,7 +37,7 @@ int mOrder::see(const int sq) {
 
 	while (attackers[side] and weakest_att < nWhiteKing) {
 		i++;
-		gain[i] = -gain[i - 1] + Eval::Value::piece_material[toPieceType(weakest_att)];
+		gain[i] = -gain[i - 1] + Eval::params.piece_material[toPieceType(weakest_att)];
 
 		weakest_att = leastValuableAtt(attackers[side], side);
 		processed |= bitU64(getLS1BIndex(BBs[weakest_att] & ~processed));
