@@ -81,18 +81,72 @@ void tData::fillEvalSet() {
 
 
 tTuning::tTuning()
-: k(pre_computed_k) {}
+: k(pre_computed_k) {
+
+	// load parameters' pointers to change them during finding minimum
+	void* s_ptr = &Eval::params;
+
+	for (int i = 0, *ptr = reinterpret_cast<int*>(s_ptr); i < tuned_param_number; i++, ptr++) {
+		eval_params[i] = ptr;
+	}
+}
+
+bool tTuning::openSessionFile() {
+	session_file.open(filepath.data(), std::ios::out | std::ios::trunc);
+
+	if (!session_file.is_open()) {
+		OS << "Failed to open file: " << filepath << '\n';
+		return false;
+	}
+
+	return true;
+}
 
 void tTuning::initTuningData() {
 	assert(data.openDataFile());
 	assert(data.loadTrainingData());
-	data.fillEvalSet();
 }
 
 void tTuning::updateK() {
+	data.fillEvalSet();
 	const double new_k_val = computeK();
 	OS << "K = " << new_k_val << '\n';
 	k = new_k_val;
+}
+
+void tTuning::runWeightTuning() {
+	for (int i = 0; i < tuned_param_number; i++) {
+		const int prev_val = *eval_params[i];
+		optimizeParameter(eval_params[i]);
+		OS << i << "log: " << *eval_params[i] << '\n';
+		session_file << i << "otimized parameter (" << prev_val << ") = " << *eval_params[i] << '\n';
+	}
+}
+
+void tTuning::optimizeParameter(int* const param) {
+	const int diff = 2 + *param / 5,
+		lbound = *param - diff, hbound = *param + diff;
+
+	if (hbound - lbound < range_threshold) 
+		*param = localSearch(param, lbound, hbound);
+}
+
+int tTuning::localSearch(int* const param, const int lbound, const int hbound) {
+	double best = std::numeric_limits<double>::max(), curr;
+	int best_param_val = (lbound + hbound) / 2;
+
+	for (int val = lbound; val <= hbound; val++) {
+		*param = val;
+		data.fillEvalSet();
+		curr = computeE(k);
+		
+		if (curr <= best) {
+			best = curr;
+			best_param_val = val;
+		}
+	}
+
+	return best_param_val;
 }
 
 double tTuning::computeK(const int k_precision) {

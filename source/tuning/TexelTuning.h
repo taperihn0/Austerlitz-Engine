@@ -1,12 +1,13 @@
 #pragma once
 
+#include "../engine/Evaluation.h"
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
 
 #define COLLECT_POSITION_DATA false
-#define ENABLE_TUNING false
+#define ENABLE_TUNING true
 
 class tGameCollector {
 public:
@@ -73,18 +74,31 @@ private:
 class tTuning {
 public:
 	tTuning();
+	bool openSessionFile();
 
 	void initTuningData();
 	void updateK();
+
+	void runWeightTuning();
 private:
+	void optimizeParameter(int* const param);
+	int localSearch(int* const param, const int lbound, const int hbound);
+
 	double computeK(const int k_precision = 10);
 	double computeE(const double g_k);
 	double sigmoid(const double g_k, const double g_q);
 
-	static constexpr double pre_computed_k = 0.519184;
+	static constexpr double pre_computed_k = 0.529958;
+	static constexpr size_t tuned_param_number = sizeof(Eval::params) / 4;
+	static constexpr std::string_view filepath =
+		R"(C:/Users/User/source/repos/ChessEngine/source/data/TuningSession.txt)";
+	static constexpr unsigned range_threshold = 15;
 
 	double k;
 	tData data;
+
+	std::array<int*, tuned_param_number> eval_params;
+	std::ofstream session_file;
 };
 
 #if ENABLE_TUNING

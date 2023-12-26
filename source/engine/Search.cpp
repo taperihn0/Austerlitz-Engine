@@ -263,7 +263,7 @@ int mSearch::qSearch(int alpha, int beta, const int ply) {
 		return time_stop_sign;
 	} 
 
-	const int eval = Eval::evaluate(alpha - Eval::params.piece_material[QUEEN] - 1, beta);
+	const int eval = Eval::evaluate(alpha - Eval::params.piece_material[QUEEN], beta);
 	nodes++;
 
 	if (eval >= beta) 

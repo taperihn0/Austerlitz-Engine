@@ -245,11 +245,8 @@ namespace Eval {
 			});
 
 		// Package of evaluation parameters for tuning
+#pragma pack(push, 1)
 		struct EvaluationParameters {
-			std::array<int, 6> piece_material = {
-				100, 325, 325, 500, 975, 10000,
-			};
-
 			int endgame_pawn_attack = 7,
 				pawn_attack = 6,
 				minor_attack = 3,
@@ -297,6 +294,10 @@ namespace Eval {
 				k_eval_cmp_distance = 70,
 				kk_tropism_scale = 2;
 
+			std::array<int, 6> piece_material = {
+				100, 325, 325, 500, 975, 10000,
+			};
+
 			using passedPawnTab = std::array<int, 7>;
 			passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
 
@@ -326,6 +327,7 @@ namespace Eval {
 				0,   0,   0,   0,   0,   0,  0,  0,
 			};
 		};
+#pragma pack(pop)
 
 	} // namespace Value
 
