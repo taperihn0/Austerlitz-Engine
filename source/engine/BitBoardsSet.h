@@ -202,10 +202,7 @@ struct gState {
 			OPENING;
 	}
 
-	inline bool isPawnEndgame() {
-		const int total_material = material[0] + material[1] - 20000;
-		return (total_material / 100) == bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
-	}
+	bool isPawnEndgame();
 
 	int ep_sq;
 	enumSide turn;

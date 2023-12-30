@@ -8,10 +8,10 @@
 
 
 bool tGameCollector::openFile() {
-	file.open(tData::getFilePath(), std::ios::app);
+	file.open(filepath.data(), std::ios::app);
 
 	if (!file.is_open()) {
-		OS << "Failed to open file: " << tData::getFilePath() << '\n';
+		OS << "Failed to open file: " << filepath << '\n';
 		return false;
 	}
 
@@ -37,13 +37,30 @@ void tGameCollector::storeGameResult() {
 	else registerGameResult(DRAW);
 }
 
+inline constexpr std::string_view operator "" _sv(const char data[], size_t) {
+	return std::string_view(data);
+}
+
+tData::tData()
+: files{ 
+		std::make_pair(&file_1, R"(C:/Users/User/source/repos/ChessEngine/source/data/1.txt)"_sv),
+		std::make_pair(&file_0, R"(C:/Users/User/source/repos/ChessEngine/source/data/0.txt)"_sv),
+		std::make_pair(&file_0_5, R"(C:/Users/User/source/repos/ChessEngine/source/data/0.5.txt)"_sv)
+} {}
+
+tData::~tData() {
+	for (auto& [file, path] : files)
+		file->close();
+}
 
 bool tData::openDataFile() {
-	file.open(filepath.data(), std::ifstream::beg);
+	for (auto& [file, path] : files) {
+		file->open(path.data(), std::ifstream::beg);
 
-	if (!file.is_open()) {
-		OS << "Failed to open file: " << filepath << '\n';
-		return false;
+		if (!file->is_open()) {
+			OS << "Failed to open file: " << path << '\n';
+			return false;
+		}
 	}
 
 	return true;
@@ -51,18 +68,19 @@ bool tData::openDataFile() {
 
 bool tData::loadTrainingData() {
 	std::istringstream iss;
-
 	std::string line, fen, res;
 
-	for (int i = 1; getline(file, line); i++) {
-		iss.clear();
-		iss.str(line);
+	for (auto& [file, path] : files) {
+		while (getline(*file, line)) {
+			iss.clear();
+			iss.str(line);
 
-		getline(iss, fen, '#');
-		iss >> std::skipws >> res;
+			getline(iss, fen, '#');
+			iss >> std::skipws >> res;
 
-		position.push_back(fen);
-		gres.push_back(stod(res));
+			position.push_back(fen);
+			gres.push_back(stod(res));
+		}
 	}
 
 	position_n = position.size();
@@ -71,6 +89,7 @@ bool tData::loadTrainingData() {
 
 void tData::fillEvalSet() {
 	eval.resize(position_n);
+	m_search.time_data.setFixedTime(0);
 
 	for (int i = 0, abs_qeval; i < position_n; i++) {
 		BBs.parseFEN(position[i]);
@@ -92,7 +111,7 @@ tTuning::tTuning()
 }
 
 bool tTuning::openSessionFile() {
-	session_file.open(filepath.data(), std::ios::out | std::ios::trunc);
+	session_file.open(filepath.data(), std::ios::app);
 
 	if (!session_file.is_open()) {
 		OS << "Failed to open file: " << filepath << '\n';
@@ -108,45 +127,68 @@ void tTuning::initTuningData() {
 }
 
 void tTuning::updateK() {
+	time_data.start = now();
+
 	data.fillEvalSet();
 	const double new_k_val = computeK();
 	OS << "K = " << new_k_val << '\n';
 	k = new_k_val;
+
+	OS << sinceStart_ms(time_data.start) << "ms\n";
 }
 
 void tTuning::runWeightTuning() {
-	for (int i = 0; i < tuned_param_number; i++) {
-		const int prev_val = *eval_params[i];
-		optimizeParameter(eval_params[i]);
-		OS << i << "log: " << *eval_params[i] << '\n';
-		session_file << i << "otimized parameter (" << prev_val << ") = " << *eval_params[i] << '\n';
+	time_data.start = now();
+	gradientDescent();
+
+	for (int* const param : eval_params) {
+		OS << *param << '\n';
+		session_file << *param << '\n';
 	}
+
+	session_file << sinceStart_ms(time_data.start) << "ms\n";
 }
 
-void tTuning::optimizeParameter(int* const param) {
-	const int diff = 2 + *param / 5,
-		lbound = *param - diff, hbound = *param + diff;
-
-	if (hbound - lbound < range_threshold) 
-		*param = localSearch(param, lbound, hbound);
-}
-
-int tTuning::localSearch(int* const param, const int lbound, const int hbound) {
-	double best = std::numeric_limits<double>::max(), curr;
-	int best_param_val = (lbound + hbound) / 2;
-
-	for (int val = lbound; val <= hbound; val++) {
-		*param = val;
+void tTuning::printIndexInfo(const size_t i) {
+	if (data.eval.empty())
 		data.fillEvalSet();
-		curr = computeE(k);
-		
-		if (curr <= best) {
-			best = curr;
-			best_param_val = val;
+	OS << data.eval[i] << ' ' << sigmoid(k, data.eval[i]) << '\n';
+	OS << "E = " << computeE(k) << '\n';
+}
+
+inline double tTuning::differenceQuotient(int* const param) {
+	*param -= 1;
+	data.fillEvalSet();
+	const double a = computeE(k);
+
+	*param += 2;
+	data.fillEvalSet();
+	const double b = computeE(k);
+
+	*param -= 1;
+	return (b - a) / 2;
+}
+
+void tTuning::gradientDescent() {
+	static constexpr double threshold = 0.00002;
+	bool stop = false;
+
+	while (!stop) {
+		stop = true;
+
+		for (int* const param : eval_params) {
+			const double diff = differenceQuotient(param);
+
+			OS << "log: diff " << diff << '\n';
+
+			if (std::abs(diff) < threshold) continue;
+			else stop = false;
+
+			const int step = static_cast<int>(-diff * 100000 * 5 / 9);
+			OS << "log: " << *param << " step " << step << '\n';
+			*param += step;
 		}
 	}
-
-	return best_param_val;
 }
 
 double tTuning::computeK(const int k_precision) {

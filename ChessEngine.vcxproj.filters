@@ -119,6 +119,6 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="source\data\TuningData.txt" />
-    <Text Include="source\data\TuningResults.txt" />
+    <Text Include="source\data\TuningSession.txt" />
   </ItemGroup>
 </Project>

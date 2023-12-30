@@ -58,6 +58,10 @@ void parseGo(std::istringstream& strm) {
 		MoveGenerator::Analisis::perftDriver(depth);
 		return;
 	}
+#if ENABLE_TUNING
+	else if (com == "tuner")
+		tuning.runWeightTuning();
+#endif
 }
 
 // parse given position and perform moves
@@ -176,6 +180,7 @@ void parseTuning(std::istringstream& strm) {
 	strm >> std::skipws >> opt;
 
 	if (opt == "k") tuning.updateK();
+	else if (isdigit(opt.back())) tuning.printIndexInfo(stoi(opt));
 }
 #endif
 
@@ -214,7 +219,7 @@ void UCI::goLoop(int argc, const char* argv[]) {
 #endif
 
 #if ENABLE_TUNING
-		else if (token == "tuner")     parseTuning(strm);
+		else if (token == "tuner")      parseTuning(strm);
 #endif
 	} while (line != "quit");
 

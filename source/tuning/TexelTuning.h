@@ -1,10 +1,12 @@
 #pragma once
 
 #include "../engine/Evaluation.h"
+#include "../engine/Timer.h"
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <utility>
 
 #define COLLECT_POSITION_DATA false
 #define ENABLE_TUNING true
@@ -39,6 +41,9 @@ private:
 	
 	void storeGameResult();
 
+	static constexpr std::string_view filepath =
+		R"(C:/Users/User/source/repos/ChessEngine/source/data/0-1-0.5.txt)";
+
 	std::vector<std::string> pos_bufor;
 	double game_res;
 	std::ofstream file;
@@ -49,15 +54,12 @@ extern tGameCollector game_collector;
 #endif
 
 struct tData {
-	tData() = default;
+	tData();
+	~tData();
 	bool openDataFile();
 
 	bool loadTrainingData();
 	void fillEvalSet();
-
-	static inline constexpr const char* getFilePath() noexcept {
-		return filepath.data();
-	}
 
 	std::vector<std::string> position;
 	std::vector<double> gres;
@@ -65,9 +67,8 @@ struct tData {
 
 	size_t position_n;
 private:
-	static constexpr std::string_view filepath = 
-		R"(C:/Users/User/source/repos/ChessEngine/source/data/TuningData.txt)";
-	std::ifstream file;
+	std::array<std::pair<std::ifstream*, std::string_view>, 3> files;
+	std::ifstream file_1, file_0, file_0_5;
 };
 
 
@@ -80,25 +81,27 @@ public:
 	void updateK();
 
 	void runWeightTuning();
+	void printIndexInfo(const size_t i);
 private:
-	void optimizeParameter(int* const param);
-	int localSearch(int* const param, const int lbound, const int hbound);
+	double differenceQuotient(int* const param);
+	void gradientDescent();
 
 	double computeK(const int k_precision = 10);
 	double computeE(const double g_k);
 	double sigmoid(const double g_k, const double g_q);
 
-	static constexpr double pre_computed_k = 0.529958;
+	static constexpr double pre_computed_k = 0.943628;
 	static constexpr size_t tuned_param_number = sizeof(Eval::params) / 4;
 	static constexpr std::string_view filepath =
 		R"(C:/Users/User/source/repos/ChessEngine/source/data/TuningSession.txt)";
-	static constexpr unsigned range_threshold = 15;
 
 	double k;
 	tData data;
 
 	std::array<int*, tuned_param_number> eval_params;
 	std::ofstream session_file;
+
+	Time time_data;
 };
 
 #if ENABLE_TUNING

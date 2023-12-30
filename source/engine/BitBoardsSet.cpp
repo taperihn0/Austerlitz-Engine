@@ -91,6 +91,8 @@ void BitBoardsSet::parseGState(const std::string& fen, int i) {
 	game_state.ep_sq = -1;
 	if (fen[++i] != '-') {
 		game_state.ep_sq = (fen[i] - 'a') + (fen[i + 1] - '1') * 8;
+		i++;
+		game_state.ep_sq += game_state.turn ? Compass::nort : Compass::sout;
 	} 
 
 	i += 2;
@@ -204,11 +206,16 @@ std::string BitBoardsSet::getFEN_States() {
 	}
 
 	states += ' ';
-	states += game_state.ep_sq == -1 ? "-" : index_to_square[game_state.ep_sq];
+	states += game_state.ep_sq == -1 ? "-" : index_to_square[game_state.ep_sq + (game_state.turn ? Compass::sout : Compass::nort)];
 	states += ' ';
 	states += std::to_string(game_state.halfmove);
 	states += ' ';
 	states += std::to_string(game_state.fullmove);
 
 	return states;
+}
+
+bool gState::isPawnEndgame() {
+	const int total_material = material[0] + material[1] - 2 * Eval::params.piece_material[KING];
+	return (total_material / Eval::params.piece_material[PAWN]) == bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
 }

@@ -220,17 +220,17 @@ namespace Eval {
 		constexpr auto distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int d = cexpr::abs(i % 8 - j % 8) + cexpr::abs(i / 8 - j / 8);
 			return 14 - d;
-			});
+		});
 
 		constexpr auto diag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int sc_i = (i % 8) + (i / 8), sc_j = (j % 8) + (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
-			});
+		});
 
 		constexpr auto adiag_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int sc_i = 7 - (i % 8) - (i / 8), sc_j = 7 - (j % 8) + (j / 8);
 			return 14 - cexpr::abs(sc_i - sc_j);
-			});
+		});
 
 		constexpr auto knight_distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			int c = 0;
@@ -242,7 +242,7 @@ namespace Eval {
 			}
 
 			return 3 - c;
-			});
+		});
 
 		// Package of evaluation parameters for tuning
 #pragma pack(push, 1)
@@ -271,23 +271,23 @@ namespace Eval {
 			int k_mobility_scale = 4, k_mobility_exclude = 4,
 				k_undefended_minor = 2,
 				k_ring_attack_factor = 5,
-				k_tropism_scale = 1, k_pawn_reduction_scale = 1;
+				k_tropism_scale = 2, k_pawn_reduction_scale = 2;
 
 			int b_mobility_scale = 3, b_mobility_exclude = 7,
 				b_undefended_minor = 2,
 				b_ring_attack_factor = 5,
-				b_tropism_scale = 1, b_pawn_reduction_scale = 1,
+				b_tropism_scale = 2, b_pawn_reduction_scale = 2,
 				b_pair_bonus = 50;
 
 			int r_mobility_exclude = 7,
 				r_ring_attack_factor = 5,
 				r_open_file_bonus = 10, r_queen_file_bonus = 10,
 				r_tarrasch_file_bonus = 10,
-				r_tropism_scale = 1, r_pawn_reduction_scale = 1;
+				r_tropism_scale = 2, r_pawn_reduction_scale = 2;
 
 			int q_mobility_exclude = 14,
 				q_ring_attack_factor = 5,
-				q_tropism_scale = 1;
+				q_tropism_scale = 4;
 
 			int kzone_control_reduction = 120,
 				k_castle_bonus = 15,

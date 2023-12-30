@@ -4,6 +4,7 @@
 #include "MoveOrder.h"
 #include "Zobrist.h"
 #include "Timer.h"
+#include "../tuning/TexelTuning.h"
 
 
 namespace Eval {
@@ -34,6 +35,9 @@ namespace Eval {
 			k_zone[WHITE] = attack<KING>(UINT64_MAX, k_sq[WHITE]) | bitU64(k_sq[WHITE]);
 			k_zone[BLACK] = attack<KING>(UINT64_MAX, k_sq[BLACK]) | bitU64(k_sq[BLACK]);
 
+			pt_att[WHITE][KING] = k_zone[WHITE];
+			pt_att[BLACK][KING] = k_zone[BLACK];
+
 			k_nearby[WHITE] = kingNearby(WHITE);
 			k_nearby[BLACK] = kingNearby(BLACK);
 
@@ -42,6 +46,27 @@ namespace Eval {
 
 			open_files[WHITE] = ~fileFill(BBs[nWhitePawn]);
 			open_files[BLACK] = ~fileFill(BBs[nBlackPawn]);
+
+#if ENABLE_TUNING
+			static const std::array<int*, 13> divisors = { 
+				&params.kzone_control_reduction,
+				&params.q_ring_attack_factor,
+				&params.r_ring_attack_factor,
+				&params.b_ring_attack_factor,
+				&params.k_ring_attack_factor,
+				&params.kk_tropism_scale,
+				&params.q_tropism_scale,
+				&params.r_tropism_scale,
+				&params.r_pawn_reduction_scale,
+				&params.b_tropism_scale,
+				&params.b_pawn_reduction_scale,
+				&params.k_tropism_scale,
+				&params.k_pawn_reduction_scale 
+			};
+
+			for (auto* ptr : divisors)
+				if (!(*ptr)) *ptr = 1;
+#endif
 		}
 
 		// reset shared evaluation data for endgame phase
@@ -65,7 +90,7 @@ namespace Eval {
 			k_sq, att_count, att_value;
 
 		bothSideLookUp<U64> k_zone, k_nearby, tarrasch_passed_msk, open_files;
-		bothSideLookUp<std::array<U64, 5>> pt_att;
+		bothSideLookUp<std::array<U64, 6>> pt_att;
 
 	} eval_vector;
 
@@ -89,14 +114,16 @@ namespace Eval {
 		}();
 		
 		for (int pc = KNIGHT; pc <= QUEEN; pc++) {
-			eval += pawn_phase_scale * bitCount(conn & eval_vector.pt_att[SIDE][pc] & BBs[nBlackPawn - SIDE])
-				+ params.minor_attack * bitCount(conn & eval_vector.pt_att[SIDE][pc] & (BBs[nBlackKnight - SIDE] | BBs[nBlackBishop - SIDE]))
-				+ params.rook_attack * bitCount(conn & eval_vector.pt_att[SIDE][pc] & BBs[nBlackRook - SIDE])
-				+ params.queen_attack * bitCount(conn & eval_vector.pt_att[SIDE][pc] & BBs[nBlackQueen - SIDE]);
+			const U64 prot = conn & eval_vector.pt_att[SIDE][pc];
+
+			eval += pawn_phase_scale * bitCount(prot & BBs[nBlackPawn - SIDE])
+				+ params.minor_attack * bitCount(prot & (BBs[nBlackKnight - SIDE] | BBs[nBlackBishop - SIDE]))
+				+ params.rook_attack * bitCount(prot & BBs[nBlackRook - SIDE])
+				+ params.queen_attack * bitCount(prot & BBs[nBlackQueen - SIDE]);
 
 			conn |= eval_vector.pt_att[SIDE][pc];
 		}
-
+		
 		return eval;
 	}
 
@@ -107,15 +134,16 @@ namespace Eval {
 			- eval_vector.passed_count
 			- eval_vector.backward_count;
 
+		int divider = eval_vector.passed_count * params.passer_weight
+			+ eval_vector.backward_count * params.backward_weight
+			+ other_count * params.other_weight;
+		divider = divider ? divider : 1;
+
 		return params.king_pawn_tropism_scale * (
-				eval_vector.t_passed_dist[SIDE] * params.passer_weight
-				+ eval_vector.t_backw_dist[SIDE] * params.backward_weight
-				+ eval_vector.t_o_dist[SIDE] * params.other_weight
-			) / (
-				eval_vector.passed_count * params.passer_weight
-				+ eval_vector.backward_count * params.backward_weight
-				+ other_count * params.other_weight + 1
-			);
+			eval_vector.t_passed_dist[SIDE] * params.passer_weight
+			+ eval_vector.t_backw_dist[SIDE] * params.backward_weight
+			+ eval_vector.t_o_dist[SIDE] * params.other_weight
+		) / divider;
 	}
 
 	// simplified castle checking
@@ -290,8 +318,8 @@ namespace Eval {
 				eval += params.outpos_score[sq];
 
 			// king tropism bonus
-			eval += params.k_tropism_scale * Value::knight_distance_score.get(sq, eval_vector.k_sq[!SIDE])
-				+ params.k_pawn_reduction_scale * eval_vector.pawn_count;
+			eval += Value::knight_distance_score.get(sq, eval_vector.k_sq[!SIDE]) * 2 / params.k_tropism_scale
+				+ eval_vector.pawn_count * 2 / params.k_pawn_reduction_scale;
 		}
 
 		return eval;
@@ -330,13 +358,13 @@ namespace Eval {
 			}
 
 			// king tropism score
-			eval += params.b_tropism_scale * std::max(
+			eval += std::max(
 				Value::adiag_score.get(sq, eval_vector.k_sq[!SIDE]),
 				Value::diag_score.get(sq, eval_vector.k_sq[!SIDE])
-			);
+			) * 2 / params.b_tropism_scale;
 
 			// bishop's value increasing while number of pawns are decreasing
-			eval -= params.b_pawn_reduction_scale * eval_vector.pawn_count;
+			eval -= eval_vector.pawn_count * 2 / params.b_pawn_reduction_scale;
 		}
 
 		// bishop pair bonus
@@ -376,7 +404,7 @@ namespace Eval {
 			}
 
 			// king tropism score
-			eval += params.r_tropism_scale * Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]);
+			eval += Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]) * 2 / params.r_tropism_scale;
 
 			// open file score
 			if (bitU64(sq) & eval_vector.open_files[SIDE])
@@ -391,7 +419,7 @@ namespace Eval {
 			}
 
 			// rook's value increasing as number of pawns is decreasing
-			eval -= params.r_pawn_reduction_scale * eval_vector.pawn_count;
+			eval -= eval_vector.pawn_count * 2 / params.r_pawn_reduction_scale;
 		}
 
 		return eval;
@@ -429,11 +457,10 @@ namespace Eval {
 			}
 
 			// king tropism score
-			eval += params.q_tropism_scale * (Value::distance_score.get(sq, eval_vector.k_sq[!SIDE])
-				+ std::max(
-					Value::adiag_score.get(sq, eval_vector.k_sq[!SIDE]),
-					Value::diag_score.get(sq, eval_vector.k_sq[!SIDE])
-				));
+			eval += std::max(Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]), std::max(
+				Value::adiag_score.get(sq, eval_vector.k_sq[!SIDE]),
+				Value::diag_score.get(sq, eval_vector.k_sq[!SIDE])
+			)) * 4 / params.q_tropism_scale;
 
 			// penalty for queen development in opening
 			if constexpr (Phase == gState::OPENING)
@@ -461,7 +488,7 @@ namespace Eval {
 		else {
 			// king distance consideration
 			if (relative_eval > params.k_eval_cmp_distance)
-				eval += params.kk_tropism_scale * Value::distance_score.get(eval_vector.k_sq[SIDE], eval_vector.k_sq[!SIDE]);
+				eval += Value::distance_score.get(eval_vector.k_sq[SIDE], eval_vector.k_sq[!SIDE]) * 4 / params.kk_tropism_scale;
 			eval += Value::late_king_score[flipSquare<SIDE>(eval_vector.k_sq[SIDE])];
 		}
 

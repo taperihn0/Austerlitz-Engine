@@ -40,7 +40,7 @@ int main(int argc, const char* argv[]) {
 
 #if ENABLE_TUNING
 	tuning.initTuningData();
-	tuning.openSessionFile();
+	assert(tuning.openSessionFile());
 #endif
 
 	InitState::initMAttacksTables();
