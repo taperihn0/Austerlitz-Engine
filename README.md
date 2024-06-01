@@ -8,7 +8,9 @@ Austerlitz is a mediocre Polish chess engine written from scratch fully in C++ l
 since July 2023. For this moment, Austerlitz supports basic UCI commands, including hash table 
 manipulation and other debug-purpose commands. Basing on hand-crafted evaluation, min-max search
 with alpha-beta pruning framework and other optimization techniques, Austerlitz v1.4.0 got earlier 2000+ ELO rank on 
-[lichess](https://lichess.org/@/AusterlitzEngine/all).
+[lichess](https://lichess.org/@/AusterlitzEngine/all). Finally, engine was tested and it appeared on [CCRL Ranking List](
+https://computerchess.org.uk/ccrl/4040/cgi/engine_details.cgi?print=Details&each_game=0&eng=Austerlitz%201.4.7%2064-bit#Austerlitz_1_4_7_64-bit)
+.
 
 ***
 

@@ -15,7 +15,7 @@ BitBoardsSet BBs(BitBoardsSet::start_pos);
 mData mdata;
 gState game_state;
 
-UCI UCI_o;
+UCInterface uci;
 SearchBenchmark bench;
 
 TranspositionTable tt;
@@ -44,5 +44,5 @@ int main(int argc, const char* argv[]) {
 #endif
 
 	InitState::initMAttacksTables();
-	UCI_o.goLoop(argc, argv);
+	uci.goLoop(argc, argv);
 }

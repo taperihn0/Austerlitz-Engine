@@ -35,9 +35,6 @@ namespace Eval {
 			k_zone[WHITE] = attack<KING>(UINT64_MAX, k_sq[WHITE]) | bitU64(k_sq[WHITE]);
 			k_zone[BLACK] = attack<KING>(UINT64_MAX, k_sq[BLACK]) | bitU64(k_sq[BLACK]);
 
-			pt_att[WHITE][KING] = k_zone[WHITE];
-			pt_att[BLACK][KING] = k_zone[BLACK];
-
 			k_nearby[WHITE] = kingNearby(WHITE);
 			k_nearby[BLACK] = kingNearby(BLACK);
 
@@ -90,7 +87,7 @@ namespace Eval {
 			k_sq, att_count, att_value;
 
 		bothSideLookUp<U64> k_zone, k_nearby, tarrasch_passed_msk, open_files;
-		bothSideLookUp<std::array<U64, 6>> pt_att;
+		bothSideLookUp<std::array<U64, 5>> pt_att;
 
 	} eval_vector;
 
@@ -104,26 +101,33 @@ namespace Eval {
 	// connectivity bonus - squares controlled by at least two pieces
 	template <enumSide SIDE, gState::gPhase Phase>
 	int connectivity() {
+		static constexpr int 
+			endgame_pawn_attack = 7,
+			pawn_attack = 6,
+			minor_attack = 3,
+			rook_attack = 2,
+			queen_attack = 1;
+
 		U64 conn = eval_vector.pt_att[SIDE][PAWN];
 		int eval = 0;
 
-		const int pawn_phase_scale = []() {
+		static constexpr int pawn_phase_scale = []() constexpr {
 			if constexpr (Phase == gState::ENDGAME)
-				return params.endgame_pawn_attack;
-			return params.pawn_attack;
+				return endgame_pawn_attack;
+			return pawn_attack;
 		}();
-		
+
 		for (int pc = KNIGHT; pc <= QUEEN; pc++) {
 			const U64 prot = conn & eval_vector.pt_att[SIDE][pc];
 
 			eval += pawn_phase_scale * bitCount(prot & BBs[nBlackPawn - SIDE])
-				+ params.minor_attack * bitCount(prot & (BBs[nBlackKnight - SIDE] | BBs[nBlackBishop - SIDE]))
-				+ params.rook_attack * bitCount(prot & BBs[nBlackRook - SIDE])
-				+ params.queen_attack * bitCount(prot & BBs[nBlackQueen - SIDE]);
+				+ minor_attack * bitCount(prot & (BBs[nBlackKnight - SIDE] | BBs[nBlackBishop - SIDE]))
+				+ rook_attack * bitCount(prot & BBs[nBlackRook - SIDE])
+				+ queen_attack * bitCount(prot & BBs[nBlackQueen - SIDE]);
 
 			conn |= eval_vector.pt_att[SIDE][pc];
 		}
-		
+
 		return eval;
 	}
 
@@ -318,8 +322,8 @@ namespace Eval {
 				eval += params.outpos_score[sq];
 
 			// king tropism bonus
-			eval += Value::knight_distance_score.get(sq, eval_vector.k_sq[!SIDE]) * 2 / params.k_tropism_scale
-				+ eval_vector.pawn_count * 2 / params.k_pawn_reduction_scale;
+			eval += (Value::knight_distance_score.get(sq, eval_vector.k_sq[!SIDE]) * 2) / params.k_tropism_scale
+				+ (eval_vector.pawn_count * 2) / params.k_pawn_reduction_scale;
 		}
 
 		return eval;
@@ -358,13 +362,13 @@ namespace Eval {
 			}
 
 			// king tropism score
-			eval += std::max(
+			eval += (std::max(
 				Value::adiag_score.get(sq, eval_vector.k_sq[!SIDE]),
 				Value::diag_score.get(sq, eval_vector.k_sq[!SIDE])
-			) * 2 / params.b_tropism_scale;
+			) * 2) / params.b_tropism_scale;
 
 			// bishop's value increasing while number of pawns are decreasing
-			eval -= eval_vector.pawn_count * 2 / params.b_pawn_reduction_scale;
+			eval -= (eval_vector.pawn_count * 2) / params.b_pawn_reduction_scale;
 		}
 
 		// bishop pair bonus
@@ -419,7 +423,7 @@ namespace Eval {
 			}
 
 			// rook's value increasing as number of pawns is decreasing
-			eval -= eval_vector.pawn_count * 2 / params.r_pawn_reduction_scale;
+			eval -= (eval_vector.pawn_count * 2) / params.r_pawn_reduction_scale;
 		}
 
 		return eval;
@@ -457,10 +461,10 @@ namespace Eval {
 			}
 
 			// king tropism score
-			eval += std::max(Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]), std::max(
+			eval += (std::max(Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]), std::max(
 				Value::adiag_score.get(sq, eval_vector.k_sq[!SIDE]),
 				Value::diag_score.get(sq, eval_vector.k_sq[!SIDE])
-			)) * 4 / params.q_tropism_scale;
+			)) * 4) / params.q_tropism_scale;
 
 			// penalty for queen development in opening
 			if constexpr (Phase == gState::OPENING)
@@ -488,7 +492,7 @@ namespace Eval {
 		else {
 			// king distance consideration
 			if (relative_eval > params.k_eval_cmp_distance)
-				eval += Value::distance_score.get(eval_vector.k_sq[SIDE], eval_vector.k_sq[!SIDE]) * 4 / params.kk_tropism_scale;
+				eval += (Value::distance_score.get(eval_vector.k_sq[SIDE], eval_vector.k_sq[!SIDE]) * 4) / params.kk_tropism_scale;
 			eval += Value::late_king_score[flipSquare<SIDE>(eval_vector.k_sq[SIDE])];
 		}
 
@@ -519,11 +523,8 @@ namespace Eval {
 		eval += pcEval<SIDE, ROOK, Phase>() - pcEval<!SIDE, ROOK, Phase>();
 		eval += pcEval<SIDE, QUEEN, Phase>() - pcEval<!SIDE, QUEEN, Phase>();
 
-		eval +=
-			// consider connectivity (double connected squares)			
-			connectivity<SIDE, Phase>() - connectivity<!SIDE, Phase>()
-			// material score and mobility
-			+ material_sc;
+		eval += material_sc
+			+ connectivity<SIDE, Phase>() - connectivity<!SIDE, Phase>();
 
 		// king position evaluation
 		eval += kingEval<SIDE, Phase>(eval) - kingEval<!SIDE, Phase>(-eval);
@@ -540,7 +541,7 @@ namespace Eval {
 	// main evaluation system
 	int evaluate(int alpha, int beta) {
 		eval_vector.openingDataReset();
-		
+
 		if (game_state.gamePhase() == gState::OPENING)
 			return sideEval<gState::OPENING>(alpha, beta);
 

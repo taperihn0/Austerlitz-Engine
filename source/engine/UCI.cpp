@@ -11,21 +11,21 @@
 #include <string>
 
 
-UCI::UCI() 
+UCInterface::UCInterface() 
 	: o_stream(&std::cout), i_stream(&std::cin) {
 	std::ios_base::sync_with_stdio(false);
 }
 
-// return introducing string
-inline void parseUCI() {
-	OS << UCI::engine_name << '\n'
-		<< UCI::author << '\n'
+
+inline void UCInterface::introduce() {
+	OS  << UCInterface::engine_name << '\n'
+		<< UCInterface::author << '\n'
 		<< TranspositionTable::hashInfo() << '\n'
 		<< "uciok\n";
 }
 
-// serve "go" command
-void parseGo(std::istringstream& strm) {
+
+void UCInterface::parseGo(std::istringstream& strm) {
 	std::string com;
 	int depth;
 
@@ -64,8 +64,8 @@ void parseGo(std::istringstream& strm) {
 #endif
 }
 
-// parse given position and perform moves
-void UCI::parsePosition(std::istringstream& strm) {
+
+void UCInterface::parsePosition(std::istringstream& strm) {
 	std::string com, move;
 
 	strm >> std::skipws >> com;
@@ -133,8 +133,8 @@ void UCI::parsePosition(std::istringstream& strm) {
 	}
 }
 
-// prepare for new game
-inline void newGame() {
+
+inline void UCInterface::newGame() {
 #if COLLECT_POSITION_DATA
 	game_collector.flushBufor();
 #endif
@@ -146,7 +146,7 @@ inline void newGame() {
 }
 
 
-void setOption(std::istringstream& strm) {
+inline void UCInterface::setOption(std::istringstream& strm) {
 	std::string com;
 
 	strm >> std::skipws >> com >> std::skipws >> com;
@@ -159,14 +159,14 @@ void setOption(std::istringstream& strm) {
 
 
 #if defined(__DEBUG__)
-void seePrint(std::istringstream& strm) {
+inline void UCInterface::seePrint(std::istringstream& strm) {
 	std::string sq_str;
 	strm >> std::skipws >> sq_str;
 	int sq = (sq_str[1] - '1') * 8 + (sq_str[0] - 'a');
 	OS << mOrder::see(sq) << '\n';
 }
 
-void evalInfo() {
+inline void UCInterface::evalInfo() {
 	OS << "white material: " << game_state.material[0] << '\n'
 		<< "black material: " << game_state.material[1] << '\n'
 		<< "pawn endgame: " << game_state.isPawnEndgame() << '\n'
@@ -175,7 +175,7 @@ void evalInfo() {
 #endif
 
 #if ENABLE_TUNING
-void parseTuning(std::istringstream& strm) {
+inline void UCInterface::parseTuning(std::istringstream& strm) {
 	std::string opt;
 	strm >> std::skipws >> opt;
 
@@ -184,8 +184,8 @@ void parseTuning(std::istringstream& strm) {
 }
 #endif
 
-// main UCI loop
-void UCI::goLoop(int argc, const char* argv[]) {
+
+void UCInterface::goLoop(int argc, const char* argv[]) {
 	std::string line, token;
 	bool skip_getline = argc > 1;
 
@@ -206,7 +206,7 @@ void UCI::goLoop(int argc, const char* argv[]) {
 		if (token == "isready")         OS << "readyok\n";
 		else if (token == "position")   parsePosition(strm);
 		else if (token == "ucinewgame") newGame();
-		else if (token == "uci")        parseUCI();
+		else if (token == "uci")        introduce();
 		else if (token == "go")         parseGo(strm);
 		else if (token == "setoption")  setOption(strm);
 		else if (token == "print")      BBs.printBoard();
@@ -226,4 +226,9 @@ void UCI::goLoop(int argc, const char* argv[]) {
 #if COLLECT_POSITION_DATA
 	game_collector.flushBufor();
 #endif
+}
+
+
+void UCInterface::setInputStream(std::istream* new_stream) {
+	i_stream = new_stream;
 }

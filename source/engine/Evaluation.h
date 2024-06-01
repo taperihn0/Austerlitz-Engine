@@ -247,19 +247,13 @@ namespace Eval {
 		// Package of evaluation parameters for tuning
 #pragma pack(push, 1)
 		struct EvaluationParameters {
-			int endgame_pawn_attack = 7,
-				pawn_attack = 6,
-				minor_attack = 3,
-				rook_attack = 2,
-				queen_attack = 1;
-
 			int passer_weight = 6, backward_weight = 3, other_weight = 2;
 
 			int promo_distance_scale = 4,
 				king_pawn_tropism_scale = 16,
 				pawn_island_penalty = 3,
 				backward_penalty = 7,
-				double_pawn_penalty = 10,
+				double_pawn_penalty = -7,
 				pawn_eg_passer_bonus = 60,
 				protected_pawn_bonus = 6, double_protected_pawn_bonus = 2,
 				isolanis_penalty = 8, half_isolanis_penalty = 2,
@@ -294,15 +288,15 @@ namespace Eval {
 				k_eval_cmp_distance = 70,
 				kk_tropism_scale = 2;
 
-			std::array<int, 6> piece_material = {
-				100, 325, 325, 500, 975, 10000,
-			};
-
 			using passedPawnTab = std::array<int, 7>;
 			passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
 
 			std::array<int, 11> attack_count_weight = { 0, 0, 50, 75, 88, 94, 97, 99, 105, 110, 120 };
 			std::array<int, 5> attacker_weight = { 0, 20, 20, 40, 80 };
+
+			std::array<int, 6> piece_material = {
+				100, 325, 325, 500, 975, 10000,
+			};
 
 			// queen early development penalty 
 			posScoreTab queen_ban_dev = {

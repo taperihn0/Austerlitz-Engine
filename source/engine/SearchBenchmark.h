@@ -14,32 +14,32 @@ public:
 	SearchBenchmark() = default;
 	inline void start();
 private:
-	std::ifstream src;
-	static constexpr std::string_view bench_path = R"(source/data/BenchmarkScript.txt)";
+	static constexpr std::string_view benchmark_script_path = R"(source/data/BenchmarkScript.txt)";
 };
 
 // execute commands located in .txt file and measure time
 inline void SearchBenchmark::start() {
 	static Timer timer;
+	
+	std::ifstream source;
+	source.open(benchmark_script_path.data());
 
-	src.open(bench_path.data());
-
-	if (!src.is_open()) {
-		OS << "Failed to open bench file: " << bench_path << '\n';
+	if (!source.is_open()) {
+		OS << "Failed to open bench file: " << benchmark_script_path << '\n';
 		return;
 	}
 
-	// change current input stream to given file
-	IS_PTR = &src;
+	uci.setInputStream(&source);
 	timer.go();
 
-	UCI_o.goLoop();
+	uci.goLoop();
 
 	timer.stop();
-	src.close();
-	IS_PTR = &std::cin;
+	source.close();
+	
+	uci.setInputStream(&std::cin);
+
 	OS << "Total time: " << timer.duration() << " ms\n";
 }
-
 
 extern SearchBenchmark bench;

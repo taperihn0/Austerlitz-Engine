@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cmath>
 #include <limits>
+#include <iomanip>
 
 
 bool tGameCollector::openFile() {
@@ -35,6 +36,12 @@ void tGameCollector::storeGameResult() {
 	if (score < mSearch::mate_comp) registerGameResult(game_state.turn ? WHITE_WIN : WHITE_LOSE);
 	else if (score > -mSearch::mate_comp) registerGameResult(game_state.turn ? WHITE_LOSE : WHITE_WIN);
 	else registerGameResult(DRAW);
+}
+
+bool Position::isQuiet() {
+	MoveList ml;
+	MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>(ml);
+	return !ml.size();
 }
 
 inline constexpr std::string_view operator "" _sv(const char data[], size_t) {
@@ -78,8 +85,13 @@ bool tData::loadTrainingData() {
 			getline(iss, fen, '#');
 			iss >> std::skipws >> res;
 
-			position.push_back(fen);
-			gres.push_back(stod(res));
+			BBs.parseFEN(fen);
+			Position pos = { BBs, game_state };
+
+			if (pos.isQuiet()) {
+				position.push_back(pos);
+				gres.push_back(stod(res));
+			}
 		}
 	}
 
@@ -87,17 +99,17 @@ bool tData::loadTrainingData() {
 	return !position.empty() and gres.size() == position.size();
 }
 
-void tData::fillEvalSet() {
+void tData::fillEval() {
 	eval.resize(position_n);
-	m_search.time_data.setFixedTime(0);
 
-	for (int i = 0, abs_qeval; i < position_n; i++) {
-		BBs.parseFEN(position[i]);
-		abs_qeval = m_search.qSearch(mSearch::low_bound, mSearch::high_bound, 0);
-		eval[i] = game_state.turn ? -abs_qeval : abs_qeval;
+	for (int i = 0; i < position_n; i++) {
+		const auto& pos = position[i];
+		BBs = pos.bbs;
+		game_state = pos.state;
+		game_state.turn = WHITE;
+		eval[i] = static_cast<double>(Eval::evaluate(mSearch::low_bound, mSearch::high_bound));
 	}
 }
-
 
 tTuning::tTuning()
 : k(pre_computed_k) {
@@ -129,7 +141,8 @@ void tTuning::initTuningData() {
 void tTuning::updateK() {
 	time_data.start = now();
 
-	data.fillEvalSet();
+	if (data.eval.empty()) data.fillEval();
+
 	const double new_k_val = computeK();
 	OS << "K = " << new_k_val << '\n';
 	k = new_k_val;
@@ -150,19 +163,18 @@ void tTuning::runWeightTuning() {
 }
 
 void tTuning::printIndexInfo(const size_t i) {
-	if (data.eval.empty())
-		data.fillEvalSet();
+	if (data.eval.empty()) data.fillEval();
 	OS << data.eval[i] << ' ' << sigmoid(k, data.eval[i]) << '\n';
 	OS << "E = " << computeE(k) << '\n';
 }
 
 inline double tTuning::differenceQuotient(int* const param) {
 	*param -= 1;
-	data.fillEvalSet();
+	data.fillEval();
 	const double a = computeE(k);
 
 	*param += 2;
-	data.fillEvalSet();
+	data.fillEval();
 	const double b = computeE(k);
 
 	*param -= 1;
@@ -170,8 +182,10 @@ inline double tTuning::differenceQuotient(int* const param) {
 }
 
 void tTuning::gradientDescent() {
-	static constexpr double threshold = 0.00002;
+	static constexpr double threshold = 0.00001;
 	bool stop = false;
+
+	OS << std::setprecision(10);
 
 	while (!stop) {
 		stop = true;
@@ -179,12 +193,14 @@ void tTuning::gradientDescent() {
 		for (int* const param : eval_params) {
 			const double diff = differenceQuotient(param);
 
-			OS << "log: diff " << diff << '\n';
+			OS << "log: diff " << std::fixed << diff << '\n';
 
 			if (std::abs(diff) < threshold) continue;
 			else stop = false;
 
-			const int step = static_cast<int>(-diff * 100000 * 5 / 9);
+			const double step_alpha = -diff * 10000. * 1.5;
+			const int step = step_alpha < 0. ? std::floor(step_alpha) : std::ceil(step_alpha);
+
 			OS << "log: " << *param << " step " << step << '\n';
 			*param += step;
 		}
@@ -221,12 +237,13 @@ double tTuning::computeE(const double g_k) {
 	double res = 0.;
 
 	for (int i = 0; i < data.position_n; i++) {
-		res += std::pow(data.gres[i] - sigmoid(g_k, static_cast<double>(data.eval[i])), 2);
+		const double error = data.gres[i] - sigmoid(g_k, data.eval[i]);
+		res += error * error;
 	}
 
 	return res / static_cast<double>(data.position_n);
 }
 
-inline double tTuning::sigmoid(const double g_k, const double g_q) {
-	return 1 / (1 + std::pow(10, -g_k * g_q / 400));
+inline double tTuning::sigmoid(const double g_k, const double g_e) {
+	return 1. / (1. + std::pow(10, -g_k * g_e / 400.));
 }

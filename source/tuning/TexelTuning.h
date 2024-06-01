@@ -9,7 +9,7 @@
 #include <utility>
 
 #define COLLECT_POSITION_DATA false
-#define ENABLE_TUNING true
+#define ENABLE_TUNING false
 
 class tGameCollector {
 public:
@@ -53,17 +53,24 @@ private:
 extern tGameCollector game_collector;
 #endif
 
+struct Position {
+	bool isQuiet();
+
+	BitBoardsSet bbs;
+	gState state;
+};
+
 struct tData {
 	tData();
 	~tData();
 	bool openDataFile();
 
 	bool loadTrainingData();
-	void fillEvalSet();
+	int getEval(Position& pos);
+	void fillEval();
 
-	std::vector<std::string> position;
-	std::vector<double> gres;
-	std::vector<int> eval;
+	std::vector<double> gres, eval;
+	std::vector<Position> position;
 
 	size_t position_n;
 private:
@@ -88,10 +95,10 @@ private:
 
 	double computeK(const int k_precision = 10);
 	double computeE(const double g_k);
-	double sigmoid(const double g_k, const double g_q);
+	double sigmoid(const double g_k, const double g_e);
 
-	static constexpr double pre_computed_k = 0.943628;
-	static constexpr size_t tuned_param_number = sizeof(Eval::params) / 4;
+	static constexpr double pre_computed_k = 0.861318; //0.943628;
+	static constexpr size_t tuned_param_number = sizeof(Eval::params) / 4 - 64 * 2 - 6;
 	static constexpr std::string_view filepath =
 		R"(C:/Users/User/source/repos/ChessEngine/source/data/TuningSession.txt)";
 

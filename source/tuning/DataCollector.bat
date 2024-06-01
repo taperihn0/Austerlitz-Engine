@@ -2,7 +2,7 @@
 
 if "%~4" == "" (
     echo Invalid number of given filepaths. Should be:
-    echo {first engine filepath} {second engine filepath} {opening book filepath} {number of games mult. by 2}
+    echo {first engine filepath} {second engine filepath} {opening book filepath} {number of rounds}
     exit /b
 )
 
