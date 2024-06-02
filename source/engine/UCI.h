@@ -28,10 +28,6 @@ private:
 	void seePrint(std::istringstream& strm);
 	void evalInfo();
 #endif
-
-#if ENABLE_TUNING
-	void parseTuning(std::istringstream& strm);
-#endif
 };
 
 extern UCInterface uci;

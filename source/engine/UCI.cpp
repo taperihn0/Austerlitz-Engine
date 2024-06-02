@@ -175,7 +175,7 @@ inline void UCInterface::evalInfo() {
 #endif
 
 #if ENABLE_TUNING
-inline void UCInterface::parseTuning(std::istringstream& strm) {
+inline void parseTuning(std::istringstream& strm) {
 	std::string opt;
 	strm >> std::skipws >> opt;
 

@@ -99,17 +99,13 @@ bool tData::loadTrainingData() {
 	return !position.empty() and gres.size() == position.size();
 }
 
-void tData::fillEval() {
-	eval.resize(position_n);
-
-	for (int i = 0; i < position_n; i++) {
-		const auto& pos = position[i];
-		BBs = pos.bbs;
-		game_state = pos.state;
-		game_state.turn = WHITE;
-		eval[i] = static_cast<double>(Eval::evaluate(mSearch::low_bound, mSearch::high_bound));
-	}
+inline double tData::evaluatePosition(const Position& pos) {
+	BBs = pos.bbs;
+	game_state = pos.state;
+	game_state.turn = WHITE;
+	return static_cast<double>(Eval::evaluate(mSearch::low_bound, mSearch::high_bound));
 }
+
 
 tTuning::tTuning()
 : k(pre_computed_k) {
@@ -141,8 +137,6 @@ void tTuning::initTuningData() {
 void tTuning::updateK() {
 	time_data.start = now();
 
-	if (data.eval.empty()) data.fillEval();
-
 	const double new_k_val = computeK();
 	OS << "K = " << new_k_val << '\n';
 	k = new_k_val;
@@ -152,8 +146,11 @@ void tTuning::updateK() {
 
 void tTuning::runWeightTuning() {
 	time_data.start = now();
-	gradientDescent();
+	optimizeParameters();
+	printTrainingResults();
+}
 
+void tTuning::printTrainingResults() {
 	for (int* const param : eval_params) {
 		OS << *param << '\n';
 		session_file << *param << '\n';
@@ -163,25 +160,23 @@ void tTuning::runWeightTuning() {
 }
 
 void tTuning::printIndexInfo(const size_t i) {
-	if (data.eval.empty()) data.fillEval();
-	OS << data.eval[i] << ' ' << sigmoid(k, data.eval[i]) << '\n';
+	const double pos_eval = data.evaluatePosition(data.position[i]);
+	OS << pos_eval << ' ' << sigmoid(k, pos_eval) << '\n';
 	OS << "E = " << computeE(k) << '\n';
 }
 
 inline double tTuning::differenceQuotient(int* const param) {
 	*param -= 1;
-	data.fillEval();
 	const double a = computeE(k);
 
 	*param += 2;
-	data.fillEval();
 	const double b = computeE(k);
 
 	*param -= 1;
 	return (b - a) / 2;
 }
 
-void tTuning::gradientDescent() {
+void tTuning::optimizeParameters() {
 	static constexpr double threshold = 0.00001;
 	bool stop = false;
 
@@ -237,13 +232,13 @@ double tTuning::computeE(const double g_k) {
 	double res = 0.;
 
 	for (int i = 0; i < data.position_n; i++) {
-		const double error = data.gres[i] - sigmoid(g_k, data.eval[i]);
+		const double error = data.gres[i] - sigmoid(g_k, data.evaluatePosition(data.position[i]));
 		res += error * error;
 	}
 
 	return res / static_cast<double>(data.position_n);
 }
 
-inline double tTuning::sigmoid(const double g_k, const double g_e) {
-	return 1. / (1. + std::pow(10, -g_k * g_e / 400.));
+inline double tTuning::sigmoid(const double g_k, const double eval_to_map) {
+	return 1. / (1. + std::pow(10, -g_k * eval_to_map / 400.));
 }

@@ -66,10 +66,10 @@ struct tData {
 	bool openDataFile();
 
 	bool loadTrainingData();
-	int getEval(Position& pos);
 	void fillEval();
+	double evaluatePosition(const Position& pos);
 
-	std::vector<double> gres, eval;
+	std::vector<double> gres;
 	std::vector<Position> position;
 
 	size_t position_n;
@@ -91,11 +91,12 @@ public:
 	void printIndexInfo(const size_t i);
 private:
 	double differenceQuotient(int* const param);
-	void gradientDescent();
+	void optimizeParameters();
+	void printTrainingResults();
 
 	double computeK(const int k_precision = 10);
 	double computeE(const double g_k);
-	double sigmoid(const double g_k, const double g_e);
+	double sigmoid(const double g_k, const double eval_to_map);
 
 	static constexpr double pre_computed_k = 0.861318; //0.943628;
 	static constexpr size_t tuned_param_number = sizeof(Eval::params) / 4 - 64 * 2 - 6;
