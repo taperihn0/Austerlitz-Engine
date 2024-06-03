@@ -89,6 +89,7 @@ public:
 
 	void runWeightTuning();
 	void printIndexInfo(const size_t i);
+	void printEvalError();
 private:
 	double differenceQuotient(int* const param);
 	void optimizeParameters();
@@ -99,7 +100,7 @@ private:
 	double sigmoid(const double g_k, const double eval_to_map);
 	
 	// previous scaling constant K = (0.861318, 0.943628)
-	static constexpr double pre_computed_k = 1.00433;
+	static constexpr double pre_computed_k = 0.900358;
 	// default number of parameters = sizeof(Eval::params) / sizeof(int)
 	static constexpr size_t tuned_param_number = 6;
 	static constexpr std::string_view filepath =

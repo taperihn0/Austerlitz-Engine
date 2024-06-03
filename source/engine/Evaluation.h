@@ -248,7 +248,7 @@ namespace Eval {
 #pragma pack(push, 1)
 		struct EvaluationParameters {
 			std::array<int, 6> piece_material = {
-				100, 325, 325, 500, 975, 10000,
+				106, 294, 311, 509, 970, 10000
 			};
 
 			int passer_weight = 6, backward_weight = 3, other_weight = 2;
@@ -328,14 +328,16 @@ namespace Eval {
 	extern Value::EvaluationParameters params;
 
 	inline int simpleEvaluation() {
-		return params.piece_material[PAWN] * (BBs.count(nWhitePawn + game_state.turn) - BBs.count(nBlackPawn - game_state.turn));
+		return params.piece_material[PAWN] 
+			* (BBs.count(nWhitePawn + game_state.turn) - BBs.count(nBlackPawn - game_state.turn));
 	}
 
 	inline int materialEvaluation() {
 		int sum = 0;
 
-		for (enumPiece piece : {PAWN, KNIGHT, BISHOP, ROOK, QUEEN})
-			sum += params.piece_material[piece] * (BBs.count(bbsIndex<WHITE>(piece)) - BBs.count(bbsIndex<BLACK>(piece)));
+		for (enumPiece piece : { PAWN, KNIGHT, BISHOP, ROOK, QUEEN })
+			sum += params.piece_material[piece] 
+			* (BBs.count(bbsIndex<WHITE>(piece)) - BBs.count(bbsIndex<BLACK>(piece)));
 	
 		return sum;
 	}

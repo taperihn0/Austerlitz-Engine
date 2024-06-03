@@ -38,11 +38,6 @@ int main(int argc, const char* argv[]) {
 	assert(game_collector.openFile());
 #endif
 
-#if ENABLE_TUNING
-	tuning.initTuningData();
-	assert(tuning.openSessionFile());
-#endif
-
 	InitState::initMAttacksTables();
 	uci.goLoop(argc, argv);
 }

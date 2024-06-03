@@ -149,25 +149,31 @@ void tTuning::updateK() {
 }
 
 void tTuning::runWeightTuning() {
+	assert(tuning.openSessionFile());
 	time_data.start = now();
 	optimizeParameters();
 	printTrainingResults();
 }
 
 void tTuning::printTrainingResults() {
+	session_file << "{\n";
+
 	for (int* const param : eval_params) {
 		OS << *param << '\n';
-		session_file << *param << '\n';
+		session_file << '\t' << *param << '\n';
 	}
 
-	session_file << sinceStart_ms(time_data.start) << "ms\n";
+	session_file << "}\n"
+		<< sinceStart_ms(time_data.start) << "ms\n";
 }
 
 void tTuning::printIndexInfo(const size_t i) {
 	const double pos_eval = data.evaluatePosition(data.position[i - 1]);
 	BBs.printBoard();
-
 	OS << pos_eval << ' ' << sigmoid(k, pos_eval) << '\n';
+}
+
+void tTuning::printEvalError() {
 	OS << "E = " << computeE(k) << '\n';
 }
 
@@ -179,32 +185,46 @@ double tTuning::differenceQuotient(int* const param) {
 	const double b = computeE(k);
 
 	*param -= 1;
-	return (b - a) / 2;
+	return b - a;
 }
 
+// vanilla gradient descent algorithm
 void tTuning::optimizeParameters() {
 	static constexpr double threshold = 0.00001;
-	bool stop = false;
+	static constexpr int step_limit = 1000000;
+	int k = 0;
+
+	std::vector<double> gradient(tuned_param_number);
+	bool found = false;
 
 	OS << std::setprecision(10);
 
-	while (!stop) {
-		stop = true;
+	while (k < step_limit) {
+		found = true;
 
-		for (int* const param : eval_params) {
-			const double diff = differenceQuotient(param);
-
-			OS << "log: diff " << std::fixed << diff << '\n';
-
-			if (std::abs(diff) < threshold) continue;
-			else stop = false;
-
-			const double step_alpha = -diff * 10000. * 1.5;
-			const int step = step_alpha < 0. ? std::floor(step_alpha) : std::ceil(step_alpha);
-
-			OS << "log: " << *param << " step " << step << '\n';
-			*param += step;
+		for (int i = 0; i < tuned_param_number; i++) {
+			const double diff = differenceQuotient(eval_params[i]);
+			gradient[i] = diff;
+			if (std::abs(diff) > threshold) found = false;
 		}
+
+		if (found) break;
+
+		OS << "log (" << k << "):\n";
+
+		for (int i = 0; i < tuned_param_number; i++) {
+			double rate = gradient[i] * 100000.;
+			const int step = static_cast<int>(rate < 0. ? std::floor(rate) : std::ceil(rate));
+
+			OS  << i << " parameter " << *eval_params[i] << '\n'
+				<< "diff: " << gradient[i] << " rate: " << rate << " step: " << step << '\n';
+
+			*eval_params[i] -= step;
+		}
+
+		OS << '\n';
+
+		k++;
 	}
 }
 

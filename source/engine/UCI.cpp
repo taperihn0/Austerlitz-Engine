@@ -176,11 +176,28 @@ inline void UCInterface::evalInfo() {
 
 #if ENABLE_TUNING
 inline void parseTuning(std::istringstream& strm) {
-	std::string opt;
-	strm >> std::skipws >> opt;
+	std::string option;
+	strm >> std::skipws >> option;
 
-	if (opt == "k") tuning.updateK();
-	else if (isdigit(opt.back())) tuning.printIndexInfo(stoi(opt));
+	if (option == "calc") {
+		strm >> std::skipws >> option;
+
+		if (option == "k")
+			tuning.updateK();
+		else if (option == "e")
+			tuning.printEvalError();
+	}
+	else if (option == "debugind") {
+		std::string index;
+		strm >> std::skipws >> index;
+
+		if (UCInterface::isValidNumber(index))
+			tuning.printIndexInfo(stoi(index));
+	}
+	else if (option == "dataload") {
+		tuning.initTuningData();
+	}
+
 }
 #endif
 
@@ -231,4 +248,9 @@ void UCInterface::goLoop(int argc, const char* argv[]) {
 
 void UCInterface::setInputStream(std::istream* new_stream) {
 	i_stream = new_stream;
+}
+
+
+inline bool UCInterface::isValidNumber(const std::string& str) {
+	return !str.empty() and str.find_first_not_of("0123456789") == std::string::npos;
 }

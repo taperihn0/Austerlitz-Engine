@@ -10,6 +10,8 @@ public:
 	void goLoop(int argc = 1, const char* argv[] = nullptr);
 	void setInputStream(std::istream* new_stream);
 
+	static bool isValidNumber(const std::string& str);
+
 	// current input/output stream pointers. Set to (&cout) and (&cin) by default.
 	std::istream* i_stream;
 	std::ostream* o_stream;
