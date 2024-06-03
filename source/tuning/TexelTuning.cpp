@@ -49,19 +49,14 @@ inline constexpr std::string_view operator "" _sv(const char data[], size_t) {
 }
 
 tData::tData()
-: files{ 
-		std::make_pair(&file_1, R"(C:/Users/User/source/repos/ChessEngine/source/data/1.txt)"_sv),
-		std::make_pair(&file_0, R"(C:/Users/User/source/repos/ChessEngine/source/data/0.txt)"_sv),
-		std::make_pair(&file_0_5, R"(C:/Users/User/source/repos/ChessEngine/source/data/0.5.txt)"_sv)
+	: files {
+		std::make_tuple(&file_1, R"(C:/Users/User/source/repos/ChessEngine/source/data/tuner_1.txt)"_sv, 1.),
+		std::make_tuple(&file_0, R"(C:/Users/User/source/repos/ChessEngine/source/data/tuner_0.txt)"_sv, 0.),
+		std::make_tuple(&file_0_5, R"(C:/Users/User/source/repos/ChessEngine/source/data/tuner_0.5.txt)"_sv, 0.5)
 } {}
 
-tData::~tData() {
-	for (auto& [file, path] : files)
-		file->close();
-}
-
 bool tData::openDataFile() {
-	for (auto& [file, path] : files) {
+	for (auto& [file, path, game_res] : files) {
 		file->open(path.data(), std::ifstream::beg);
 
 		if (!file->is_open()) {
@@ -77,33 +72,42 @@ bool tData::loadTrainingData() {
 	std::istringstream iss;
 	std::string line, fen, res;
 
-	for (auto& [file, path] : files) {
+	OS << "Loading dataset ";
+
+	for (auto& [file, path, game_result] : files) {
 		while (getline(*file, line)) {
 			iss.clear();
 			iss.str(line);
 
-			getline(iss, fen, '#');
-			iss >> std::skipws >> res;
+			getline(iss, fen, '\n');
 
 			BBs.parseFEN(fen);
 			Position pos = { BBs, game_state };
 
 			if (pos.isQuiet()) {
 				position.push_back(pos);
-				gres.push_back(stod(res));
+				gres.push_back(game_result);
 			}
 		}
+
+		OS << '.';
 	}
 
 	position_n = position.size();
-	return !position.empty() and gres.size() == position.size();
+
+	if (!position_n or gres.size() != position.size())
+		return false;
+
+	OS << std::endl << "Succesfully loaded training dataset" << std::endl
+	   << "Total data samples: " << position_n << '\n';
 }
 
-inline double tData::evaluatePosition(const Position& pos) {
+double tData::evaluatePosition(const Position& pos) {
 	BBs = pos.bbs;
 	game_state = pos.state;
-	game_state.turn = WHITE;
-	return static_cast<double>(Eval::evaluate(mSearch::low_bound, mSearch::high_bound));
+	//game_state.turn = WHITE;
+	//return static_cast<double>(Eval::evaluate(mSearch::low_bound, mSearch::high_bound));
+	return static_cast<double>(Eval::materialEvaluation());
 }
 
 
@@ -160,12 +164,14 @@ void tTuning::printTrainingResults() {
 }
 
 void tTuning::printIndexInfo(const size_t i) {
-	const double pos_eval = data.evaluatePosition(data.position[i]);
+	const double pos_eval = data.evaluatePosition(data.position[i - 1]);
+	BBs.printBoard();
+
 	OS << pos_eval << ' ' << sigmoid(k, pos_eval) << '\n';
 	OS << "E = " << computeE(k) << '\n';
 }
 
-inline double tTuning::differenceQuotient(int* const param) {
+double tTuning::differenceQuotient(int* const param) {
 	*param -= 1;
 	const double a = computeE(k);
 
@@ -239,6 +245,6 @@ double tTuning::computeE(const double g_k) {
 	return res / static_cast<double>(data.position_n);
 }
 
-inline double tTuning::sigmoid(const double g_k, const double eval_to_map) {
+double tTuning::sigmoid(const double g_k, const double eval_to_map) {
 	return 1. / (1. + std::pow(10, -g_k * eval_to_map / 400.));
 }

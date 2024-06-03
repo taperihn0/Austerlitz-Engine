@@ -9,7 +9,7 @@
 #include <utility>
 
 #define COLLECT_POSITION_DATA false
-#define ENABLE_TUNING false
+#define ENABLE_TUNING true
 
 class tGameCollector {
 public:
@@ -62,7 +62,7 @@ struct Position {
 
 struct tData {
 	tData();
-	~tData();
+	~tData() = default;
 	bool openDataFile();
 
 	bool loadTrainingData();
@@ -74,7 +74,7 @@ struct tData {
 
 	size_t position_n;
 private:
-	std::array<std::pair<std::ifstream*, std::string_view>, 3> files;
+	std::array<std::tuple<std::ifstream*, std::string_view, double>, 3> files;
 	std::ifstream file_1, file_0, file_0_5;
 };
 
@@ -97,9 +97,11 @@ private:
 	double computeK(const int k_precision = 10);
 	double computeE(const double g_k);
 	double sigmoid(const double g_k, const double eval_to_map);
-
-	static constexpr double pre_computed_k = 0.861318; //0.943628;
-	static constexpr size_t tuned_param_number = sizeof(Eval::params) / 4 - 64 * 2 - 6;
+	
+	// previous scaling constant K = (0.861318, 0.943628)
+	static constexpr double pre_computed_k = 1.00433;
+	// default number of parameters = sizeof(Eval::params) / sizeof(int)
+	static constexpr size_t tuned_param_number = 6;
 	static constexpr std::string_view filepath =
 		R"(C:/Users/User/source/repos/ChessEngine/source/data/TuningSession.txt)";
 

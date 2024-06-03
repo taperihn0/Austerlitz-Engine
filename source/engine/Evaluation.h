@@ -247,6 +247,10 @@ namespace Eval {
 		// Package of evaluation parameters for tuning
 #pragma pack(push, 1)
 		struct EvaluationParameters {
+			std::array<int, 6> piece_material = {
+				100, 325, 325, 500, 975, 10000,
+			};
+
 			int passer_weight = 6, backward_weight = 3, other_weight = 2;
 
 			int promo_distance_scale = 4,
@@ -294,10 +298,6 @@ namespace Eval {
 			std::array<int, 11> attack_count_weight = { 0, 0, 50, 75, 88, 94, 97, 99, 105, 110, 120 };
 			std::array<int, 5> attacker_weight = { 0, 20, 20, 40, 80 };
 
-			std::array<int, 6> piece_material = {
-				100, 325, 325, 500, 975, 10000,
-			};
-
 			// queen early development penalty 
 			posScoreTab queen_ban_dev = {
 				-23, -23, -23,  -7, -23, -23, -23, -23,
@@ -327,9 +327,17 @@ namespace Eval {
 
 	extern Value::EvaluationParameters params;
 
-	// simple version of evaluation funcion
 	inline int simpleEvaluation() {
 		return params.piece_material[PAWN] * (BBs.count(nWhitePawn + game_state.turn) - BBs.count(nBlackPawn - game_state.turn));
+	}
+
+	inline int materialEvaluation() {
+		int sum = 0;
+
+		for (enumPiece piece : {PAWN, KNIGHT, BISHOP, ROOK, QUEEN})
+			sum += params.piece_material[piece] * (BBs.count(bbsIndex<WHITE>(piece)) - BBs.count(bbsIndex<BLACK>(piece)));
+	
+		return sum;
 	}
 
 	// main evaluation system
