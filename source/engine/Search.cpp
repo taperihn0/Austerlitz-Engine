@@ -397,8 +397,11 @@ MoveItem::iMove mSearch::bestMove(const int depth) {
 	OS << '\n';
 
 #if COLLECT_POSITION_DATA
-	if (score > mSearch::mate_comp and score < -mSearch::mate_comp)
-		game_collector.registerPosition(BBs.getFEN());
+	if (score >= mate_score and score < mate_comp)
+		game_collector.setGameResult(game_state.turn ? tGameCollector::WHITE_WIN : tGameCollector::WHITE_LOSE);
+	else if (score > -mate_comp and score <= -mate_score)
+		game_collector.setGameResult(game_state.turn ? tGameCollector::WHITE_LOSE : tGameCollector::WHITE_WIN);
+	else game_collector.registerPosition(BBs.getFEN());
 #endif
 
 	return node[ROOT].node_best_move;

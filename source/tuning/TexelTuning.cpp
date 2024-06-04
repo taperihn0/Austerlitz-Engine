@@ -8,35 +8,60 @@
 #include <iomanip>
 
 
-bool tGameCollector::openFile() {
-	file.open(filepath.data(), std::ios::app);
+inline constexpr std::string_view operator "" _sv(const char data[], size_t) {
+	return std::string_view(data);
+}
 
-	if (!file.is_open()) {
-		OS << "Failed to open file: " << filepath << '\n';
-		return false;
+
+tGameCollector::tGameCollector()
+	: files {
+		std::make_pair(&file_1, R"(C:/Users/User/source/repos/ChessEngine/source/data/1.txt)"_sv),
+		std::make_pair(&file_0, R"(C:/Users/User/source/repos/ChessEngine/source/data/0.txt)"_sv),
+		std::make_pair(&file_0_5, R"(C:/Users/User/source/repos/ChessEngine/source/data/0.5.txt)"_sv)
+	}, game_res(NO_RESULT)
+{}
+
+bool tGameCollector::openFile() {
+	for (auto& [file, path] : files) {
+		file->open(path.data(), std::ios::app);
+
+		if (!file->is_open()) {
+			OS << "Failed to open file: " << path << '\n';
+			return false;
+		}
 	}
 
 	return true;
 }
 
 void tGameCollector::flushBufor() {
-	storeGameResult();
+
+	// if engine didn't come up with a winner, it's a draw
+	if (game_res == NO_RESULT)
+		game_res = DRAW;
 
 	for (const auto& pos : pos_bufor) {
-		file << pos << "# " << game_res * 0.5 << '\n';
+		switch (game_res) {
+		case WHITE_LOSE:
+			file_0 << pos << '\n';
+			break;
+		case WHITE_WIN:
+			file_1 << pos << '\n';
+			break;
+		case DRAW:
+			file_0_5 << pos << '\n';
+			break;
+		default: break;
+		}
 	}
 
 	clearBufor();
 }
 
-void tGameCollector::storeGameResult() {
-	m_search.time_data.setFixedTime(0);
-	const int score = m_search.alphaBeta<false>(mSearch::low_bound, mSearch::high_bound, 3, 0);
-
-	if (score < mSearch::mate_comp) registerGameResult(game_state.turn ? WHITE_WIN : WHITE_LOSE);
-	else if (score > -mSearch::mate_comp) registerGameResult(game_state.turn ? WHITE_LOSE : WHITE_WIN);
-	else registerGameResult(DRAW);
+void tGameCollector::setGameResult(GameResult gr) {
+	game_res = gr;
 }
+
 
 bool Position::isQuiet() {
 	MoveList ml;
@@ -44,16 +69,14 @@ bool Position::isQuiet() {
 	return !ml.size();
 }
 
-inline constexpr std::string_view operator "" _sv(const char data[], size_t) {
-	return std::string_view(data);
-}
 
 tData::tData()
 	: files {
 		std::make_tuple(&file_1, R"(C:/Users/User/source/repos/ChessEngine/source/data/tuner_1.txt)"_sv, 1.),
 		std::make_tuple(&file_0, R"(C:/Users/User/source/repos/ChessEngine/source/data/tuner_0.txt)"_sv, 0.),
 		std::make_tuple(&file_0_5, R"(C:/Users/User/source/repos/ChessEngine/source/data/tuner_0.5.txt)"_sv, 0.5)
-} {}
+	}, position_n(0)
+{}
 
 bool tData::openDataFile() {
 	for (auto& [file, path, game_res] : files) {
@@ -100,6 +123,8 @@ bool tData::loadTrainingData() {
 
 	OS << std::endl << "Succesfully loaded training dataset" << std::endl
 	   << "Total data samples: " << position_n << '\n';
+
+	return true;
 }
 
 double tData::evaluatePosition(const Position& pos) {
@@ -149,7 +174,7 @@ void tTuning::updateK() {
 }
 
 void tTuning::runWeightTuning() {
-	assert(tuning.openSessionFile());
+	assert(openSessionFile());
 	time_data.start = now();
 	optimizeParameters();
 	printTrainingResults();

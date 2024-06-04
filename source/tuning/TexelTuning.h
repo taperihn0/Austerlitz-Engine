@@ -8,8 +8,8 @@
 #include <iostream>
 #include <utility>
 
-#define COLLECT_POSITION_DATA false
-#define ENABLE_TUNING true
+#define COLLECT_POSITION_DATA true
+#define ENABLE_TUNING false
 
 class tGameCollector {
 public:
@@ -17,36 +17,28 @@ public:
 		WHITE_LOSE, DRAW, WHITE_WIN, NO_RESULT
 	};
 
-	tGameCollector()
-	: game_res(static_cast<double>(NO_RESULT)) {}
+	tGameCollector();
+	~tGameCollector() = default;
 
 	bool openFile();
-
-	inline void registerGameResult(GameResult res) noexcept {
-		game_res = static_cast<double>(res);
-	}
 
 	inline void registerPosition(const std::string& fen) {
 		pos_bufor.push_back(fen);
 	}
 
 	void flushBufor();
+	void setGameResult(GameResult gr);
 
 private:
-
 	inline void clearBufor() noexcept {
 		pos_bufor.clear();
-		game_res = static_cast<double>(NO_RESULT);
+		game_res = NO_RESULT;
 	}
-	
-	void storeGameResult();
-
-	static constexpr std::string_view filepath =
-		R"(C:/Users/User/source/repos/ChessEngine/source/data/0-1-0.5.txt)";
 
 	std::vector<std::string> pos_bufor;
-	double game_res;
-	std::ofstream file;
+	GameResult game_res;
+	std::array<std::pair<std::ofstream*, std::string_view>, 3> files;
+	std::ofstream file_1, file_0, file_0_5;
 };
 
 #if COLLECT_POSITION_DATA
@@ -60,19 +52,20 @@ struct Position {
 	gState state;
 };
 
-struct tData {
+class tData {
+public:
 	tData();
 	~tData() = default;
 	bool openDataFile();
 
 	bool loadTrainingData();
-	void fillEval();
 	double evaluatePosition(const Position& pos);
 
 	std::vector<double> gres;
 	std::vector<Position> position;
 
 	size_t position_n;
+
 private:
 	std::array<std::tuple<std::ifstream*, std::string_view, double>, 3> files;
 	std::ifstream file_1, file_0, file_0_5;
@@ -90,6 +83,7 @@ public:
 	void runWeightTuning();
 	void printIndexInfo(const size_t i);
 	void printEvalError();
+
 private:
 	double differenceQuotient(int* const param);
 	void optimizeParameters();
