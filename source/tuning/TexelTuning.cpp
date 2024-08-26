@@ -39,6 +39,24 @@ void tGameCollector::flushBufor() {
 	// if engine didn't come up with a winner, it's a draw
 	if (game_res == NO_RESULT)
 		game_res = DRAW;
+	// filter saved positions and remove those with mate score detected in shallow search
+	else {
+		int removed = 0;
+
+		while (!pos_bufor.empty() and removed < 10) {
+			BBs.parseFEN(pos_bufor.back());
+
+			m_search.time_data.setFixedTime(0);
+			int score = m_search.alphaBeta<false>(mSearch::low_bound, mSearch::high_bound, 10, 0);
+			score = std::abs(score);
+
+			if (score > -mSearch::mate_comp and score <= -mSearch::mate_score) {
+				pos_bufor.pop_back();
+				removed++;
+			}
+			else break;
+		}
+	}
 
 	for (const auto& pos : pos_bufor) {
 		switch (game_res) {
@@ -65,7 +83,17 @@ void tGameCollector::setGameResult(GameResult gr) {
 
 bool Position::isQuiet() {
 	MoveList ml;
-	MoveGenerator::generateLegalMoves<MoveGenerator::CAPTURES>(ml);
+	MoveGenerator::generateLegalMoves<MoveGenerator::TACTICAL>(ml);
+	return !ml.size();
+}
+
+bool Position::isCheck() {
+	return isSquareAttacked(getLS1BIndex(BBs[nWhiteKing + game_state.turn]), game_state.turn);
+}
+
+bool Position::isStealmate() {
+	MoveList ml;
+	MoveGenerator::generateLegalMoves<MoveGenerator::LEGAL>(ml);
 	return !ml.size();
 }
 
@@ -107,7 +135,7 @@ bool tData::loadTrainingData() {
 			BBs.parseFEN(fen);
 			Position pos = { BBs, game_state };
 
-			if (pos.isQuiet()) {
+			if (pos.isQuiet() and !pos.isCheck() and !pos.isStealmate()) {
 				position.push_back(pos);
 				gres.push_back(game_result);
 			}
@@ -130,9 +158,8 @@ bool tData::loadTrainingData() {
 double tData::evaluatePosition(const Position& pos) {
 	BBs = pos.bbs;
 	game_state = pos.state;
-	//game_state.turn = WHITE;
-	//return static_cast<double>(Eval::evaluate(mSearch::low_bound, mSearch::high_bound));
-	return static_cast<double>(Eval::materialEvaluation());
+	const int eval = Eval::evaluate(mSearch::low_bound, mSearch::high_bound);
+	return static_cast<double>(game_state.turn == WHITE ? eval : -eval);
 }
 
 
@@ -199,7 +226,7 @@ void tTuning::printIndexInfo(const size_t i) {
 }
 
 void tTuning::printEvalError() {
-	OS << "E = " << computeE(k) << '\n';
+	OS << std::setprecision(10) << "E = " << computeE(k) << '\n' << std::setprecision(6);
 }
 
 double tTuning::differenceQuotient(int* const param) {
@@ -215,8 +242,9 @@ double tTuning::differenceQuotient(int* const param) {
 
 // vanilla gradient descent algorithm
 void tTuning::optimizeParameters() {
-	static constexpr double threshold = 0.00001;
-	static constexpr int step_limit = 1000000;
+	static constexpr double threshold = 10e-6;
+	static constexpr int step_limit = 500;
+	static constexpr double alpha = 0.1;
 	int k = 0;
 
 	std::vector<double> gradient(tuned_param_number);
@@ -226,11 +254,11 @@ void tTuning::optimizeParameters() {
 
 	while (k < step_limit) {
 		found = true;
-
+		
 		for (int i = 0; i < tuned_param_number; i++) {
 			const double diff = differenceQuotient(eval_params[i]);
 			gradient[i] = diff;
-			if (std::abs(diff) > threshold) found = false;
+			if (std::abs(diff) >= threshold) found = false;
 		}
 
 		if (found) break;
@@ -238,8 +266,8 @@ void tTuning::optimizeParameters() {
 		OS << "log (" << k << "):\n";
 
 		for (int i = 0; i < tuned_param_number; i++) {
-			double rate = gradient[i] * 100000.;
-			const int step = static_cast<int>(rate < 0. ? std::floor(rate) : std::ceil(rate));
+			const double rate = gradient[i] * 1e6;
+			int step = static_cast<int>(std::round(rate * alpha));
 
 			OS  << i << " parameter " << *eval_params[i] << '\n'
 				<< "diff: " << gradient[i] << " rate: " << rate << " step: " << step << '\n';
@@ -248,7 +276,6 @@ void tTuning::optimizeParameters() {
 		}
 
 		OS << '\n';
-
 		k++;
 	}
 }

@@ -51,8 +51,9 @@ enum enumSquare {
 	a8, b8, c8, d8, e8, f8, g8, h8
 };
 
-// vertical flipped squares
+// vertical flipped squares and horizontal flipped squares
 constexpr auto ver_flip_square = cexpr::CexprArr<false, int, 64>([](int i) constexpr { return i ^ 56; });
+constexpr auto hor_flip_square = cexpr::CexprArr<false, int, 64>([](int i) constexpr { return i ^ 7; });
 
 // translate index to string square in little endian mapping
 constexpr std::array<const char*, 64> index_to_square = {
@@ -120,7 +121,7 @@ namespace Constans {
 		board_side[2] = { 0x00000000FFFFFFFF, 0xFFFFFFFF00000000 },
 		king_center[2] = { 0x000000000000FF1C, 0x1CFF000000000000 },
 		castle_sides[2][2] = { 0x0000000000000003, 0x00000000000000E0, 0x0300000000000000, 0xE000000000000000 },
-		ban_dev_sq[2] = { 0xFFFFFFFFFFFFFF00, 0x00FFFFFFFFFFFFFF };
+		develop_squares[2] = { 0xFFFFFFFFFFFFFF00, 0x00FFFFFFFFFFFFFF };
 
 	constexpr std::array<U64, 8> r_by_index = {
 		r1_rank, r2_rank, r3_rank, r4_rank, r5_rank, r6_rank, r7_rank, r8_rank
@@ -286,15 +287,16 @@ inline constexpr U64 fileFill(U64 bb) noexcept {
 
 template <enumSide SIDE>
 inline constexpr U64 rearspan(U64 bb) noexcept {
-	if constexpr (SIDE) return nortFill(bb);
-	return soutFill(bb);
+	if constexpr (SIDE) return nortFill(bb << 8);
+	return soutFill(bb >> 8);
 }
 
 template <enumSide SIDE>
 inline constexpr U64 frontspan(U64 bb) noexcept {
-	if constexpr (SIDE) return soutFill(bb);
-	return nortFill(bb);
+	if constexpr (SIDE) return soutFill(bb >> 8);
+	return nortFill(bb << 8);
 }
+
 
 inline constexpr U64 islandsEastFile(U64 fileset) noexcept {
 	return fileset ^ (fileset & (fileset >> 1));

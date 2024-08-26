@@ -4,6 +4,7 @@
 #include "StaticLookup.h"
 #include "LegalityTest.h"
 
+#define ENABLE_TUNING false
 
 namespace Eval {
 	
@@ -60,7 +61,7 @@ namespace Eval {
 			-14,  13,   6,  21,  23,  12, 17, -23,
 			-27,  -2,  -5,  12,  17,   6, 10, -25,
 			-26,  -4,  -4, -10,   3,   3, 33, -12,
-			-35,  -1, -20, -23, -15,  24, 38, -22,
+			-35,  -1, -12, -23, -15,  12, 38, -22,
 			0,   0,   0,   0,   0,   0,  0,   0,
 		};
 
@@ -81,7 +82,7 @@ namespace Eval {
 			-47,  60,  37,  65,  84, 129,  73,   44,
 			-9,  17,  19,  53,  37,  69,  18,   22,
 			-13,   4,  16,  13,  28,  19,  21,   -8,
-			-23,  -9,  12,  10,  19,  17,  25,  -16,
+			-23,  -9,  14,  10,  19,  17,  25,  -16,
 			-29, -53, -12,  -3,  -1,  18, -14,  -19,
 			-105, -21, -58, -33, -17, -28, -19,  -23,
 		};
@@ -105,7 +106,7 @@ namespace Eval {
 			-6,  13,  13,  26,  34,  12,  10,   4,
 			0,  15,  15,  15,  14,  27,  18,  10,
 			4,  15,  16,   0,   7,  21,  33,   1,
-			-33,  -3, -14, -21, -13, -12, -39, -21,
+			-33,  -3, -14, -21, -13, -11, -39, -21,
 		};
 
 		constexpr posScoreTab late_bishop_score = {
@@ -127,7 +128,7 @@ namespace Eval {
 			-36, -26, -12,  -1,  9, -7,   6, -23,
 			-45, -25, -16, -17,  3,  0,  -5, -33,
 			-44, -16, -20,  -9, -1, 11,  -6, -71,
-			-19, -13,   1,  17, 16,  7, -37, -26,
+			-19, -13,   1,  17, 16,  7, -37, -24,
 		};
 
 		constexpr posScoreTab late_rook_score = {
@@ -149,7 +150,7 @@ namespace Eval {
 			-9, -26,  -9, -10,  -2,  -4,   3,  -3,
 			-14,   2, -11,  -2,  -5,   2,  14,   5,
 			-35,  -8,  11,   2,   8,  15,  -3,   1,
-			-1, -18,  -9,  10, -15, -25, -31, -50,
+			-1, -18,  -9,  4, -3, -25, -31, -50,
 		};
 
 		constexpr posScoreTab late_queen_score = {
@@ -171,7 +172,7 @@ namespace Eval {
 			-49,  -1, -27, -39, -46, -44, -33, -51,
 			-14, -14, -22, -46, -44, -30, -15, -27,
 			1,   7,  -8, -64, -43, -16,   9,   8,
-			-15,  36,  12, -54,   8, -28,  24,  14,
+			-15,  36,  12, -42,  -3, -28,  21,  14,
 		};
 
 		constexpr posScoreTab late_king_score = {
@@ -184,38 +185,6 @@ namespace Eval {
 			-27, -11,   4,  13,  14,   4,  -5, -17,
 			-53, -34, -21, -11, -28, -14, -24, -43
 		};
-
-		// easily aggregated lookups
-		using aggregateScoreTab = std::array<std::array<posScoreTab, 6>, 3>;
-		constexpr aggregateScoreTab position_score = { {
-			{
-				pawn_score,
-				knight_score,
-				bishop_score,
-				rook_score,
-				queen_score,
-				king_score
-			},
-
-			{
-				pawn_score,
-				knight_score,
-				bishop_score,
-				rook_score,
-				queen_score,
-				king_score
-			},
-
-			{
-				late_pawn_score,
-				late_knight_score,
-				late_bishop_score,
-				late_rook_score,
-				late_queen_score,
-				late_king_score
-			}
-
-		} };
 
 		constexpr auto distance_score = cexpr::CexprArr<true, int, 64, 64>([](int i, int j) {
 			const int d = cexpr::abs(i % 8 - j % 8) + cexpr::abs(i / 8 - j / 8);
@@ -245,83 +214,78 @@ namespace Eval {
 		});
 
 		// Package of evaluation parameters for tuning
+#if ENABLE_TUNING
 #pragma pack(push, 1)
+#endif
 		struct EvaluationParameters {
 			std::array<int, 6> piece_material = {
-				106, 294, 311, 509, 970, 10000
+				166, 513, 545, 860, 1507, 10000
 			};
 
-			int passer_weight = 6, backward_weight = 3, other_weight = 2;
+			int backward_penalty = 10,
+				double_pawn_penalty = 26,
+				protected_pawn_bonus = 9,
+				doubleprot_pawn_bonus = 5,
+				isolanis_penalty = 2,
+				no_pawns_penalty = 50;
 
-			int promo_distance_scale = 4,
-				king_pawn_tropism_scale = 16,
-				pawn_island_penalty = 3,
-				backward_penalty = 7,
-				double_pawn_penalty = -7,
-				pawn_eg_passer_bonus = 60,
-				protected_pawn_bonus = 6, double_protected_pawn_bonus = 2,
-				isolanis_penalty = 8, half_isolanis_penalty = 2,
-				flat_shield_bonus = 12, triangle_shield_bonus = 8,
-				open_square_penalty = 4,
-				no_pawns_penalty = -30,
-				overly_advanced_penalty = 2;
+			int k_outpos_bonus = 1;
+			std::array<int, 9> k_pawns_onboard_bonus = { 0, 3, 4, 9, 12, 15, 17, 20, 23 };
 
-			int k_mobility_scale = 4, k_mobility_exclude = 4,
-				k_undefended_minor = 2,
-				k_ring_attack_factor = 5,
-				k_tropism_scale = 2, k_pawn_reduction_scale = 2;
+			int b_pair_bonus = 68;
+			std::array<int, 9> b_pawns_onboard_bonus = { 0, 3, 4, 9, 12, 15, 20, 20, 22 };
 
-			int b_mobility_scale = 3, b_mobility_exclude = 7,
-				b_undefended_minor = 2,
-				b_ring_attack_factor = 5,
-				b_tropism_scale = 2, b_pawn_reduction_scale = 2,
-				b_pair_bonus = 50;
+			int r_open_file_bonus = 10, 
+				r_queen_file_bonus = 10,
+				r_tarrasch_file_bonus = 25;
+			std::array<int, 9> r_pawns_onboard_bonus = { 0, 3, 4, 9, 12, 16, 18, 20, 16 };
 
-			int r_mobility_exclude = 7,
-				r_ring_attack_factor = 5,
-				r_open_file_bonus = 10, r_queen_file_bonus = 10,
-				r_tarrasch_file_bonus = 10,
-				r_tropism_scale = 2, r_pawn_reduction_scale = 2;
+			int q_develop_penalty = 34;
 
-			int q_mobility_exclude = 14,
-				q_ring_attack_factor = 5,
-				q_tropism_scale = 4;
+			int k_castle_bonus = 15;
 
-			int kzone_control_reduction = 120,
-				k_castle_bonus = 15,
-				k_eval_cmp_distance = 70,
-				kk_tropism_scale = 2;
+			std::array<int, 7> passed_score = { 0, 10, 20, 30, 60, 116, 105 };
+			std::array<int, 11> attack_count_weight = { 0, 16, 36, 78, 88, 94, 97, 99, 105, 110, 120 };
+			std::array<int, 5> attacker_weight = { 0, 10, 8, 25, 90 };
 
-			using passedPawnTab = std::array<int, 7>;
-			passedPawnTab passed_score = { 0, 10, 20, 30, 55, 90, 105 };
+			int tempo_bonus = 46;
 
-			std::array<int, 11> attack_count_weight = { 0, 0, 50, 75, 88, 94, 97, 99, 105, 110, 120 };
-			std::array<int, 5> attacker_weight = { 0, 20, 20, 40, 80 };
+			// easily aggregated lookups
+			using aggregateScoreTab = std::array<std::array<posScoreTab, 6>, 3>;
+			aggregateScoreTab position_score = { {
+				{
+					pawn_score,
+					knight_score,
+					bishop_score,
+					rook_score,
+					queen_score,
+					king_score
+				},
 
-			// queen early development penalty 
-			posScoreTab queen_ban_dev = {
-				-23, -23, -23,  -7, -23, -23, -23, -23,
-				-23, -23, -23, -23, -23, -23, -23, -23,
-				-19, -21, -21, -21, -21, -21, -21, -19,
-				-18, -18, -20, -20, -20, -20, -18, -17,
-				-18, -18, -18, -18, -18, -18, -18, -18,
-				-18, -18, -23, -13, -13, -18, -18, -18,
-				  0,   0,  -4,  -4,  -4,  -4,   0,   0,
-				  0,   0,   0,   0,   0,   0,   0,   0
-			};
+				{
+					pawn_score,
+					knight_score,
+					bishop_score,
+					rook_score,
+					queen_score,
+					king_score
+				},
 
-			posScoreTab outpos_score = {
-				0,   0,   0,   0,   3,   0,  0,  0,
-				0,   0,  13,  10,   9,  13,  2,  0,
-				0,  14,  15,  16,  16,  15, 14,  5,
-				1,   7,  14,  17,  17,  14,  7,  4,
-				0,   2,   4,   9,   9,   4,  2,  1,
-				0,   0,   1,   1,   1,   1,  0,  0,
-				0,   0,   0,   0,   0,   0,  0,  0,
-				0,   0,   0,   0,   0,   0,  0,  0,
-			};
+				{
+					late_pawn_score,
+					late_knight_score,
+					late_bishop_score,
+					late_rook_score,
+					late_queen_score,
+					late_king_score
+				}
+
+			} };
 		};
+
+#if ENABLE_TUNING
 #pragma pack(pop)
+#endif
 
 	} // namespace Value
 
@@ -332,12 +296,13 @@ namespace Eval {
 			* (BBs.count(nWhitePawn + game_state.turn) - BBs.count(nBlackPawn - game_state.turn));
 	}
 
-	inline int materialEvaluation() {
+	template <enumSide SIDE>
+	inline int material() {
 		int sum = 0;
 
 		for (enumPiece piece : { PAWN, KNIGHT, BISHOP, ROOK, QUEEN })
-			sum += params.piece_material[piece] 
-			* (BBs.count(bbsIndex<WHITE>(piece)) - BBs.count(bbsIndex<BLACK>(piece)));
+			sum += params.piece_material[piece]
+			* BBs.count(bbsIndex<SIDE>(piece));
 	
 		return sum;
 	}

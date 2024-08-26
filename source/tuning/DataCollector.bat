@@ -6,7 +6,7 @@ if "%~4" == "" (
     exit /b
 )
 
-set "engine_1=C:\Users\User\Desktop\lichess-bot-master\engines\version\data_storing_enabled\Austerlitz"
+set "engine_1=Austerlitz"
 
 if "%~1" neq "default" (
     set "engine_1=%~1"

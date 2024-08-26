@@ -8,8 +8,7 @@
 #include <iostream>
 #include <utility>
 
-#define COLLECT_POSITION_DATA true
-#define ENABLE_TUNING false
+#define COLLECT_POSITION_DATA false
 
 class tGameCollector {
 public:
@@ -47,6 +46,8 @@ extern tGameCollector game_collector;
 
 struct Position {
 	bool isQuiet();
+	bool isCheck();
+	bool isStealmate();
 
 	BitBoardsSet bbs;
 	gState state;
@@ -94,9 +95,8 @@ private:
 	double sigmoid(const double g_k, const double eval_to_map);
 	
 	// previous scaling constant K = (0.861318, 0.943628)
-	static constexpr double pre_computed_k = 0.900358;
-	// default number of parameters = sizeof(Eval::params) / sizeof(int)
-	static constexpr size_t tuned_param_number = 6;
+	static constexpr double pre_computed_k = 0.637088;
+	static constexpr size_t tuned_param_number = sizeof(Eval::params) / sizeof(int);
 	static constexpr std::string_view filepath =
 		R"(C:/Users/User/source/repos/ChessEngine/source/data/TuningSession.txt)";
 

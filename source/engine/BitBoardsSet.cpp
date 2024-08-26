@@ -216,6 +216,6 @@ std::string BitBoardsSet::getFEN_States() {
 }
 
 bool gState::isPawnEndgame() {
-	const int total_material = material[0] + material[1] - 2 * Eval::params.piece_material[KING];
-	return (total_material / Eval::params.piece_material[PAWN]) == bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
+	return (game_state.material[WHITE] + game_state.material[BLACK]) / Eval::params.piece_material[PAWN]
+		== bitCount(BBs[nWhitePawn] | BBs[nBlackPawn]);
 }

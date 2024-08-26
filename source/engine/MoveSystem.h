@@ -171,36 +171,10 @@ namespace {
 
 	} // namespace PawnAttacks
 
-
-	inline U64 noNeightbourEast(U64 bb) {
-		return bb & ~westOne(fileFill(bb));
-	}
-
-	inline U64 noNeightbourWest(U64 bb) {
-		return bb & ~eastOne(fileFill(bb));
-	}
-
-	inline U64 isolanis(U64 bb) {
-		return noNeightbourEast(bb) & noNeightbourWest(bb);
-	}
-
-	inline U64 halfIsolanis(U64 bb) {
-		return noNeightbourEast(bb) ^ noNeightbourWest(bb);
-	}
-
 	template <enumSide SIDE>
-	inline U64 unfreePawns(U64 own, U64 opp) {
-		if constexpr (SIDE) return own & nortFill(opp);
-		return own & soutFill(opp);
-	}
-
-	template <enumSide SIDE>
-	inline U64 overlyAdvancedPawns(U64 own, U64 opp) {
-		const U64 unfree = unfreePawns<SIDE>(own, opp);
-		const U64 unfree_att = PawnAttacks::anyAttackPawn<SIDE>(unfree, UINT64_MAX);
-
-		if constexpr (SIDE) return unfree & (soutFill(unfree_att) ^ unfree_att);
-		return unfree & (nortFill(unfree_att) ^ unfree_att);
+	inline constexpr U64 attackspan(U64 bb) noexcept {
+		const U64 front_span = frontspan<SIDE>(bb);
+		return eastOne(front_span) | westOne(front_span);
 	}
 
 } // namespace

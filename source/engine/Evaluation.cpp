@@ -11,17 +11,16 @@ namespace Eval {
 
 	static struct commonEvalData {
 
-		inline U64 kingNearby(bool side) {
-			U64 k_att = k_zone[side];
-			k_att |= westOne(k_att);
-			k_att |= eastOne(k_att);
-			k_att |= nortOne(k_att);
-			k_att |= soutOne(k_att);
-			return k_att & ~k_zone[side];
+		inline U64 grid5x5(U64 square) {
+			square |= westOne(square);
+			square |= eastOne(square);
+			square |= nortOne(square);
+			square |= soutOne(square);
+			return square;
 		}
 
 		// reset shared evaluation data for opening, middlegame and endgame
-		void openingDataReset() {
+		void reset() {
 			// king square
 			k_sq[WHITE] = getLS1BIndex(BBs[nWhiteKing]);
 			k_sq[BLACK] = getLS1BIndex(BBs[nBlackKing]);
@@ -32,47 +31,18 @@ namespace Eval {
 			pawn_count = s_pawn_count[WHITE] + s_pawn_count[BLACK];
 
 			// king zone, used in king safety evaluation
-			k_zone[WHITE] = attack<KING>(UINT64_MAX, k_sq[WHITE]) | bitU64(k_sq[WHITE]);
-			k_zone[BLACK] = attack<KING>(UINT64_MAX, k_sq[BLACK]) | bitU64(k_sq[BLACK]);
-
-			k_nearby[WHITE] = kingNearby(WHITE);
-			k_nearby[BLACK] = kingNearby(BLACK);
-
-			// attackers data as used in king safety evaluation
-			att_count = { 0, 0 }, att_value = { 0, 0 };
+			king_zone[WHITE] = grid5x5(attack<KING>(UINT64_MAX, k_sq[WHITE]));
+			king_zone[BLACK] = grid5x5(attack<KING>(UINT64_MAX, k_sq[BLACK]));
 
 			open_files[WHITE] = ~fileFill(BBs[nWhitePawn]);
 			open_files[BLACK] = ~fileFill(BBs[nBlackPawn]);
 
-#if ENABLE_TUNING
-			static const std::array<int*, 13> divisors = { 
-				&params.kzone_control_reduction,
-				&params.q_ring_attack_factor,
-				&params.r_ring_attack_factor,
-				&params.b_ring_attack_factor,
-				&params.k_ring_attack_factor,
-				&params.kk_tropism_scale,
-				&params.q_tropism_scale,
-				&params.r_tropism_scale,
-				&params.r_pawn_reduction_scale,
-				&params.b_tropism_scale,
-				&params.b_pawn_reduction_scale,
-				&params.k_tropism_scale,
-				&params.k_pawn_reduction_scale 
-			};
-
-			for (auto* ptr : divisors)
-				if (!(*ptr)) *ptr = 1;
-#endif
+			att_count = { 0, 0 }, att_value = { 0, 0 };
 		}
 
 		// reset shared evaluation data for endgame phase
-		inline void endgameDataReset() noexcept {
-			passed_count = 0;
-			backward_count = 0;
-			t_passed_dist = { 0, 0 };
-			t_backw_dist = { 0, 0 };
-			t_o_dist = { 0, 0 };
+		inline void clear() noexcept {
+			att_count = { 0, 0 }, att_value = { 0, 0 };
 			tarrasch_passed_msk = { eU64, eU64 };
 		}
 
@@ -81,78 +51,20 @@ namespace Eval {
 		template <typename T>
 		using bothSideLookUp = std::array<T, 2>;
 
-		int passed_count, backward_count, pawn_count;
+		int pawn_count;
 		bothSideLookUp<int>
-			t_passed_dist, t_backw_dist, t_o_dist, s_pawn_count,
-			k_sq, att_count, att_value;
+			s_pawn_count,
+			k_sq, att_count, 
+			att_value;
 
-		bothSideLookUp<U64> k_zone, k_nearby, tarrasch_passed_msk, open_files;
+		bothSideLookUp<U64> king_zone, tarrasch_passed_msk, open_files;
 		bothSideLookUp<std::array<U64, 5>> pt_att;
 
 	} eval_vector;
 
-	// bonus for distance from promotion square
-	template <enumSide SIDE>
-	inline int promotionDistanceBonus(U64 bb) {
-		if constexpr (SIDE) return (7 - (getLS1BIndex(bb) / 8)) * params.promo_distance_scale;
-		return (getMS1BIndex(bb) / 8) * params.promo_distance_scale;
-	}
-
-	// connectivity bonus - squares controlled by at least two pieces
-	template <enumSide SIDE, gState::gPhase Phase>
-	int connectivity() {
-		static constexpr int 
-			endgame_pawn_attack = 7,
-			pawn_attack = 6,
-			minor_attack = 3,
-			rook_attack = 2,
-			queen_attack = 1;
-
-		U64 conn = eval_vector.pt_att[SIDE][PAWN];
-		int eval = 0;
-
-		static constexpr int pawn_phase_scale = []() constexpr {
-			if constexpr (Phase == gState::ENDGAME)
-				return endgame_pawn_attack;
-			return pawn_attack;
-		}();
-
-		for (int pc = KNIGHT; pc <= QUEEN; pc++) {
-			const U64 prot = conn & eval_vector.pt_att[SIDE][pc];
-
-			eval += pawn_phase_scale * bitCount(prot & BBs[nBlackPawn - SIDE])
-				+ minor_attack * bitCount(prot & (BBs[nBlackKnight - SIDE] | BBs[nBlackBishop - SIDE]))
-				+ rook_attack * bitCount(prot & BBs[nBlackRook - SIDE])
-				+ queen_attack * bitCount(prot & BBs[nBlackQueen - SIDE]);
-
-			conn |= eval_vector.pt_att[SIDE][pc];
-		}
-
-		return eval;
-	}
-
-	// king pawn tropism, considering pawns distance to own king
-	template <enumSide SIDE>
-	inline int kingPawnTropism() {
-		const int other_count = eval_vector.pawn_count
-			- eval_vector.passed_count
-			- eval_vector.backward_count;
-
-		int divider = eval_vector.passed_count * params.passer_weight
-			+ eval_vector.backward_count * params.backward_weight
-			+ other_count * params.other_weight;
-		divider = divider ? divider : 1;
-
-		return params.king_pawn_tropism_scale * (
-			eval_vector.t_passed_dist[SIDE] * params.passer_weight
-			+ eval_vector.t_backw_dist[SIDE] * params.backward_weight
-			+ eval_vector.t_o_dist[SIDE] * params.other_weight
-		) / divider;
-	}
-
 	// simplified castle checking
 	template <enumSide SIDE>
-	bool isCastle() {
+	inline bool isCastle() {
 		if (game_state.castle.checkLegalCastle<SIDE & QUEEN>()
 			or game_state.castle.checkLegalCastle<SIDE & ROOK>())
 			return false;
@@ -161,7 +73,7 @@ namespace Eval {
 
 	template <enumSide SIDE>
 	inline int flipSquare(int sq) {
-		if constexpr (SIDE) return sq;
+		if constexpr (SIDE) return hor_flip_square.get(sq);
 		return ver_flip_square.get(sq);
 	}
 
@@ -171,204 +83,195 @@ namespace Eval {
 		return sq / 8;
 	}
 
+	template <enumSide SIDE>
+	U64 backwardPawnsMask() {
+		U64 stop;
+
+		if constexpr (SIDE) stop = soutOne(BBs[nBlackPawn]);
+		else stop = nortOne(BBs[nWhitePawn]);
+
+		const U64 defend_spans = attackspan<SIDE>(BBs[nWhitePawn + SIDE]),
+			attack_spans = attackspan<!SIDE>(BBs[nBlackPawn - SIDE]);
+
+		const U64 res = stop & attack_spans & ~defend_spans;
+
+		if constexpr (SIDE) return nortOne(res);
+		return soutOne(res);
+	}
+
+	template <enumSide SIDE>
+	inline U64 doublePawnsMask() {
+		const U64 rear_span = rearspan<SIDE>(BBs[nWhitePawn + SIDE]);
+		return BBs[nWhitePawn + SIDE] & rear_span;
+	}
+
+	template <enumSide SIDE>
+	inline U64 protectedPawnsMask() {
+		return BBs[nWhitePawn + SIDE] & eval_vector.pt_att[SIDE][PAWN];
+	}
+
+	template <enumSide SIDE>
+	inline U64 doubleProtectedPawnsMask() {
+		return PawnAttacks::bothAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], BBs[nWhitePawn + SIDE]);
+	}
+
+	inline U64 noNeightbourEast(U64 bb) {
+		return bb & ~westOne(fileFill(bb));
+	}
+
+	inline U64 noNeightbourWest(U64 bb) {
+		return bb & ~eastOne(fileFill(bb));
+	}
+
+	template <enumSide SIDE>
+	inline U64 isolanisMask() {
+		return noNeightbourEast(BBs[nWhitePawn + SIDE]) & noNeightbourWest(BBs[nWhitePawn + SIDE]);
+	}
+
+	template <enumSide SIDE>
+	inline int pawnIslandCount() {
+		return bitCount(soutFill(BBs[nWhitePawn + SIDE]) & Constans::r1_rank);
+	}
+
+	/*
+	template <enumSide SIDE>
+	int pawnShieldBonus() {
+		if (eval_vector.k_sq[SIDE] % 8 == 0 or eval_vector.k_sq[SIDE] % 8 == 7)
+			return 0;
+		else if (eval_vector.k_sq[WHITE] / 8 >= 6 or eval_vector.k_sq[BLACK] / 8 <= 1)
+			return 0;
+
+		U64 wall = bitU64(eval_vector.k_sq[SIDE]);
+		wall |= westOne(wall) | eastOne(wall);
+
+		if constexpr (SIDE) wall = soutOne(wall);
+		else wall = nortOne(wall);
+
+		U64 key = wall & BBs[nWhitePawn + SIDE];
+		
+		if constexpr (SIDE) wall = soutOne(wall);
+		else wall = nortOne(wall);
+
+		if constexpr (SIDE) {
+			key |= (wall & BBs[nWhitePawn + SIDE]) << 5;
+			key >>= (getLS1BIndex(wall) + 5);
+		}
+		else {
+			key |= (wall & BBs[nWhitePawn + SIDE]) >> 5;
+			key >>= (getLS1BIndex(wall) - 8);
+
+		}
+
+		return params.pawn_shield_weight[SIDE][key];
+	}
+	*/
+
 	// evaluation of pawn structure of given side
 	template <enumSide SIDE, gState::gPhase Phase>
 	int pawnStructureEval() {
-		static constexpr auto vertical_pawn_shift = std::make_tuple(nortOne, soutOne);
 		U64 pawns = BBs[nWhitePawn + SIDE], passed = eU64;
 		int sq, eval = 0;
 
-		const U64 p_att = PawnAttacks::anyAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX);
-		eval_vector.pt_att[SIDE][PAWN] = p_att;
+		eval_vector.pt_att[SIDE][PAWN] = PawnAttacks::anyAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX);
 
-		const bool is_pawn_endgame = game_state.isPawnEndgame();
+		eval -= bitCount(backwardPawnsMask<SIDE>()) * params.backward_penalty
+			+ bitCount(doublePawnsMask<SIDE>()) * params.double_pawn_penalty
+			+ bitCount(isolanisMask<SIDE>()) * params.isolanis_penalty;
 
-		// pawn islands
-		const U64 fileset = soutFill(BBs[nWhitePawn + SIDE]) & Constans::r1_rank;
-		eval -= params.pawn_island_penalty * islandCount(fileset);
-
-		bool dist_updated;
+		eval += bitCount(protectedPawnsMask<SIDE>()) * params.protected_pawn_bonus
+			+ bitCount(doubleProtectedPawnsMask<SIDE>()) * params.doubleprot_pawn_bonus;
 
 		while (pawns) {
 			sq = popLS1B(pawns);
-			eval += Value::position_score[Phase][PAWN][flipSquare<SIDE>(sq)];
-			dist_updated = false;
+			eval += params.position_score[Phase][PAWN][flipSquare<SIDE>(sq)];
 
-			// if backward pawn...
-			if (!(LookUp::back_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE])) {
-				if constexpr (Phase == gState::ENDGAME) {
-					eval_vector.t_backw_dist[SIDE] += Value::distance_score.get(sq, eval_vector.k_sq[SIDE]);
-					eval_vector.t_backw_dist[!SIDE] += Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]);
-					eval_vector.backward_count++;
-					dist_updated = true;
-				}
-
-				eval -= params.backward_penalty;
-			}
-
-			// if double pawn...
-			if (!(LookUp::sf_file.get(SIDE, sq) & BBs[nWhitePawn + SIDE]))
-				eval -= params.double_pawn_penalty;
 			// if passed pawn...
-			else if (!((LookUp::nf_file.get(SIDE, sq) | LookUp::sf_file.get(SIDE, sq)) & BBs[nBlackPawn - SIDE])) {
-				if constexpr (Phase == gState::ENDGAME) {
-					passed |= bitU64(sq);
-					eval_vector.t_passed_dist[SIDE] += Value::distance_score.get(sq, eval_vector.k_sq[SIDE]);
-					eval_vector.t_passed_dist[!SIDE] += Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]);
-					eval_vector.passed_count++;
-					dist_updated = true;
-				}
-
-				// clear passer square bonus
-				if (!(LookUp::passer_square.get(SIDE, sq) & eval_vector.k_sq[!SIDE])
-					and game_state.turn == SIDE)
-					eval += params.passed_score[flipRank<SIDE>(sq)] / 2 + is_pawn_endgame * params.pawn_eg_passer_bonus;
-
-				eval += params.passed_score[flipRank<SIDE>(sq)];
-			}
-
-			// if protected...
-			if (bitU64(sq) & p_att or std::get<SIDE>(vertical_pawn_shift)(bitU64(sq)) & p_att)
-				eval += params.protected_pawn_bonus;
-
 			if constexpr (Phase == gState::ENDGAME) {
-				if (!dist_updated) {
-					eval_vector.t_o_dist[SIDE] += Value::distance_score.get(sq, eval_vector.k_sq[SIDE]);
-					eval_vector.t_o_dist[!SIDE] += Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]);
+				if ((LookUp::sf_file.get(SIDE, sq) & (BBs[nWhitePawn] | BBs[nBlackPawn])) == 0ull
+					and (LookUp::nf_file.get(SIDE, sq) & BBs[nBlackPawn - SIDE]) == 0ull) {
+					passed |= bitU64(sq);
+					eval += params.passed_score[flipRank<SIDE>(sq)];
 				}
 			}
 		}
-
-		// both defending another pawn bonus
-		eval += params.double_protected_pawn_bonus * bitCount(PawnAttacks::bothAttackPawn<SIDE>(BBs[nWhitePawn + SIDE], UINT64_MAX));
 
 		// save tarrasch masks
 		if constexpr (Phase == gState::ENDGAME) {
 			eval_vector.tarrasch_passed_msk[SIDE] |= rearspan<SIDE>(passed);
-			eval_vector.tarrasch_passed_msk[!SIDE] |= frontspan<SIDE>(passed);
+		
+			if (!eval_vector.s_pawn_count[SIDE])
+				eval -= params.no_pawns_penalty;
 		}
-
-		// isolanis and half-isolanis
-		eval -= params.isolanis_penalty * bitCount(isolanis(BBs[nWhitePawn + SIDE]))
-			+ params.half_isolanis_penalty * bitCount(halfIsolanis(BBs[nWhitePawn + SIDE]));
-
-		// pawn shield
-		if constexpr (Phase != gState::ENDGAME) {
-			const U64 pshield = std::get<SIDE>(vertical_pawn_shift)(
-				BBs[nWhiteKing + SIDE] | eastOne(BBs[nWhiteKing + SIDE]) | westOne(BBs[nWhiteKing + SIDE])
-				) & BBs[nWhitePawn + SIDE],
-				pshield_front = std::get<SIDE>(vertical_pawn_shift)(pshield) & BBs[nWhitePawn + SIDE];
-			const int pshield_count = bitCount(pshield);
-
-			if (pshield_count == 3)
-				eval += params.flat_shield_bonus;
-			else if (pshield_count == 2 and
-				((pshield << 1) & (pshield >> 1)) == std::get<!SIDE>(vertical_pawn_shift)(pshield_front))
-				eval += params.triangle_shield_bonus;
-			else {
-				// penalty for open file near the king
-				eval -= params.open_square_penalty 
-					* bitCount(eval_vector.open_files[SIDE] & (eval_vector.k_zone[SIDE] | eval_vector.k_nearby[SIDE]));
-			}
-		}
-		else {
-			// no pawns in endgame penalty
-			eval += !eval_vector.s_pawn_count[SIDE] ? params.no_pawns_penalty :
-				promotionDistanceBonus<SIDE>(BBs[nWhitePawn + SIDE]) * (is_pawn_endgame + 1);
-		}
-
-		// overly advanced pawns
-		eval -= params.overly_advanced_penalty * bitCount(overlyAdvancedPawns<SIDE>(BBs[nWhitePawn + SIDE], BBs[nBlackPawn - SIDE]));
 
 		return eval;
 	}
 
+	template <enumSide SIDE>
+	inline U64 outposMask() {
+		return BBs[nWhiteKnight + SIDE] & eval_vector.pt_att[SIDE][PAWN] & ~eval_vector.pt_att[!SIDE][PAWN];
+	}
+
 	// evaluation of knights
-	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
-	auto pcEval() -> std::enable_if_t<PC == KNIGHT, int> {
+	template <enumSide SIDE, gState::gPhase Phase>
+	int knightEval() {
 		int sq, eval = 0, mobility;
-		const U64 opp_p_att = eval_vector.pt_att[!SIDE][PAWN];
-		U64 k_msk = BBs[nWhiteKnight + SIDE], k_att, safe_att;
+		U64 knights = BBs[nWhiteKnight + SIDE], k_att;
 
 		eval_vector.pt_att[SIDE][KNIGHT] = eU64;
 
-		while (k_msk) {
-			sq = popLS1B(k_msk);
-			eval += Value::position_score[Phase][KNIGHT][flipSquare<SIDE>(sq)];
+		eval += bitCount(outposMask<SIDE>()) * params.k_outpos_bonus;
 
-			// safe mobility - do not consider squares controled by enemy pawns
+		while (knights) {
+			sq = popLS1B(knights);
+			eval += params.position_score[Phase][KNIGHT][flipSquare<SIDE>(sq)];
+
+			// mobily bonus
 			k_att = attack<KNIGHT>(UINT64_MAX, sq);
-			safe_att = k_att & ~eval_vector.pt_att[!SIDE][PAWN] & BBs[nEmpty];
-			mobility = bitCount(safe_att);
-			eval += params.k_mobility_scale * (mobility - params.k_mobility_exclude);
-			// undefended minor pieces 
-			eval -= params.k_undefended_minor * bitCount(~k_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
+			mobility = bitCount(k_att & ~BBs[nWhite + SIDE]);
+			eval += 6 * (mobility - 4);
 
 			eval_vector.pt_att[SIDE][KNIGHT] |= k_att;
 
-			if constexpr (Phase != gState::ENDGAME) {
-				if (k_att & eval_vector.k_zone[!SIDE]) {
-					eval_vector.att_count[SIDE]++;
-					eval_vector.att_value[SIDE] += params.attacker_weight[KNIGHT]
-						* bitCount(k_att & eval_vector.k_zone[!SIDE]);
-				}
-				else if (k_att & eval_vector.k_nearby[!SIDE])
-					eval_vector.att_value[SIDE] += params.attacker_weight[KNIGHT] / params.k_ring_attack_factor;
+			if (k_att & eval_vector.king_zone[!SIDE]) {
+				eval_vector.att_count[SIDE]++;
+				eval_vector.att_value[SIDE] += params.attacker_weight[KNIGHT]
+					* bitCount(k_att & eval_vector.king_zone[!SIDE]);
 			}
 
-			// outpos check
-			if (bitU64(sq) &
-				(Constans::board_side[!SIDE] & eval_vector.pt_att[SIDE][PAWN] & ~opp_p_att))
-				eval += params.outpos_score[sq];
-
-			// king tropism bonus
-			eval += (Value::knight_distance_score.get(sq, eval_vector.k_sq[!SIDE]) * 2) / params.k_tropism_scale
-				+ (eval_vector.pawn_count * 2) / params.k_pawn_reduction_scale;
+			eval += params.k_pawns_onboard_bonus[eval_vector.s_pawn_count[SIDE]];
 		}
 
 		return eval;
 	}
 
 	// evaluation of bishops
-	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
-	auto pcEval() -> std::enable_if_t<PC == BISHOP, int> {
+	template <enumSide SIDE, gState::gPhase Phase>
+	int bishopEval() {
 		int sq, eval = 0, b_count = 0, mobility;
-		U64 b_msk = BBs[nWhiteBishop + SIDE], b_att;
+		U64 bishops = BBs[nWhiteBishop + SIDE], b_att;
 
 		eval_vector.pt_att[SIDE][BISHOP] = eU64;
 
-		while (b_msk) {
-			sq = popLS1B(b_msk);
+		while (bishops) {
+			sq = popLS1B(bishops);
 			b_count++;
-			eval += Value::position_score[Phase][BISHOP][flipSquare<SIDE>(sq)];
+			eval += params.position_score[Phase][BISHOP][flipSquare<SIDE>(sq)];
 			
-			// mobility
+			// mobility credit
 			b_att = attack<BISHOP>(BBs[nOccupied], sq);
-			mobility = bitCount(b_att);
-			eval += params.b_mobility_scale * (mobility - params.b_mobility_exclude);
-			// undefended minor pieces
-			eval -= params.b_undefended_minor * bitCount(~b_att & (BBs[nWhiteKnight + SIDE] | BBs[nWhiteBishop + SIDE]));
+			mobility = bitCount(b_att & ~BBs[nWhite + SIDE]);
+			eval += 5 * (mobility - 7);
 
 			eval_vector.pt_att[SIDE][BISHOP] |= b_att;
 
-			if constexpr (Phase != gState::ENDGAME) {
-				if (b_att & eval_vector.k_zone[!SIDE]) {
-					eval_vector.att_count[SIDE]++;
-					eval_vector.att_value[SIDE] += params.attacker_weight[BISHOP]
-						* bitCount(b_att & eval_vector.k_zone[!SIDE]);
-				}
-				else if (b_att & eval_vector.k_nearby[!SIDE])
-					eval_vector.att_value[SIDE] += params.attacker_weight[BISHOP] / params.b_ring_attack_factor;
+			if (b_att & eval_vector.king_zone[!SIDE]) {
+				eval_vector.att_count[SIDE]++;
+				eval_vector.att_value[SIDE] += params.attacker_weight[BISHOP]
+					* bitCount(b_att & eval_vector.king_zone[!SIDE]);
 			}
 
-			// king tropism score
-			eval += (std::max(
-				Value::adiag_score.get(sq, eval_vector.k_sq[!SIDE]),
-				Value::diag_score.get(sq, eval_vector.k_sq[!SIDE])
-			) * 2) / params.b_tropism_scale;
-
-			// bishop's value increasing while number of pawns are decreasing
-			eval -= (eval_vector.pawn_count * 2) / params.b_pawn_reduction_scale;
+			// bishop's value increasing while number of pawns is decreasing
+			eval += params.b_pawns_onboard_bonus[eval_vector.s_pawn_count[SIDE]];
 		}
 
 		// bishop pair bonus
@@ -377,98 +280,87 @@ namespace Eval {
 	}
 
 	// evaluation of rooks
-	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
-	auto pcEval() -> std::enable_if_t<PC == ROOK, int> {
+	template <enumSide SIDE, gState::gPhase Phase>
+	int rookEval() {
 		int sq, eval = 0, mobility;
-		U64 r_msk = BBs[nWhiteRook + SIDE], r_att;
+		U64 rooks = BBs[nWhiteRook + SIDE], r_att;
 		
-		static constexpr int mobility_weight = Phase + 1 + (Phase + 1) / 3;
+		int mobility_weight = 0;
+
+		if constexpr (Phase == gState::OPENING) mobility_weight = 1;
+		else mobility_weight = 2;
 
 		eval_vector.pt_att[SIDE][ROOK] = eU64;
 
-		while (r_msk) {
-			sq = popLS1B(r_msk);
-			eval += Value::position_score[Phase][ROOK][flipSquare<SIDE>(sq)];
+		eval += bitCount(eval_vector.open_files[SIDE] & BBs[nWhiteRook + SIDE])
+			* params.r_open_file_bonus
+			+ bitCount(fileFill(BBs[nWhiteRook + SIDE]) & BBs[nWhiteQueen + SIDE])
+			* params.r_queen_file_bonus;
+
+		if constexpr (Phase == gState::ENDGAME)
+			eval += bitCount(BBs[nWhiteRook + SIDE] & eval_vector.tarrasch_passed_msk[SIDE])
+				* params.r_tarrasch_file_bonus;
+
+		while (rooks) {
+			sq = popLS1B(rooks);
+			eval += params.position_score[Phase][ROOK][flipSquare<SIDE>(sq)];
 			
-			// mobility
+			// mobility credit
 			r_att = attack<ROOK>(BBs[nOccupied], sq);
-			mobility = bitCount(r_att);
-			eval += mobility_weight * (mobility - params.r_mobility_exclude);
+			mobility = bitCount(r_att & ~BBs[nWhite + SIDE]);
+			eval += mobility_weight * 3 * (mobility - 7);
 
 			eval_vector.pt_att[SIDE][ROOK] |= r_att;
 
-			if constexpr (Phase != gState::ENDGAME) {
-				if (r_att & eval_vector.k_zone[!SIDE]) {
-					eval_vector.att_count[SIDE]++;
-					eval_vector.att_value[SIDE] += params.attacker_weight[ROOK]
-						* bitCount(r_att & eval_vector.k_zone[!SIDE]);
-				}
-				else if (r_att & eval_vector.k_nearby[!SIDE])
-					eval_vector.att_value[SIDE] += params.attacker_weight[ROOK] / params.r_ring_attack_factor;
-			}
-
-			// king tropism score
-			eval += Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]) * 2 / params.r_tropism_scale;
-
-			// open file score
-			if (bitU64(sq) & eval_vector.open_files[SIDE])
-				eval += params.r_open_file_bonus;
-			// queen/rook on the same file
-			if (Constans::f_by_index[sq % 8] & (BBs[nBlackQueen - SIDE] | BBs[nWhiteRook + SIDE]))
-				eval += params.r_queen_file_bonus;
-			// tarrasch rule
-			if constexpr (Phase == gState::ENDGAME) {
-				if (bitU64(sq) & eval_vector.tarrasch_passed_msk[SIDE])
-					eval += params.r_tarrasch_file_bonus;
+			if (r_att & eval_vector.king_zone[!SIDE]) {
+				eval_vector.att_count[SIDE]++;
+				eval_vector.att_value[SIDE] += params.attacker_weight[ROOK]
+					* bitCount(r_att & eval_vector.king_zone[!SIDE]);
 			}
 
 			// rook's value increasing as number of pawns is decreasing
-			eval -= (eval_vector.pawn_count * 2) / params.r_pawn_reduction_scale;
+			eval += params.r_pawns_onboard_bonus[eval_vector.s_pawn_count[SIDE]];
 		}
 
 		return eval;
 	}
 
 	// evaluation of queens
-	template <enumSide SIDE, enumPiece PC, gState::gPhase Phase>
-	auto pcEval() -> std::enable_if_t<PC == QUEEN, int> {
+	template <enumSide SIDE, gState::gPhase Phase>
+	int queenEval() {
 		int sq, eval = 0, mobility;
-		U64 q_msk = BBs[nWhiteQueen + SIDE], q_att;
+		U64 queens = BBs[nWhiteQueen + SIDE], q_att;
 		
-		static constexpr int mobility_weight = (Phase + 2) / 2;
+		int mobility_weight;
+
+		if constexpr (Phase == gState::OPENING) mobility_weight = 2;
+		else mobility_weight = 3;
 
 		eval_vector.pt_att[SIDE][QUEEN] = eU64;
 
-		while (q_msk) {
-			sq = popLS1B(q_msk);
-			eval += Value::position_score[Phase][QUEEN][flipSquare<SIDE>(sq)];
+		if constexpr (Phase == gState::OPENING)
+			eval -= bitCount(BBs[nWhiteQueen + SIDE] & Constans::develop_squares[SIDE])
+			* params.q_develop_penalty;
+
+		while (queens) {
+			sq = popLS1B(queens);
+			eval += params.position_score[Phase][QUEEN][flipSquare<SIDE>(sq)];
 	
 			// mobility
 			q_att = attack<QUEEN>(BBs[nOccupied], sq);
-			mobility = bitCount(q_att);
-			eval += mobility_weight * (mobility - params.q_mobility_exclude);
+			mobility = bitCount(q_att & ~BBs[nWhite + SIDE]);
+			eval += mobility_weight * (mobility - 14);
 
 			eval_vector.pt_att[SIDE][QUEEN] |= q_att;
 
-			if constexpr (Phase != gState::ENDGAME) {
-				if (q_att & eval_vector.k_zone[!SIDE]) {
-					eval_vector.att_count[SIDE]++;
-					eval_vector.att_value[SIDE] += params.attacker_weight[QUEEN]
-						* bitCount(q_att & eval_vector.k_zone[!SIDE]);
-				}
-				else if (q_att & eval_vector.k_nearby[!SIDE])
-					eval_vector.att_value[SIDE] += params.attacker_weight[QUEEN] / params.q_ring_attack_factor;
+			if (q_att & eval_vector.king_zone[!SIDE]) {
+				eval_vector.att_count[SIDE]++;
+				eval_vector.att_value[SIDE] += params.attacker_weight[QUEEN]
+					* bitCount(q_att & eval_vector.king_zone[!SIDE]);
 			}
 
-			// king tropism score
-			eval += (std::max(Value::distance_score.get(sq, eval_vector.k_sq[!SIDE]), std::max(
-				Value::adiag_score.get(sq, eval_vector.k_sq[!SIDE]),
-				Value::diag_score.get(sq, eval_vector.k_sq[!SIDE])
-			)) * 4) / params.q_tropism_scale;
-
-			// penalty for queen development in opening
-			if constexpr (Phase == gState::OPENING)
-				eval += params.queen_ban_dev[flipSquare<SIDE>(sq)];
+			eval += params.b_pawns_onboard_bonus[eval_vector.s_pawn_count[SIDE]] 
+				+ params.r_pawns_onboard_bonus[eval_vector.s_pawn_count[SIDE]];
 		}
 
 		return eval;
@@ -476,24 +368,18 @@ namespace Eval {
 
 	// king evaluation
 	template <enumSide SIDE, gState::gPhase Phase>
-	int kingEval(int relative_eval) {
+	int kingEval() {
+
 		// king zone control
-		const int k_zone_control = eval_vector.att_value[SIDE] 
-			* params.attack_count_weight[eval_vector.att_count[SIDE]] / params.kzone_control_reduction;
-		int eval = k_zone_control;
+		int eval = -eval_vector.att_value[!SIDE] * params.attack_count_weight[eval_vector.att_count[!SIDE]] / 100;
+		eval += params.position_score[Phase][KING][flipSquare<SIDE>(eval_vector.k_sq[SIDE])];
 
 		if constexpr (Phase != gState::ENDGAME) {
-			eval += Value::king_score[flipSquare<SIDE>(eval_vector.k_sq[SIDE])];
 
 			// check castling possibility
 			if constexpr (Phase == gState::OPENING)
-				if (isCastle<SIDE>()) eval += params.k_castle_bonus;
-		}
-		else {
-			// king distance consideration
-			if (relative_eval > params.k_eval_cmp_distance)
-				eval += (Value::distance_score.get(eval_vector.k_sq[SIDE], eval_vector.k_sq[!SIDE]) * 4) / params.kk_tropism_scale;
-			eval += Value::late_king_score[flipSquare<SIDE>(eval_vector.k_sq[SIDE])];
+				if (isCastle<SIDE>()) 
+					eval += params.k_castle_bonus;
 		}
 
 		return eval;
@@ -501,33 +387,18 @@ namespace Eval {
 
 	template <enumSide SIDE, gState::gPhase Phase>
 	int templEval(int alpha, int beta) {
-		const int material_sc = game_state.material[SIDE] - game_state.material[!SIDE];
+		
+		// material difference and pawn structure evaluation
+		int eval = game_state.material[SIDE] - game_state.material[!SIDE]
+			+ pawnStructureEval<SIDE, Phase>() - pawnStructureEval<!SIDE, Phase>()
+			+ knightEval<SIDE, Phase>() - knightEval<!SIDE, Phase>()
+			+ bishopEval<SIDE, Phase>() - bishopEval<!SIDE, Phase>()
+			+ rookEval<SIDE, Phase>() - rookEval<!SIDE, Phase>()
+			+ queenEval<SIDE, Phase>() - queenEval<!SIDE, Phase>()
+			+ kingEval<SIDE, Phase>() - kingEval<!SIDE, Phase>();
 
-		if constexpr (Phase == gState::OPENING) {
-			static constexpr int lazy_margin_op = 450;
+		if (SIDE == game_state.turn) eval += params.tempo_bonus;
 
-			if (material_sc - lazy_margin_op >= beta)
-				return beta;
-			else if (material_sc + lazy_margin_op <= alpha)
-				return alpha;
-		}
-
-		// pawn structure evaluation
-		int eval = pawnStructureEval<SIDE, Phase>() - pawnStructureEval<!SIDE, Phase>();
-
-		if constexpr (Phase == gState::ENDGAME)
-			eval += kingPawnTropism<SIDE>() - kingPawnTropism<!SIDE>();
-
-		eval += pcEval<SIDE, KNIGHT, Phase>() - pcEval<!SIDE, KNIGHT, Phase>();
-		eval += pcEval<SIDE, BISHOP, Phase>() - pcEval<!SIDE, BISHOP, Phase>();
-		eval += pcEval<SIDE, ROOK, Phase>() - pcEval<!SIDE, ROOK, Phase>();
-		eval += pcEval<SIDE, QUEEN, Phase>() - pcEval<!SIDE, QUEEN, Phase>();
-
-		eval += material_sc
-			+ connectivity<SIDE, Phase>() - connectivity<!SIDE, Phase>();
-
-		// king position evaluation
-		eval += kingEval<SIDE, Phase>(eval) - kingEval<!SIDE, Phase>(-eval);
 		return eval;
 	}
 
@@ -540,19 +411,32 @@ namespace Eval {
 
 	// main evaluation system
 	int evaluate(int alpha, int beta) {
-		eval_vector.openingDataReset();
+		eval_vector.reset();
 
-		if (game_state.gamePhase() == gState::OPENING)
-			return sideEval<gState::OPENING>(alpha, beta);
+		const int total_mat_no_kings = 16 * params.piece_material[PAWN]
+									+ 4 * params.piece_material[KNIGHT] 
+									+ 4 * params.piece_material[BISHOP]
+									+ 4 * params.piece_material[ROOK] 
+									+ 2 * params.piece_material[QUEEN];
 
-		eval_vector.endgameDataReset();
+		game_state.material[WHITE] = material<WHITE>();
+		game_state.material[BLACK] = material<BLACK>();
 
-		// middlegame and endgame point of view score interpolation
-		const int phase = ((8150 - (game_state.material[0] + game_state.material[1] - 2 * params.piece_material[KING])) * 256 + 4075) / 8150,
-			mid_score = sideEval<gState::MIDDLEGAME>(alpha, beta),
-			end_score = sideEval<gState::ENDGAME>(alpha, beta);
+		// compute evaluation values
+		// as phase is: (100% opening, 0% endgame)
+		const int op_eval = sideEval<gState::OPENING>(alpha, beta);
 
-		return ((mid_score * (256 - phase)) + (end_score * phase)) / 256;
+		eval_vector.clear();
+
+		// and as phase is: (0% opening, 100% endgame)
+		const int eg_eval = sideEval<gState::ENDGAME>(alpha, beta);
+
+		// compute current phase of the game,
+		// where biggest possible material is opening phase and 0 - endgame phase
+		const int phase = game_state.material[WHITE] + game_state.material[BLACK];
+
+		// final tapered eval result as linear approximation/interpolation
+		return eg_eval + phase * (op_eval - eg_eval) / total_mat_no_kings;
 	}
 
 } // namespace Eval
